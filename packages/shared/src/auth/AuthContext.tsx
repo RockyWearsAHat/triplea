@@ -9,6 +9,12 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login(email: string, password: string): Promise<void>;
+  register(params: {
+    name: string;
+    email: string;
+    password: string;
+    roles?: string[];
+  }): Promise<void>;
   // Temporary helper for demo flows while real login is wired through all UIs.
   loginAs(role: UserRole): void;
   logout(): void;
@@ -116,6 +122,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (params: {
+    name: string;
+    email: string;
+    password: string;
+    roles?: string[];
+  }) => {
+    const user = await api.register(params);
+    setState({ user, loading: false });
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   const logout = () => {
     setState({ user: null, loading: false });
     api.logout().catch(() => {
@@ -145,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     ...state,
     login,
+    register,
     loginAs,
     logout,
     hasRole,

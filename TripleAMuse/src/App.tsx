@@ -7,7 +7,7 @@ import {
   spacing,
   useAuth,
 } from "@shared";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import "./App.css";
 
 type TagProps = {
@@ -559,6 +559,7 @@ function RequestsPage() {
 
 function AccountPage() {
   const { user, login, logout } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -654,8 +655,155 @@ function AccountPage() {
           <Button type="submit" disabled={submitting}>
             {submitting ? "Signing in..." : "Sign in"}
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => navigate("/register")}
+          >
+            Create an account
+          </Button>
         </form>
       )}
+    </AppShell>
+  );
+}
+
+function RegisterPage() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [accountType, setAccountType] = React.useState<
+    "admin" | "rental_provider" | "musician" | "customer"
+  >("customer");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await register({
+        name,
+        email,
+        password,
+        roles: [accountType],
+      });
+      navigate("/");
+    } catch (err) {
+      setError("Registration failed. Please try a different email.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <AppShell
+      title="Create account"
+      subtitle="Unified identity across Triple A apps."
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          maxWidth: 420,
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Account type</label>
+          <select
+            value={accountType}
+            onChange={(e) =>
+              setAccountType(
+                e.target.value as
+                  | "admin"
+                  | "rental_provider"
+                  | "musician"
+                  | "customer"
+              )
+            }
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          >
+            <option value="customer">Customer / organiser</option>
+            <option value="musician">Musician</option>
+            <option value="rental_provider">Employee (rental provider)</option>
+            <option value="admin">Owner (admin)</option>
+          </select>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Name</label>
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Password</label>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
+
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Creating..." : "Create account"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/account")}
+        >
+          Back to sign in
+        </Button>
+      </form>
     </AppShell>
   );
 }
@@ -766,6 +914,7 @@ function App() {
           }
         />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/register" element={<RegisterPage />} />
       </Routes>
     </div>
   );

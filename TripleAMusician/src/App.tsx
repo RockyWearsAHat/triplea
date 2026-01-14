@@ -8,7 +8,7 @@ import {
   useAuth,
   RequireRole,
 } from "@shared";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import "./App.css";
 
 const mockProfile: MusicianProfile = {
@@ -93,6 +93,7 @@ function Section({
 
 function LoginPage() {
   const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -165,6 +166,114 @@ function LoginPage() {
         )}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/register")}
+        >
+          Create a musician account
+        </Button>
+      </form>
+    </AppShell>
+  );
+}
+
+function RegisterPage() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await register({ name, email, password, roles: ["musician"] });
+      navigate("/");
+    } catch (err) {
+      setError("Registration failed. Please try a different email.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <AppShell
+      title="Create musician account"
+      subtitle="Sign up to manage gigs, ratings, and perks."
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          maxWidth: 360,
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Name</label>
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: colors.text,
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: colors.text,
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Password</label>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 999,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: colors.text,
+            }}
+          />
+        </div>
+        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Creating..." : "Create account"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/login")}
+        >
+          Back to login
         </Button>
       </form>
     </AppShell>
@@ -470,6 +579,7 @@ function App() {
       <NavBar />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route
           path="/"
           element={

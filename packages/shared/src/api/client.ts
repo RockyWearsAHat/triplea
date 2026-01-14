@@ -52,6 +52,30 @@ export class TripleAApiClient {
 
   // --- Auth ---
 
+  async register(params: {
+    name: string;
+    email: string;
+    password: string;
+    roles?: string[];
+  }): Promise<User> {
+    const data = await this.request<{
+      id: string;
+      name: string;
+      email: string;
+      roles: string[];
+    }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.roles as User["role"],
+    };
+  }
+
   async login(email: string, password: string): Promise<User> {
     const data = await this.request<{
       id: string;
