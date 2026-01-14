@@ -7,3 +7,4 @@ export * from "./auth/AuthContext";
 export * from "./auth/RequireAuth";
 export * from "./api/client";
 export * from "./chat/ChatInbox";
+export * from "./animation/useScrollReveal";

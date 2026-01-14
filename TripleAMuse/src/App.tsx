@@ -7,6 +7,7 @@ import {
   RequireAnyRole,
   RequireRole,
   spacing,
+  useScrollReveal,
   useAuth,
 } from "@shared";
 import {
@@ -66,6 +67,7 @@ function Section({ title, children }: SectionProps) {
       }}
     >
       <h2
+        data-reveal
         style={{
           fontSize: 16,
           fontWeight: 600,
@@ -86,6 +88,7 @@ function HomeDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [instruments, setInstruments] = useState<
@@ -98,6 +101,217 @@ function HomeDashboardPage() {
       imageUrl?: string;
     }>
   >([]);
+
+  const categories = useMemo(() => {
+    const values = Array.from(
+      new Set(
+        instruments
+          .map((i) => i.category)
+          .filter(
+            (c): c is string => typeof c === "string" && c.trim().length > 0
+          )
+      )
+    );
+    values.sort((a, b) => a.localeCompare(b));
+    return values;
+  }, [instruments]);
+
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+
+  // Bias the initial view toward a smaller, category-based list for smoother first paint.
+  useEffect(() => {
+    if (selectedCategory !== "All") return;
+    if (instruments.length <= 18) return;
+    if (categories.length === 0) return;
+    setSelectedCategory(categories[0]);
+  }, [categories, instruments.length, selectedCategory]);
+
+  const visibleInstruments = useMemo(() => {
+    if (selectedCategory === "All") return instruments;
+    return instruments.filter((i) => i.category === selectedCategory);
+  }, [instruments, selectedCategory]);
+
+  const serviceOptions = useMemo(
+    () => [
+      {
+        id: "lessons",
+        title: "Lessons",
+        description: "Book coaching for instrument, voice, and production.",
+        path: "/new-request?type=lessons",
+      },
+      {
+        id: "stage",
+        title: "Stage setup",
+        description: "On-site crew for load-in, PA, lighting, and logistics.",
+        path: "/new-request?type=stage",
+      },
+      {
+        id: "delivery",
+        title: "Delivery & pickup",
+        description: "Transport instruments and gear to/from the venue.",
+        path: "/new-request?type=delivery",
+      },
+    ],
+    []
+  );
+
+  const [rentalsLimit, setRentalsLimit] = useState(12);
+  useEffect(() => {
+    setRentalsLimit(12);
+  }, [selectedCategory]);
+
+  const displayedInstruments = useMemo(
+    () => visibleInstruments.slice(0, rentalsLimit),
+    [visibleInstruments, rentalsLimit]
+  );
+
+  type DealItem =
+    | { kind: "instrument"; id: string }
+    | { kind: "service"; id: string };
+
+  type Deal = {
+    id: string;
+    title: string;
+    subtitle: string;
+    items: DealItem[];
+  };
+
+  const [deals, setDeals] = useState<Deal[]>([
+    {
+      id: "deal-starter",
+      title: "Starter package",
+      subtitle: "A simple kit you can customize.",
+      items: [
+        { kind: "service", id: "delivery" },
+        { kind: "service", id: "stage" },
+      ],
+    },
+    {
+      id: "deal-backline",
+      title: "Backline + delivery",
+      subtitle: "Pick your gear, we handle logistics.",
+      items: [{ kind: "service", id: "delivery" }],
+    },
+    {
+      id: "deal-coaching",
+      title: "Practice & prep",
+      subtitle: "Gear plus coaching.",
+      items: [{ kind: "service", id: "lessons" }],
+    },
+  ]);
+
+  const [seededDeals, setSeededDeals] = useState(false);
+  useEffect(() => {
+    if (seededDeals) return;
+    if (instruments.length === 0) return;
+    const picks = instruments
+      .filter((i) => i.available)
+      .slice(0, 4)
+      .map((i) => i.id);
+    if (picks.length === 0) return;
+
+    setDeals((prev) =>
+      prev.map((d) => {
+        if (d.id === "deal-backline") {
+          return {
+            ...d,
+            items: [
+              { kind: "instrument", id: picks[0] },
+              ...(picks[1]
+                ? [{ kind: "instrument", id: picks[1] } as const]
+                : []),
+              { kind: "service", id: "delivery" },
+            ],
+          };
+        }
+        if (d.id === "deal-coaching") {
+          return {
+            ...d,
+            items: [
+              { kind: "instrument", id: picks[2] ?? picks[0] },
+              { kind: "service", id: "lessons" },
+            ],
+          };
+        }
+        if (d.id === "deal-starter") {
+          return {
+            ...d,
+            items: [
+              { kind: "instrument", id: picks[3] ?? picks[1] ?? picks[0] },
+              { kind: "service", id: "delivery" },
+            ],
+          };
+        }
+        return d;
+      })
+    );
+    setSeededDeals(true);
+  }, [instruments, seededDeals]);
+
+  function dealInstrumentById(id: string) {
+    return instruments.find((i) => i.id === id);
+  }
+
+  function dealServiceById(id: string) {
+    return serviceOptions.find((s) => s.id === id);
+  }
+
+  function dealLine(item: DealItem): { title: string; meta?: string } {
+    if (item.kind === "instrument") {
+      const inst = dealInstrumentById(item.id);
+      return {
+        title: inst?.name ?? "Rental item",
+        meta: inst ? `${inst.category} · $${inst.dailyRate}/day` : undefined,
+      };
+    }
+    const svc = dealServiceById(item.id);
+    return {
+      title: svc?.title ?? "Service",
+      meta: "Request",
+    };
+  }
+
+  function dealEstimatedDailyTotal(deal: Deal): number {
+    return deal.items
+      .filter(
+        (i): i is { kind: "instrument"; id: string } => i.kind === "instrument"
+      )
+      .map((i) => dealInstrumentById(i.id)?.dailyRate ?? 0)
+      .reduce((a, b) => a + b, 0);
+  }
+
+  function removeDealItem(dealId: string, index: number) {
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.id === dealId
+          ? { ...d, items: d.items.filter((_, i) => i !== index) }
+          : d
+      )
+    );
+  }
+
+  function addDealItem(dealId: string, value: string) {
+    const [kind, id] = value.split(":");
+    if (!kind || !id) return;
+    if (kind !== "instrument" && kind !== "service") return;
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.id === dealId
+          ? {
+              ...d,
+              items: [...d.items, { kind: kind as DealItem["kind"], id }],
+            }
+          : d
+      )
+    );
+  }
+
+  useScrollReveal(contentRef, [
+    displayedInstruments.length,
+    deals.length,
+    catalogBusy,
+    selectedCategory,
+  ]);
 
   useEffect(() => {
     setCatalogError(null);
@@ -112,16 +326,349 @@ function HomeDashboardPage() {
   return (
     <AppShell
       title="Triple A Muse"
-      subtitle="Services marketplace (like Uber): rentals, lessons, and stage/logistics for musicians and customers."
+      subtitle="Gear + services marketplace for musicians and organizers."
     >
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.lg,
-        }}
+        ref={contentRef}
+        style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}
       >
-        <Section title="Browse instrument rentals">
+        <section className={ui.hero} data-reveal>
+          <div>
+            <p className={ui.heroKicker}>Gear & services marketplace</p>
+            <h2 className={ui.heroTitle}>Rent gear in minutes.</h2>
+            <p className={ui.heroLead}>
+              Pick a category, browse what’s available, and rent with delivery
+              or pickup.
+            </p>
+
+            <div className={ui.heroActions}>
+              <Button
+                onClick={() =>
+                  document
+                    .getElementById("muse-rentals")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Browse rentals
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  document
+                    .getElementById("muse-services")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Services
+              </Button>
+              {!user ? (
+                <Button variant="ghost" onClick={() => navigate("/account")}>
+                  Sign in
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <div
+          data-reveal
+          style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.sm,
+              overflowX: "auto",
+              paddingBottom: spacing.xs,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            <Button
+              variant={selectedCategory === "All" ? "secondary" : "ghost"}
+              onClick={() => setSelectedCategory("All")}
+            >
+              All rentals
+            </Button>
+            {categories.map((c) => (
+              <Button
+                key={c}
+                variant={selectedCategory === c ? "secondary" : "ghost"}
+                onClick={() => setSelectedCategory(c)}
+              >
+                {c}
+              </Button>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.sm,
+              overflowX: "auto",
+              paddingBottom: spacing.xs,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {serviceOptions.map((s) => (
+              <Button
+                key={s.id}
+                variant="ghost"
+                onClick={() => {
+                  if (!user) {
+                    navigate(`/account?next=${encodeURIComponent(s.path)}`);
+                    return;
+                  }
+                  navigate(s.path);
+                }}
+              >
+                {s.title}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <Section title="Featured rentals">
+          {catalogBusy ? (
+            <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading...</p>
+          ) : displayedInstruments.length === 0 ? (
+            <p style={{ color: "#9ca3af", fontSize: 14 }}>
+              No items available.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                gap: spacing.lg,
+                overflowX: "auto",
+                paddingBottom: spacing.xs,
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              {displayedInstruments.slice(0, 10).map((item) => (
+                <div
+                  key={item.id}
+                  data-reveal
+                  className={[ui.card, ui.cardPad].join(" ")}
+                  style={{
+                    minWidth: 260,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <p style={{ margin: 0, fontWeight: 600 }}>{item.name}</p>
+                  <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
+                    {item.category} · ${item.dailyRate}/day
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      marginTop: spacing.xs,
+                    }}
+                  >
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        navigate(`/instruments/${encodeURIComponent(item.id)}`)
+                      }
+                    >
+                      View
+                    </Button>
+                    <Button
+                      disabled={!item.available}
+                      onClick={() => {
+                        const target = `/instruments/${encodeURIComponent(
+                          item.id
+                        )}?rent=1`;
+                        if (!user) {
+                          navigate(
+                            `/account?next=${encodeURIComponent(target)}`
+                          );
+                          return;
+                        }
+                        navigate(target);
+                      }}
+                    >
+                      Rent
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Deals">
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.lg,
+              overflowX: "auto",
+              paddingBottom: spacing.xs,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {deals.map((deal) => {
+              const estimated = dealEstimatedDailyTotal(deal);
+              const firstInstrument = deal.items.find(
+                (i): i is { kind: "instrument"; id: string } =>
+                  i.kind === "instrument"
+              );
+
+              return (
+                <div
+                  key={deal.id}
+                  data-reveal
+                  className={[ui.card, ui.cardPad].join(" ")}
+                  style={{
+                    minWidth: 320,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 650 }}>{deal.title}</p>
+                    <p
+                      style={{
+                        margin: "6px 0 0",
+                        color: "#9ca3af",
+                        fontSize: 13,
+                      }}
+                    >
+                      {deal.subtitle}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
+                    {deal.items.map((item, idx) => {
+                      const line = dealLine(item);
+                      return (
+                        <div
+                          key={`${item.kind}:${item.id}:${idx}`}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: spacing.sm,
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            padding: "10px 12px",
+                            background:
+                              "color-mix(in srgb, var(--surface) 85%, transparent)",
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontWeight: 600,
+                                fontSize: 13,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {line.title}
+                            </p>
+                            {line.meta ? (
+                              <p
+                                style={{
+                                  margin: "4px 0 0",
+                                  color: "#9ca3af",
+                                  fontSize: 12,
+                                }}
+                              >
+                                {line.meta}
+                              </p>
+                            ) : null}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            onClick={() => removeDealItem(deal.id, idx)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      );
+                    })}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: spacing.sm,
+                        alignItems: "center",
+                      }}
+                    >
+                      <select
+                        aria-label="Add to deal"
+                        defaultValue=""
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          e.currentTarget.value = "";
+                          addDealItem(deal.id, v);
+                        }}
+                        className={ui.input}
+                        style={{ height: 40 }}
+                      >
+                        <option value="" disabled>
+                          Add item…
+                        </option>
+                        <optgroup label="Rentals">
+                          {instruments.slice(0, 80).map((i) => (
+                            <option key={i.id} value={`instrument:${i.id}`}>
+                              {i.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Services">
+                          {serviceOptions.map((s) => (
+                            <option key={s.id} value={`service:${s.id}`}>
+                              {s.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: spacing.sm,
+                      alignItems: "center",
+                    }}
+                  >
+                    <p style={{ margin: 0, color: "#9ca3af", fontSize: 13 }}>
+                      Est. gear total: ${estimated.toFixed(0)}/day
+                    </p>
+                    <Button
+                      variant="secondary"
+                      disabled={!firstInstrument}
+                      onClick={() => {
+                        if (!firstInstrument) return;
+                        navigate(
+                          `/instruments/${encodeURIComponent(
+                            firstInstrument.id
+                          )}`
+                        );
+                      }}
+                    >
+                      Start
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        <div id="muse-rentals" />
+        <Section title="Rentals">
           {catalogError ? <p className={ui.error}>{catalogError}</p> : null}
           <div
             style={{
@@ -134,19 +681,17 @@ function HomeDashboardPage() {
               <p style={{ color: "#9ca3af", fontSize: 14 }}>
                 Loading catalog...
               </p>
-            ) : instruments.length === 0 ? (
+            ) : visibleInstruments.length === 0 ? (
               <p style={{ color: "#9ca3af", fontSize: 14 }}>
                 No items available.
               </p>
             ) : (
-              instruments.map((item) => (
+              displayedInstruments.map((item) => (
                 <div
                   key={item.id}
+                  data-reveal
+                  className={[ui.card, ui.cardPad].join(" ")}
                   style={{
-                    padding: spacing.lg,
-                    borderRadius: 12,
-                    backgroundColor: "#020617",
-                    border: "1px solid #1f2937",
                     display: "flex",
                     flexDirection: "column",
                     gap: spacing.sm,
@@ -158,8 +703,9 @@ function HomeDashboardPage() {
                         width: "100%",
                         borderRadius: 12,
                         overflow: "hidden",
-                        border: "1px solid #1f2937",
-                        backgroundColor: "#0b1220",
+                        border: "1px solid var(--border)",
+                        backgroundColor:
+                          "color-mix(in srgb, var(--surface) 70%, transparent)",
                       }}
                     >
                       <img
@@ -172,6 +718,8 @@ function HomeDashboardPage() {
                           display: "block",
                         }}
                         loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
                       />
                     </div>
                   ) : null}
@@ -226,9 +774,21 @@ function HomeDashboardPage() {
               ))
             )}
           </div>
+
+          {!catalogBusy && visibleInstruments.length > rentalsLimit ? (
+            <div data-reveal style={{ marginTop: spacing.md }}>
+              <Button
+                variant="secondary"
+                onClick={() => setRentalsLimit((n) => n + 12)}
+              >
+                Show more
+              </Button>
+            </div>
+          ) : null}
         </Section>
 
-        <Section title="Browse services">
+        <div id="muse-services" />
+        <Section title="Services">
           <div
             style={{
               display: "grid",
@@ -236,36 +796,12 @@ function HomeDashboardPage() {
               gap: spacing.lg,
             }}
           >
-            {[
-              {
-                id: "lessons",
-                title: "Lessons",
-                description:
-                  "Book coaching for instrument, voice, and production.",
-                path: "/new-request?type=lessons",
-              },
-              {
-                id: "stage",
-                title: "Stage setup",
-                description:
-                  "On-site crew for load-in, PA, lighting, and logistics.",
-                path: "/new-request?type=stage",
-              },
-              {
-                id: "delivery",
-                title: "Delivery & pickup",
-                description:
-                  "Transport instruments and gear to/from the venue.",
-                path: "/new-request?type=delivery",
-              },
-            ].map((s) => (
+            {serviceOptions.map((s) => (
               <div
                 key={s.id}
+                data-reveal
+                className={[ui.card, ui.cardPad].join(" ")}
                 style={{
-                  padding: spacing.lg,
-                  borderRadius: 12,
-                  backgroundColor: "#020617",
-                  border: "1px solid #1f2937",
                   display: "flex",
                   flexDirection: "column",
                   gap: spacing.sm,
@@ -276,6 +812,7 @@ function HomeDashboardPage() {
                   {s.description}
                 </p>
                 <Button
+                  variant="secondary"
                   onClick={() => {
                     if (!user) {
                       navigate(`/account?next=${encodeURIComponent(s.path)}`);
@@ -291,60 +828,93 @@ function HomeDashboardPage() {
           </div>
         </Section>
 
-        <Section title="Today at a glance">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: spacing.lg,
-            }}
-          >
+        <Section title="Operations snapshot">
+          <div data-reveal className={[ui.card, ui.cardPad].join(" ")}>
             <div
               style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: spacing.md,
               }}
             >
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>Open requests</p>
-              <p style={{ fontSize: 28, fontWeight: 600 }}>7</p>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>
-                3 awaiting confirmation, 4 scheduled.
-              </p>
-            </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
+                  Open requests
+                </p>
+                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
+                  7
+                </p>
+                <p
+                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
+                >
+                  3 awaiting confirmation, 4 scheduled.
+                </p>
+              </div>
 
-            <div
-              style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
-              }}
-            >
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>Pickups today</p>
-              <p style={{ fontSize: 28, fontWeight: 600 }}>2</p>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>
-                Both from the warehouse location.
-              </p>
-            </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
+                  Pickups today
+                </p>
+                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
+                  2
+                </p>
+                <p
+                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
+                >
+                  Warehouse pickups.
+                </p>
+              </div>
 
-            <div
-              style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
-              }}
-            >
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>Deliveries today</p>
-              <p style={{ fontSize: 28, fontWeight: 600 }}>3</p>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>
-                1 club, 2 private events.
-              </p>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
+                  Deliveries today
+                </p>
+                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
+                  3
+                </p>
+                <p
+                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
+                >
+                  1 club, 2 private events.
+                </p>
+              </div>
             </div>
           </div>
         </Section>
+
+        <section className={ui.hero} data-reveal>
+          <div>
+            <p className={ui.heroKicker}>What this is</p>
+            <h2 className={ui.heroTitle}>
+              Everything around the gig — handled.
+            </h2>
+            <p className={ui.heroLead}>
+              Muse is the marketplace for the stuff that makes gigs happen:
+              rentals, lessons, stage setup, and logistics.
+            </p>
+          </div>
+
+          <div className={ui.featureGrid}>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Transparent rentals</p>
+              <p className={ui.featureBody}>
+                See daily rates, availability, and pickup/delivery options.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Lessons & coaching</p>
+              <p className={ui.featureBody}>
+                Book 1:1 or group sessions — voice, instruments, production.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Stage & logistics</p>
+              <p className={ui.featureBody}>
+                Delivery, crew, and event support when you need it.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </AppShell>
   );

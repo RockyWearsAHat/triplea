@@ -15,6 +15,7 @@ import {
   TripleAApiClient,
   RequireAnyRole,
   RequireRole,
+  useScrollReveal,
   useAuth,
 } from "@shared";
 import {
@@ -563,9 +564,13 @@ function BrowsePage() {
     []
   );
 
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+
   const [results, setResults] = useState<DiscoveryResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useScrollReveal(contentRef, [results?.length ?? 0, loading]);
 
   useEffect(() => {
     setError(null);
@@ -579,13 +584,81 @@ function BrowsePage() {
 
   return (
     <AppShell
-      title="Browse musicians"
-      subtitle="Explore performers and get an estimate before you book."
+      title="Triple A Music"
+      subtitle="Discover performers, post gigs, and manage bookings end-to-end."
     >
       <div
+        ref={contentRef}
         style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}
       >
-        <Section title="Available now">
+        <section className={ui.hero} data-reveal>
+          <div>
+            <p className={ui.heroKicker}>Customer booking app</p>
+            <h2 className={ui.heroTitle}>
+              Find the right musician for your event.
+            </h2>
+            <p className={ui.heroLead}>
+              Browse performers with pricing hints, message and coordinate
+              details, then book and manage the whole event lifecycle in one
+              place.
+            </p>
+
+            <div className={ui.heroActions}>
+              <Button
+                onClick={() =>
+                  document
+                    .getElementById("music-performers")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Browse performers
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (!user) {
+                    navigate(`/login?next=${encodeURIComponent("/post-gig")}`);
+                    return;
+                  }
+                  navigate("/post-gig");
+                }}
+              >
+                Post a gig
+              </Button>
+              {!user ? (
+                <Button variant="ghost" onClick={() => navigate("/login")}>
+                  Sign in
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className={ui.featureGrid}>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Fast discovery</p>
+              <p className={ui.featureBody}>
+                Filter by style, get a ballpark estimate, and compare options
+                quickly.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Gigs & applications</p>
+              <p className={ui.featureBody}>
+                Post gigs, review applicants, and choose the right performer.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Messaging</p>
+              <p className={ui.featureBody}>
+                Keep communication in one thread — customers, musicians, venues,
+                support.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div id="music-performers" />
+        <Section title="Available performers">
           {loading ? (
             <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
               Loading...
@@ -610,11 +683,9 @@ function BrowsePage() {
               return (
                 <div
                   key={r.musician.id}
+                  data-reveal
+                  className={[ui.card, ui.cardPad].join(" ")}
                   style={{
-                    padding: spacing.lg,
-                    borderRadius: 12,
-                    backgroundColor: "#020617",
-                    border: "1px solid #1f2937",
                     display: "flex",
                     flexDirection: "column",
                     gap: spacing.sm,
@@ -635,7 +706,7 @@ function BrowsePage() {
                     ))}
                   </div>
 
-                  <p style={{ margin: 0, color: "#e5e7eb", fontWeight: 600 }}>
+                  <p style={{ margin: 0, fontWeight: 600 }}>
                     {r.musician.instruments.join(" / ")}
                   </p>
                   <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>

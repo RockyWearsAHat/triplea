@@ -6,7 +6,7 @@ This project contains a suite of three related apps built with Vite and TypeScri
 
 - **Triple A Musician** – like the “Uber Driver” app for performers.
 - **Triple A Music** – like “Uber Eats” for customers/organizers booking musicians and venues.
-- **Triple A Muse** – like “Uber” as a services marketplace used by both musicians and customers (rentals, lessons, stage/logistics services).
+- **Triple A Muse** – like an “Uber Eats”-style web hub: interactive browse-first surface for Triple A offerings (rentals + services), plus clear funnels to Music (customers) and Musician (performers).
 
 The repository is organized into three sub-projects:
 
@@ -71,7 +71,13 @@ Core concepts:
 
 ### 3. Triple A Muse (Marketplace & services app)
 
-Goal: Act as a hybrid marketplace where performers and customers are both consumers of services, gear, and expertise.
+Goal: Be the interactive, browse-first "front door" (web) for Triple A offerings and funnels.
+
+Key positioning (as clarified by owner):
+
+- Muse is the place for people who want Triple A’s services directly (rentals/lessons/logistics).
+- Music is the official consumer marketplace to book musicians/venues for events (customers should generally end up there).
+- Musician is the performer onboarding + work app (sign up to perform; payout setup; profile; gigs/workflow).
 
 Core concepts:
 
@@ -82,20 +88,67 @@ Core concepts:
   - Find teachers for instruments, voice, songwriting, production, and performance coaching.
   - Book 1:1 or group sessions (in-person or online).
 - **Stage & event services**
-  - Browse locations and services for stage setup, sound engineering, lighting, and logistics.
-  - Request help setting up stages or complete event packages.
+  - "Logistics" here is service work (event coordination): decorations, acoustics, security coordination, on-site support, etc.
+  - Important nuance: logistics/setup are not “rental gear” (owner explicitly does not want to rent out speakers/mics).
+  - Offer package plans that can be customized.
 - **Unified user identity**
   - Same user can be a performer, customer, and service consumer.
   - Single account with roles/permissions determining what they can list, rent, or book.
+
+## Owner Alignment (Jan 2026)
+
+This section summarizes a direct conversation with the owner and is the current north-star for UX and product shape.
+
+### What the owner asked for (high signal)
+
+- **Muse should feel like Uber Eats / Pizza Hut**:
+  - Interactive and self-explanatory when read top-to-bottom.
+  - Offerings up front with simple labels and intuitive layout.
+  - Less “explaining” at the top; the explainer belongs at the bottom.
+- **Category bar for rentals**:
+  - Instruments should be front-and-center with a category chip bar.
+- **Deals / package plans** (Pizza Hut “deals” model):
+  - Curated packages (e.g., logistics bundles) that users can customize.
+  - Users can remove items and modify what’s included.
+- **Funnel strategy / cross-app relationships**:
+  - Muse should advertise and link to:
+    - Triple A Music (consumer marketplace: find musicians/venues for weddings/cruises/funerals, etc.).
+    - Triple A Musician (performer sign-up / onboarding and performer work app).
+  - Music + Musician should be installable “apps”; their websites can be more mission/marketing oriented.
+- **Tiering**:
+  - Rentals = entry-level.
+  - Lessons = step up.
+  - Logistics/performance services = highest tier.
+- **Inventory reality check**:
+  - Owner currently has instruments (drums, trumpets, violins, clarinets, electric/acoustic guitars, keyboards/pianos).
+  - Pricing can be placeholders initially; owner expects to edit later.
+- **Brand assets**:
+  - Owner has a logo to provide (email/text).
+
+### UX rules to follow in Muse (non-negotiable)
+
+- Make Muse **browse-first**: categories + featured rows + deals/packages first.
+- Keep the interface clean and uncluttered:
+  - Default to fewer cards on first paint and expand via interaction.
+  - Avoid long explanatory blocks near the top.
+- Put "Everything around the gig — handled." and the explanatory mission copy at the bottom.
+- Keep labels simple (one- to two-word category/service labels where possible).
+
+### Clarifications / assumptions for implementation
+
+- Logistics packages are service bundles (event-coordinator style), not gear rentals.
+- If rentals are shown, focus on the owner’s actual rentable inventory and do not invent unrelated rental categories.
+- The overall system still supports a marketplace (Music) and performer workflow (Musician), but Muse’s job is to funnel users to the right app.
 
 ## Cross-App Considerations
 
 - **Overarching Product Split (Non-Negotiable)**
 
   - Each app has a distinct “job to be done”:
-    - Musician = performer work app (ratings, gigs, obligations, perks).
-    - Music = customer/organizer booking app (discover → request → confirm → manage event).
-    - Muse = shared marketplace/services app (both performers and customers consume rentals/lessons/stage services).
+    - Musician = performer onboarding + work app (profile, gigs, obligations, perks).
+    - Music = consumer marketplace (discover → request → confirm → manage event).
+    - Muse = interactive web hub for rentals/lessons/logistics + funnels to Music/Musician.
+  - Muse should not become a second “Music” marketplace UI; it should advertise/route users to the right experience.
   - When implementing pages, copy, nav, and access controls, do not blur these responsibilities across apps.
   - Admin/employee operations support the whole ecosystem, but should not change the above product split.
 

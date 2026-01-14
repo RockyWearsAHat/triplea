@@ -7,6 +7,7 @@ import {
   colors,
   spacing,
   TripleAApiClient,
+  useScrollReveal,
   useAuth,
   RequireAnyRole,
   RequireRole,
@@ -291,14 +292,60 @@ function RegisterPage() {
   );
 }
 function MusicianDashboardPage() {
+  const navigate = useNavigate();
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  useScrollReveal(contentRef);
+
   return (
     <AppShell
       title="Triple A Musician"
-      subtitle="Performer app (like Uber Driver): gigs, ratings, obligations, and perks."
+      subtitle="Your performer hub for gigs, reputation, and earnings."
     >
       <div
+        ref={contentRef}
         style={{ display: "flex", flexDirection: "column", gap: spacing.xl }}
       >
+        <section className={ui.hero} data-reveal>
+          <div>
+            <p className={ui.heroKicker}>Performer work app</p>
+            <h2 className={ui.heroTitle}>Run your gigs like a pro.</h2>
+            <p className={ui.heroLead}>
+              Track bookings and obligations, apply to new gigs, and build your
+              rating and perks — all with the same account across Triple A.
+            </p>
+            <div className={ui.heroActions}>
+              <Button
+                variant="secondary"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              >
+                View dashboard
+              </Button>
+              <Button onClick={() => navigate("/gigs")}>Browse gigs</Button>
+            </div>
+          </div>
+
+          <div className={ui.featureGrid}>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Bookings & obligations</p>
+              <p className={ui.featureBody}>
+                See what’s next, confirm arrival, and keep details handy.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Gigs marketplace</p>
+              <p className={ui.featureBody}>
+                Browse open gigs and apply with a short message.
+              </p>
+            </div>
+            <div className={ui.featureCard} data-reveal>
+              <p className={ui.featureTitle}>Perks & reputation</p>
+              <p className={ui.featureBody}>
+                Improve your rating over time and unlock better perks.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <Section title="Profile & rating">
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.lg }}>
             <div style={{ flex: "1 1 220px" }}>
@@ -344,11 +391,9 @@ function MusicianDashboardPage() {
             {upcomingBookings.map((b) => (
               <div
                 key={b.id}
+                data-reveal
+                className={[ui.card, ui.cardPad].join(" ")}
                 style={{
-                  padding: spacing.lg,
-                  borderRadius: 12,
-                  backgroundColor: "#020617",
-                  border: "1px solid #1f2937",
                   display: "flex",
                   justifyContent: "space-between",
                   gap: spacing.lg,
@@ -408,10 +453,9 @@ function MusicianDashboardPage() {
             {perks.map((perk) => (
               <div
                 key={perk.id}
+                data-reveal
+                className={[ui.card, ui.cardPad].join(" ")}
                 style={{
-                  padding: spacing.lg,
-                  borderRadius: 12,
-                  backgroundColor: "#020617",
                   border: "1px dashed #374151",
                 }}
               >
@@ -489,9 +533,12 @@ function BrowseGigsPage() {
     []
   );
   const navigate = useNavigate();
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
   const [gigs, setGigs] = React.useState<Gig[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  useScrollReveal(contentRef, [gigs.length, loading]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -521,28 +568,25 @@ function BrowseGigsPage() {
       title="Browse gigs"
       subtitle="Find open gigs posted by customers and apply."
     >
-      {loading ? (
-        <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading...</p>
-      ) : error ? (
-        <p style={{ color: "#f87171", fontSize: 14 }}>{error}</p>
-      ) : gigs.length === 0 ? (
-        <p style={{ color: "#9ca3af", fontSize: 14 }}>No gigs available yet.</p>
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-          }}
-        >
-          {gigs.map((gig) => (
+      <div
+        ref={contentRef}
+        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
+      >
+        {loading ? (
+          <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading...</p>
+        ) : error ? (
+          <p style={{ color: "#f87171", fontSize: 14 }}>{error}</p>
+        ) : gigs.length === 0 ? (
+          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+            No gigs available yet.
+          </p>
+        ) : (
+          gigs.map((gig) => (
             <div
               key={gig.id}
+              data-reveal
+              className={[ui.card, ui.cardPad].join(" ")}
               style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
                 display: "flex",
                 justifyContent: "space-between",
                 gap: spacing.lg,
@@ -573,9 +617,9 @@ function BrowseGigsPage() {
                 View gig
               </Button>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </AppShell>
   );
 }
