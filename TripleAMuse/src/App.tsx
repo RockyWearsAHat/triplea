@@ -349,17 +349,17 @@ function HomeDashboardPage() {
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
               >
-                Browse rentals
+                Rentals
               </Button>
               <Button
                 variant="secondary"
                 onClick={() =>
                   document
-                    .getElementById("muse-services")
+                    .getElementById("muse-deals")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
               >
-                Services
+                Deals
               </Button>
               {!user ? (
                 <Button variant="ghost" onClick={() => navigate("/account")}>
@@ -499,6 +499,7 @@ function HomeDashboardPage() {
           )}
         </Section>
 
+        <div id="muse-deals" />
         <Section title="Deals">
           <div
             style={{
@@ -686,10 +687,10 @@ function HomeDashboardPage() {
                 No items available.
               </p>
             ) : (
-              displayedInstruments.map((item) => (
+              displayedInstruments.map((item, idx) => (
                 <div
                   key={item.id}
-                  data-reveal
+                  data-reveal={idx < 6 ? true : undefined}
                   className={[ui.card, ui.cardPad].join(" ")}
                   style={{
                     display: "flex",
@@ -697,32 +698,6 @@ function HomeDashboardPage() {
                     gap: spacing.sm,
                   }}
                 >
-                  {item.imageUrl ? (
-                    <div
-                      style={{
-                        width: "100%",
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        border: "1px solid var(--border)",
-                        backgroundColor:
-                          "color-mix(in srgb, var(--surface) 70%, transparent)",
-                      }}
-                    >
-                      <img
-                        src={`http://localhost:4000${item.imageUrl}`}
-                        alt={item.name}
-                        style={{
-                          width: "100%",
-                          height: 140,
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                        loading="lazy"
-                        decoding="async"
-                        fetchPriority="low"
-                      />
-                    </div>
-                  ) : null}
                   <p style={{ margin: 0, fontWeight: 600 }}>{item.name}</p>
                   <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
                     {item.category} · ${item.dailyRate}/day
@@ -785,101 +760,6 @@ function HomeDashboardPage() {
               </Button>
             </div>
           ) : null}
-        </Section>
-
-        <div id="muse-services" />
-        <Section title="Services">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.lg,
-            }}
-          >
-            {serviceOptions.map((s) => (
-              <div
-                key={s.id}
-                data-reveal
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: spacing.sm,
-                }}
-              >
-                <p style={{ margin: 0, fontWeight: 600 }}>{s.title}</p>
-                <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
-                  {s.description}
-                </p>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    if (!user) {
-                      navigate(`/account?next=${encodeURIComponent(s.path)}`);
-                      return;
-                    }
-                    navigate(s.path);
-                  }}
-                >
-                  {user ? "Request" : "Sign in to request"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Operations snapshot">
-          <div data-reveal className={[ui.card, ui.cardPad].join(" ")}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: spacing.md,
-              }}
-            >
-              <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
-                  Open requests
-                </p>
-                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
-                  7
-                </p>
-                <p
-                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
-                >
-                  3 awaiting confirmation, 4 scheduled.
-                </p>
-              </div>
-
-              <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
-                  Pickups today
-                </p>
-                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
-                  2
-                </p>
-                <p
-                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
-                >
-                  Warehouse pickups.
-                </p>
-              </div>
-
-              <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
-                  Deliveries today
-                </p>
-                <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 650 }}>
-                  3
-                </p>
-                <p
-                  style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}
-                >
-                  1 club, 2 private events.
-                </p>
-              </div>
-            </div>
-          </div>
         </Section>
 
         <section className={ui.hero} data-reveal>
