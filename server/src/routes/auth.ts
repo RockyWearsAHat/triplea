@@ -1,8 +1,11 @@
 import type { Request, Response, Router } from "express";
 import express from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User";
+import { Invite } from "../models/Invite";
+import { deriveDefaultPermissions } from "../lib/access";
 
 const router: Router = express.Router();
 
@@ -14,6 +17,28 @@ function getJwtSecret(): string {
     throw new Error("JWT_SECRET is not set");
   }
   return process.env.JWT_SECRET;
+}
+
+function issueAuthCookie(
+  res: Response,
+  user: { id: string; email: string; roles: string[] }
+) {
+  const token = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      roles: user.roles,
+    },
+    getJwtSecret(),
+    { expiresIn: "7d" }
+  );
+
+  res.cookie(JWT_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: JWT_MAX_AGE_MS,
+  });
 }
 
 router.post("/register", async (req: Request, res: Response) => {
@@ -36,11 +61,31 @@ router.post("/register", async (req: Request, res: Response) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    const resolvedRoles = roles && roles.length ? roles : ["customer"];
+    if (resolvedRoles.length !== 1) {
+      return res
+        .status(400)
+        .json({ message: "Public registration supports exactly one role" });
+    }
+
+    const role = resolvedRoles[0];
+    if (role !== "customer" && role !== "musician") {
+      return res.status(403).json({
+        message:
+          "This account type cannot be registered publicly. Contact support if you were invited.",
+      });
+    }
+
+    // Enforce canonical roles server-side; do not trust the client.
+    const canonicalRoles = [role];
+    const defaultPermissions = deriveDefaultPermissions(canonicalRoles);
+
     const user = await User.create({
       name,
       email,
       passwordHash,
-      roles: roles && roles.length ? roles : ["customer"],
+      roles: canonicalRoles,
+      permissions: defaultPermissions,
     });
 
     return res.status(201).json({
@@ -48,6 +93,8 @@ router.post("/register", async (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
       roles: user.roles,
+      permissions: user.permissions,
+      employeeRoles: user.employeeRoles,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -65,41 +112,117 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const user = await User.findOne({ email }).exec();
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    // Always run a bcrypt comparison to reduce timing leaks (user enumeration).
+    // This dummy hash is a valid bcrypt hash for a random password.
+    const DUMMY_BCRYPT_HASH =
+      "$2a$10$CwTycUXWue0Thq9StjUM0uJ8b2vNhpX6YsJhBKt3vnDnN/SfXlBx2";
 
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        roles: user.roles,
-      },
-      getJwtSecret(),
-      { expiresIn: "7d" }
+    const ok = await bcrypt.compare(
+      password,
+      user?.passwordHash ?? DUMMY_BCRYPT_HASH
     );
+    if (!user || !ok) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    res.cookie(JWT_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: JWT_MAX_AGE_MS,
-    });
+    issueAuthCookie(res, { id: user.id, email: user.email, roles: user.roles });
 
     return res.json({
       id: user.id,
       name: user.name,
       email: user.email,
       roles: user.roles,
+      permissions: user.permissions,
+      employeeRoles: user.employeeRoles,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("/login error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Invite-only registration for internal employees.
+// The invite token is one-time-use, email-bound, and expires.
+router.post("/register-invite", async (req: Request, res: Response) => {
+  try {
+    const { token, name, email, password } = req.body as {
+      token: string;
+      name: string;
+      email: string;
+      password: string;
+    };
+
+    if (!token || !name || !email || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(String(token))
+      .digest("hex");
+
+    const invite = await Invite.findOne({ tokenHash }).exec();
+    if (!invite) {
+      return res.status(400).json({ message: "Invalid or expired invite" });
+    }
+    if (invite.revokedAt) {
+      return res.status(400).json({ message: "Invalid or expired invite" });
+    }
+    if (invite.usedAt) {
+      return res.status(400).json({ message: "Invite has already been used" });
+    }
+    if (invite.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired invite" });
+    }
+    if (invite.email !== normalizedEmail) {
+      return res
+        .status(403)
+        .json({ message: "Invite is not valid for this email" });
+    }
+
+    const existing = await User.findOne({ email: normalizedEmail }).exec();
+    if (existing) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Only allow employee roles via invite.
+    const canonicalRoles = invite.roles;
+    if (!canonicalRoles.includes("rental_provider")) {
+      return res.status(400).json({ message: "Invite misconfigured" });
+    }
+
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      passwordHash,
+      roles: canonicalRoles,
+      permissions:
+        invite.permissions ?? deriveDefaultPermissions(canonicalRoles),
+      employeeRoles: invite.employeeRoles ?? [],
+    });
+
+    invite.usedAt = new Date();
+    invite.usedByUserId = user.id;
+    await invite.save();
+
+    issueAuthCookie(res, { id: user.id, email: user.email, roles: user.roles });
+
+    return res.status(201).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      permissions: user.permissions,
+      employeeRoles: user.employeeRoles,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("/register-invite error", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -137,6 +260,8 @@ router.get("/me", async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         roles: user.roles,
+        permissions: user.permissions,
+        employeeRoles: user.employeeRoles,
       },
     });
   } catch (err) {

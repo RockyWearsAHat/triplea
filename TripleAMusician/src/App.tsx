@@ -1,15 +1,26 @@
 import React from "react";
-import type { Booking, MusicianProfile, Perk } from "@shared";
+import type { Booking, Gig, MusicianProfile, Perk } from "@shared";
 import {
+  AppFrame,
   AppShell,
   Button,
   colors,
   spacing,
+  TripleAApiClient,
   useAuth,
+  RequireAnyRole,
   RequireRole,
+  ChatInbox,
 } from "@shared";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import "./App.css";
+import ui from "@shared/styles/primitives.module.scss";
 
 const mockProfile: MusicianProfile = {
   id: "m1",
@@ -283,7 +294,7 @@ function MusicianDashboardPage() {
   return (
     <AppShell
       title="Triple A Musician"
-      subtitle="Your control center for gigs, ratings, and musician perks."
+      subtitle="Performer app (like Uber Driver): gigs, ratings, obligations, and perks."
     >
       <div
         style={{ display: "flex", flexDirection: "column", gap: spacing.xl }}
@@ -472,6 +483,261 @@ function PerksPage() {
   );
 }
 
+function BrowseGigsPage() {
+  const api = React.useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+  const navigate = useNavigate();
+  const [gigs, setGigs] = React.useState<Gig[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api
+      .listPublicGigs()
+      .then((data) => {
+        if (cancelled) return;
+        setGigs(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Failed to load gigs.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  return (
+    <AppShell
+      title="Browse gigs"
+      subtitle="Find open gigs posted by customers and apply."
+    >
+      {loading ? (
+        <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading...</p>
+      ) : error ? (
+        <p style={{ color: "#f87171", fontSize: 14 }}>{error}</p>
+      ) : gigs.length === 0 ? (
+        <p style={{ color: "#9ca3af", fontSize: 14 }}>No gigs available yet.</p>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+          }}
+        >
+          {gigs.map((gig) => (
+            <div
+              key={gig.id}
+              style={{
+                padding: spacing.lg,
+                borderRadius: 12,
+                backgroundColor: "#020617",
+                border: "1px solid #1f2937",
+                display: "flex",
+                justifyContent: "space-between",
+                gap: spacing.lg,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ minWidth: 220 }}>
+                <h3 style={{ fontWeight: 600 }}>{gig.title}</h3>
+                <p
+                  style={{
+                    marginTop: spacing.xs,
+                    color: "#9ca3af",
+                    fontSize: 14,
+                  }}
+                >
+                  Budget:{" "}
+                  {typeof gig.budget === "number"
+                    ? `$${gig.budget.toFixed(0)}`
+                    : "—"}{" "}
+                  · Status: {gig.status}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/gigs/${gig.id}`)}
+              >
+                View gig
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}
+
+function GigDetailPage() {
+  const api = React.useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+  const params = useParams();
+  const gigId = params.id ?? "";
+  const navigate = useNavigate();
+
+  const [gig, setGig] = React.useState<Gig | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [message, setMessage] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!gigId) {
+      setError("Missing gig id.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    api
+      .getPublicGig(gigId)
+      .then((data) => {
+        if (cancelled) return;
+        setGig(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Failed to load gig.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, gigId]);
+
+  async function handleApply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!gigId) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await api.applyToGig(gigId, { message: message.trim() || undefined });
+      setSubmitted(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.toLowerCase().includes("already")) {
+        setSubmitted(true);
+      } else {
+        setSubmitError(msg || "Failed to submit application.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <AppShell title="Gig details" subtitle="Review the gig and apply.">
+      <Button variant="ghost" onClick={() => navigate("/gigs")}>
+        Back to gigs
+      </Button>
+
+      {loading ? (
+        <p style={{ color: "#9ca3af", fontSize: 14, marginTop: spacing.md }}>
+          Loading...
+        </p>
+      ) : error ? (
+        <p style={{ color: "#f87171", fontSize: 14, marginTop: spacing.md }}>
+          {error}
+        </p>
+      ) : !gig ? (
+        <p style={{ color: "#9ca3af", fontSize: 14, marginTop: spacing.md }}>
+          Gig not found.
+        </p>
+      ) : (
+        <div style={{ marginTop: spacing.md }}>
+          <Section title={gig.title}>
+            <p style={{ color: "#9ca3af", fontSize: 14 }}>
+              Budget:{" "}
+              {typeof gig.budget === "number"
+                ? `$${gig.budget.toFixed(0)}`
+                : "—"}{" "}
+              · Status: {gig.status}
+            </p>
+            {gig.description ? (
+              <p style={{ marginTop: spacing.sm, fontSize: 14 }}>
+                {gig.description}
+              </p>
+            ) : null}
+          </Section>
+
+          <Section title="Apply">
+            {submitted ? (
+              <p style={{ color: "#9ca3af", fontSize: 14 }}>
+                Application submitted.
+              </p>
+            ) : (
+              <form
+                onSubmit={handleApply}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.md,
+                  maxWidth: 560,
+                }}
+              >
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  <label style={{ fontSize: 13, color: "#9ca3af" }}>
+                    Message to customer (optional)
+                  </label>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={4}
+                    style={{
+                      padding: `${spacing.sm}px ${spacing.md}px`,
+                      borderRadius: 12,
+                      border: "1px solid #374151",
+                      backgroundColor: "#020617",
+                      color: colors.text,
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+
+                {submitError && (
+                  <p style={{ color: "#f87171", fontSize: 13 }}>
+                    {submitError}
+                  </p>
+                )}
+
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Submitting..." : "Apply"}
+                </Button>
+              </form>
+            )}
+          </Section>
+        </div>
+      )}
+    </AppShell>
+  );
+}
+
 function ProfilePage() {
   const { user, logout } = useAuth();
 
@@ -513,100 +779,180 @@ function ProfilePage() {
 }
 
 function NavBar() {
-  const linkStyle: React.CSSProperties = {
-    fontSize: 13,
-    padding: `${spacing.xs}px ${spacing.sm}px`,
-  };
-
-  const activeStyle: React.CSSProperties = {
-    textDecoration: "underline",
-  };
-
+  const { user } = useAuth();
   return (
-    <nav style={{ marginBottom: spacing.md, display: "flex", gap: spacing.sm }}>
-      <NavLink
-        to="/"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Dashboard
-      </NavLink>
-      <NavLink
-        to="/bookings"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Bookings
-      </NavLink>
-      <NavLink
-        to="/perks"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Perks
-      </NavLink>
-      <NavLink
-        to="/login"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Login
-      </NavLink>
-      <NavLink
-        to="/profile"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Account
-      </NavLink>
+    <nav className={ui.nav}>
+      {user?.role.includes("musician") && (
+        <>
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/bookings"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Bookings
+          </NavLink>
+          <NavLink
+            to="/perks"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Perks
+          </NavLink>
+          <NavLink
+            to="/gigs"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Gigs
+          </NavLink>
+        </>
+      )}
+
+      {user && (
+        <NavLink
+          to="/messages"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          Messages
+        </NavLink>
+      )}
+
+      {!user ? (
+        <>
+          <NavLink
+            to="/login"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Login
+          </NavLink>
+          <NavLink
+            to="/register"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Register
+          </NavLink>
+        </>
+      ) : (
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          Account
+        </NavLink>
+      )}
     </nav>
+  );
+}
+
+function MessagesPage() {
+  return (
+    <AppShell
+      title="Messages"
+      subtitle="Central inbox for conversations with customers, venues, and internal support."
+    >
+      <ChatInbox />
+    </AppShell>
   );
 }
 
 function App() {
   return (
-    <div style={{ paddingTop: spacing.sm }}>
-      <NavBar />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          path="/"
-          element={
-            <RequireRole role="musician">
-              <MusicianDashboardPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/bookings"
-          element={
-            <RequireRole role="musician">
-              <BookingsPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/perks"
-          element={
-            <RequireRole role="musician">
-              <PerksPage />
-            </RequireRole>
-          }
-        />
-        <Route path="/profile" element={<ProfilePage />} />
-      </Routes>
-    </div>
+    <AppFrame>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <NavBar />
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/"
+              element={
+                <RequireRole role="musician">
+                  <MusicianDashboardPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/bookings"
+              element={
+                <RequireRole role="musician">
+                  <BookingsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/perks"
+              element={
+                <RequireRole role="musician">
+                  <PerksPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/gigs"
+              element={
+                <RequireRole role="musician">
+                  <BrowseGigsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/gigs/:id"
+              element={
+                <RequireRole role="musician">
+                  <GigDetailPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <RequireAnyRole
+                  roles={["customer", "musician", "rental_provider", "admin"]}
+                >
+                  <MessagesPage />
+                </RequireAnyRole>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <RequireRole role="musician">
+                  <ProfilePage />
+                </RequireRole>
+              }
+            />
+          </Routes>
+        </div>
+      </div>
+    </AppFrame>
   );
 }
 

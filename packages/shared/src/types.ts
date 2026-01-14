@@ -31,6 +31,21 @@ export interface User {
   employeeRoles?: EmployeeRole[];
 }
 
+export interface ChatConversation {
+  id: string;
+  title: string | null;
+  participantIds: string[];
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface MusicianProfile {
   id: string;
   userId: string;
@@ -71,6 +86,8 @@ export interface Instrument {
   category: string;
   dailyRate: number;
   available: boolean;
+  imageCount?: number;
+  imageUrl?: string;
 }
 
 export interface Location {
@@ -78,6 +95,40 @@ export interface Location {
   name: string;
   address: string;
   city: string;
+  imageCount?: number;
+  imageUrl?: string;
+}
+
+export type GigStatus = "open" | "cancelled" | "filled";
+
+export interface Gig {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  time?: string;
+  budget?: number;
+  status: GigStatus;
+  location?: Location | null;
+}
+
+export type GigApplicationStatus = "pending" | "accepted" | "denied";
+
+export interface GigApplicantSummary {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+}
+
+export interface GigApplication {
+  id: string;
+  gigId: string;
+  status: GigApplicationStatus;
+  message?: string | null;
+  createdAt?: string;
+  decidedAt?: string | null;
+  applicant?: GigApplicantSummary;
 }
 
 export interface Perk {

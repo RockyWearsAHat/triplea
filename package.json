@@ -2,6 +2,14 @@
   "name": "triple-a-apps",
   "private": true,
   "version": "0.0.0",
+  "scripts": {
+    "dev": "concurrently -k -n server,music,musician,muse \"npm run dev --prefix server\" \"npm run dev --prefix TripleAMusic\" \"npm run dev --prefix TripleAMusician\" \"npm run dev --prefix TripleAMuse\"",
+    "build": "npm run build --prefix server && npm run build --prefix TripleAMusic && npm run build --prefix TripleAMusician && npm run build --prefix TripleAMuse",
+    "dev:server": "npm run dev --prefix server",
+    "dev:music": "npm run dev --prefix TripleAMusic",
+    "dev:musician": "npm run dev --prefix TripleAMusician",
+    "dev:muse": "npm run dev --prefix TripleAMuse"
+  },
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
@@ -9,6 +17,8 @@
   "devDependencies": {
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.1.2",
+    "sass": "^1.78.0",
     "typescript": "~5.9.3"
   }
 }

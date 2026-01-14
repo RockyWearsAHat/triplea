@@ -1,14 +1,30 @@
-import React, { type CSSProperties, type ReactNode } from "react";
+import React, { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
+  AppFrame,
   AppShell,
   Button,
+  ChatInbox,
   RequireAnyRole,
   RequireRole,
   spacing,
   useAuth,
 } from "@shared";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import "./App.css";
+import ui from "@shared/styles/primitives.module.scss";
+import type { EmployeeRole, Permission, User, UserRole } from "@shared/types";
+import {
+  type EmployeeInviteSummary,
+  TripleAApiClient,
+} from "@shared/api/client";
 
 type TagProps = {
   label: string;
@@ -63,10 +79,40 @@ function Section({ title, children }: SectionProps) {
 }
 
 function HomeDashboardPage() {
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [instruments, setInstruments] = useState<
+    Array<{
+      id: string;
+      name: string;
+      category: string;
+      dailyRate: number;
+      available: boolean;
+      imageUrl?: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    setCatalogError(null);
+    setCatalogBusy(true);
+    api
+      .getMarketplaceCatalog()
+      .then((c) => setInstruments(c.instruments))
+      .catch((e) => setCatalogError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setCatalogBusy(false));
+  }, [api]);
+
   return (
     <AppShell
       title="Triple A Muse"
-      subtitle="Operations hub for gear rental, lessons, and event logistics."
+      subtitle="Services marketplace (like Uber): rentals, lessons, and stage/logistics for musicians and customers."
     >
       <div
         style={{
@@ -75,7 +121,8 @@ function HomeDashboardPage() {
           gap: spacing.lg,
         }}
       >
-        <Section title="Who is this for?">
+        <Section title="Browse instrument rentals">
+          {catalogError ? <p className={ui.error}>{catalogError}</p> : null}
           <div
             style={{
               display: "grid",
@@ -83,84 +130,164 @@ function HomeDashboardPage() {
               gap: spacing.lg,
             }}
           >
-            <div
-              style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
-              }}
-            >
-              <h3 style={{ fontWeight: 600 }}>Musicians</h3>
-              <p
-                style={{
-                  marginTop: spacing.xs,
-                  color: "#9ca3af",
-                  fontSize: 14,
-                }}
-              >
-                Request backline, amps, and stage support for upcoming gigs.
+            {catalogBusy ? (
+              <p style={{ color: "#9ca3af", fontSize: 14 }}>
+                Loading catalog...
               </p>
-              <Button
-                style={{ marginTop: spacing.md }}
-                onClick={() => (window.location.href = "/new-request")}
-              >
-                Request gear
-              </Button>
-            </div>
+            ) : instruments.length === 0 ? (
+              <p style={{ color: "#9ca3af", fontSize: 14 }}>
+                No items available.
+              </p>
+            ) : (
+              instruments.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    padding: spacing.lg,
+                    borderRadius: 12,
+                    backgroundColor: "#020617",
+                    border: "1px solid #1f2937",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  {item.imageUrl ? (
+                    <div
+                      style={{
+                        width: "100%",
+                        borderRadius: 12,
+                        overflow: "hidden",
+                        border: "1px solid #1f2937",
+                        backgroundColor: "#0b1220",
+                      }}
+                    >
+                      <img
+                        src={`http://localhost:4000${item.imageUrl}`}
+                        alt={item.name}
+                        style={{
+                          width: "100%",
+                          height: 140,
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : null}
+                  <p style={{ margin: 0, fontWeight: 600 }}>{item.name}</p>
+                  <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
+                    {item.category} · ${item.dailyRate}/day
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      color: item.available ? "#9ca3af" : "#f87171",
+                      fontSize: 13,
+                    }}
+                  >
+                    {item.available ? "Available" : "Unavailable"}
+                  </p>
 
-            <div
-              style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
-              }}
-            >
-              <h3 style={{ fontWeight: 600 }}>Event organisers</h3>
-              <p
-                style={{
-                  marginTop: spacing.xs,
-                  color: "#9ca3af",
-                  fontSize: 14,
-                }}
-              >
-                Book full packages: PA, lights, transport, and on-site crew.
-              </p>
-              <Button
-                style={{ marginTop: spacing.md }}
-                onClick={() => (window.location.href = "/new-request")}
-              >
-                Plan an event
-              </Button>
-            </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      marginTop: spacing.sm,
+                    }}
+                  >
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        navigate(`/instruments/${encodeURIComponent(item.id)}`)
+                      }
+                    >
+                      View
+                    </Button>
+                    <Button
+                      disabled={!item.available}
+                      onClick={() => {
+                        const target = `/instruments/${encodeURIComponent(
+                          item.id
+                        )}?rent=1`;
+                        if (!user) {
+                          navigate(
+                            `/account?next=${encodeURIComponent(target)}`
+                          );
+                          return;
+                        }
+                        navigate(target);
+                      }}
+                    >
+                      Rent
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Section>
 
-            <div
-              style={{
-                padding: spacing.lg,
-                borderRadius: 12,
-                backgroundColor: "#020617",
-                border: "1px solid #1f2937",
-              }}
-            >
-              <h3 style={{ fontWeight: 600 }}>Owner dashboard</h3>
-              <p
+        <Section title="Browse services">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: spacing.lg,
+            }}
+          >
+            {[
+              {
+                id: "lessons",
+                title: "Lessons",
+                description:
+                  "Book coaching for instrument, voice, and production.",
+                path: "/new-request?type=lessons",
+              },
+              {
+                id: "stage",
+                title: "Stage setup",
+                description:
+                  "On-site crew for load-in, PA, lighting, and logistics.",
+                path: "/new-request?type=stage",
+              },
+              {
+                id: "delivery",
+                title: "Delivery & pickup",
+                description:
+                  "Transport instruments and gear to/from the venue.",
+                path: "/new-request?type=delivery",
+              },
+            ].map((s) => (
+              <div
+                key={s.id}
                 style={{
-                  marginTop: spacing.xs,
-                  color: "#9ca3af",
-                  fontSize: 14,
+                  padding: spacing.lg,
+                  borderRadius: 12,
+                  backgroundColor: "#020617",
+                  border: "1px solid #1f2937",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.sm,
                 }}
               >
-                See all open requests, today's pickups, and logistics tasks.
-              </p>
-              <Button
-                style={{ marginTop: spacing.md }}
-                variant="secondary"
-                onClick={() => (window.location.href = "/requests")}
-              >
-                View requests
-              </Button>
-            </div>
+                <p style={{ margin: 0, fontWeight: 600 }}>{s.title}</p>
+                <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
+                  {s.description}
+                </p>
+                <Button
+                  onClick={() => {
+                    if (!user) {
+                      navigate(`/account?next=${encodeURIComponent(s.path)}`);
+                      return;
+                    }
+                    navigate(s.path);
+                  }}
+                >
+                  {user ? "Request" : "Sign in to request"}
+                </Button>
+              </div>
+            ))}
           </div>
         </Section>
 
@@ -224,6 +351,86 @@ function HomeDashboardPage() {
 }
 
 function AdminDashboardPage() {
+  const navigate = useNavigate();
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+  const { hasPermission } = useAuth();
+  const canManageEmployees = hasPermission("manage_employees");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+
+  const [invites, setInvites] = useState<EmployeeInviteSummary[]>([]);
+  const [invitesBusy, setInvitesBusy] = useState(false);
+  const [invitesError, setInvitesError] = useState<string | null>(null);
+  const [revokeBusyId, setRevokeBusyId] = useState<string | null>(null);
+
+  async function loadInvites() {
+    if (!canManageEmployees) return;
+    setInvitesError(null);
+    setInvitesBusy(true);
+    try {
+      const data = await api.adminListEmployeeInvites();
+      setInvites(data);
+    } catch (e) {
+      setInvitesError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInvitesBusy(false);
+    }
+  }
+
+  async function createEmployeeInvite() {
+    if (!canManageEmployees) {
+      setInviteError("You do not have permission to manage employees.");
+      return;
+    }
+    setInviteError(null);
+    setInviteLink(null);
+    setInviteBusy(true);
+    try {
+      const data = await api.adminCreateEmployeeInvite({
+        email: inviteEmail,
+        expiresInHours: 24,
+        employeeRoles: [],
+      });
+      const link = `${window.location.origin}/invite?token=${encodeURIComponent(
+        data.token
+      )}`;
+      setInviteLink(link);
+      await loadInvites();
+    } catch (e) {
+      setInviteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function revokeInvite(inviteId: string) {
+    if (!canManageEmployees) {
+      setInvitesError("You do not have permission to manage employees.");
+      return;
+    }
+    setInvitesError(null);
+    setRevokeBusyId(inviteId);
+    try {
+      await api.adminRevokeEmployeeInvite(inviteId);
+      await loadInvites();
+    } catch (e) {
+      setInvitesError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRevokeBusyId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!canManageEmployees) return;
+    void loadInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageEmployees]);
+
   return (
     <AppShell
       title="Admin dashboard"
@@ -252,9 +459,270 @@ function AdminDashboardPage() {
               Assign roles like operations, gear tech, and drivers to employees.
               This is where permission-based access will be managed.
             </p>
-            <Button variant="secondary" style={{ alignSelf: "flex-start" }}>
+            <Button
+              variant="secondary"
+              style={{ alignSelf: "flex-start" }}
+              onClick={() => navigate("/admin/users")}
+            >
               Manage employees
             </Button>
+          </div>
+        </Section>
+
+        <Section title="Employee onboarding">
+          <div
+            style={{
+              padding: spacing.lg,
+              borderRadius: 12,
+              backgroundColor: "#020617",
+              border: "1px solid #1f2937",
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.md,
+              maxWidth: 520,
+            }}
+          >
+            <p style={{ color: "#9ca3af", fontSize: 14 }}>
+              Employees can only register via a private, expiring invite link.
+              Admin accounts cannot be self-registered.
+            </p>
+
+            {!canManageEmployees ? (
+              <p className={ui.error} style={{ margin: 0 }}>
+                You do not have permission to invite employees.
+              </p>
+            ) : null}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 13 }}>Employee email</label>
+              <input
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="employee@company.com"
+                style={{
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  borderRadius: 12,
+                  border: "1px solid #374151",
+                  backgroundColor: "#020617",
+                  color: "white",
+                }}
+              />
+            </div>
+
+            {inviteError && (
+              <p className={ui.error} style={{ margin: 0 }}>
+                {inviteError}
+              </p>
+            )}
+
+            <Button
+              onClick={createEmployeeInvite}
+              disabled={
+                inviteBusy || !inviteEmail.trim() || !canManageEmployees
+              }
+            >
+              {inviteBusy ? "Creating invite..." : "Create invite link"}
+            </Button>
+
+            {inviteLink && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
+                  Copy and email this link to the employee:
+                </p>
+                <input
+                  readOnly
+                  value={inviteLink}
+                  style={{
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    borderRadius: 12,
+                    border: "1px solid #374151",
+                    backgroundColor: "#020617",
+                    color: "white",
+                  }}
+                />
+              </div>
+            )}
+
+            <div
+              style={{
+                height: 1,
+                backgroundColor: "#1f2937",
+                width: "100%",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: spacing.md,
+              }}
+            >
+              <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
+                Recent invites
+              </p>
+              <Button
+                variant="secondary"
+                onClick={loadInvites}
+                disabled={invitesBusy || !canManageEmployees}
+              >
+                {invitesBusy ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
+
+            {invitesError && (
+              <p className={ui.error} style={{ margin: 0 }}>
+                {invitesError}
+              </p>
+            )}
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        paddingBottom: 8,
+                      }}
+                    >
+                      Email
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        paddingBottom: 8,
+                      }}
+                    >
+                      Status
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        paddingBottom: 8,
+                      }}
+                    >
+                      Expires
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        paddingBottom: 8,
+                      }}
+                    >
+                      Created
+                    </th>
+                    <th style={{ paddingBottom: 8 }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {invites.length === 0 && !invitesBusy ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        style={{ color: "#9ca3af", fontSize: 13 }}
+                      >
+                        No invites yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    invites.map((inv) => {
+                      const now = Date.now();
+                      const expiresAtMs = Date.parse(inv.expiresAt);
+                      const isExpired = Number.isFinite(expiresAtMs)
+                        ? expiresAtMs < now
+                        : false;
+
+                      const status = inv.revokedAt
+                        ? "Revoked"
+                        : inv.usedAt
+                        ? "Used"
+                        : isExpired
+                        ? "Expired"
+                        : "Active";
+
+                      const canRevoke = !inv.usedAt && !inv.revokedAt;
+
+                      return (
+                        <tr key={inv.id}>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderTop: "1px solid #1f2937",
+                              fontSize: 13,
+                            }}
+                          >
+                            {inv.email}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderTop: "1px solid #1f2937",
+                              fontSize: 13,
+                              color: "#9ca3af",
+                            }}
+                          >
+                            {status}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderTop: "1px solid #1f2937",
+                              fontSize: 13,
+                              color: "#9ca3af",
+                            }}
+                          >
+                            {new Date(inv.expiresAt).toLocaleString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderTop: "1px solid #1f2937",
+                              fontSize: 13,
+                              color: "#9ca3af",
+                            }}
+                          >
+                            {new Date(inv.createdAt).toLocaleString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderTop: "1px solid #1f2937",
+                              textAlign: "right",
+                            }}
+                          >
+                            {canRevoke ? (
+                              <Button
+                                variant="secondary"
+                                onClick={() => revokeInvite(inv.id)}
+                                disabled={revokeBusyId === inv.id}
+                              >
+                                {revokeBusyId === inv.id
+                                  ? "Revoking..."
+                                  : "Revoke"}
+                              </Button>
+                            ) : (
+                              <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                                —
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Section>
 
@@ -298,6 +766,236 @@ function AdminDashboardPage() {
             </div>
           </div>
         </Section>
+      </div>
+    </AppShell>
+  );
+}
+
+function AdminUsersPage() {
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    api
+      .adminListUsers()
+      .then((data) => setUsers(data))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false));
+  }, [api]);
+
+  const allRoles: UserRole[] = [
+    "customer",
+    "musician",
+    "teacher",
+    "rental_provider",
+    "admin",
+  ];
+  const allPermissions: Permission[] = [
+    "view_admin_dashboard",
+    "manage_employees",
+    "view_musician_dashboard",
+    "view_customer_dashboard",
+    "view_employee_dashboard",
+    "manage_gear_requests",
+    "manage_venue_ads",
+  ];
+  const allEmployeeRoles: EmployeeRole[] = [
+    "operations_manager",
+    "gear_tech",
+    "driver",
+    "warehouse",
+  ];
+
+  function toggleInList<T extends string>(
+    list: T[] | undefined,
+    value: T
+  ): T[] {
+    const current = list ?? [];
+    return current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+  }
+
+  async function saveUser(u: User) {
+    setSavingId(u.id);
+    setError(null);
+    try {
+      const updated = await api.adminUpdateUser({
+        id: u.id,
+        roles: u.role,
+        permissions: u.permissions ?? [],
+        employeeRoles: u.employeeRoles ?? [],
+      });
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <AppShell
+      title="User admin"
+      subtitle="Assign roles, permissions, and employee job functions."
+    >
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}
+      >
+        {loading && <p className={ui.help}>Loading users…</p>}
+        {error && <p className={ui.error}>{error}</p>}
+        {!loading && users.length === 0 && (
+          <p className={ui.help}>No users found.</p>
+        )}
+
+        {users.map((u) => (
+          <div key={u.id} className={[ui.card, ui.cardPad].join(" ")}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: spacing.md,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ minWidth: 260 }}>
+                <p style={{ fontWeight: 600 }}>{u.name}</p>
+                <p className={ui.help}>{u.email}</p>
+                <p className={ui.help}>ID: {u.id}</p>
+              </div>
+              <Button
+                variant="secondary"
+                disabled={savingId === u.id}
+                onClick={() => saveUser(u)}
+              >
+                {savingId === u.id ? "Saving…" : "Save"}
+              </Button>
+            </div>
+
+            <div
+              style={{
+                marginTop: spacing.md,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: spacing.lg,
+              }}
+            >
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: 8 }}>Roles</p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {allRoles.map((r) => (
+                    <label
+                      key={r}
+                      style={{ display: "flex", gap: 10, alignItems: "center" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={u.role.includes(r)}
+                        onChange={() =>
+                          setUsers((prev) =>
+                            prev.map((x) =>
+                              x.id === u.id
+                                ? { ...x, role: toggleInList(x.role, r) }
+                                : x
+                            )
+                          )
+                        }
+                      />
+                      <span style={{ fontSize: 13 }}>{r}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: 8 }}>Permissions</p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {allPermissions.map((p) => (
+                    <label
+                      key={p}
+                      style={{ display: "flex", gap: 10, alignItems: "center" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(u.permissions ?? []).includes(p)}
+                        onChange={() =>
+                          setUsers((prev) =>
+                            prev.map((x) =>
+                              x.id === u.id
+                                ? {
+                                    ...x,
+                                    permissions: toggleInList(
+                                      x.permissions ?? [],
+                                      p
+                                    ),
+                                  }
+                                : x
+                            )
+                          )
+                        }
+                      />
+                      <span style={{ fontSize: 13 }}>{p}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: 8 }}>
+                  Employee roles
+                </p>
+                <p className={ui.help} style={{ marginBottom: 8 }}>
+                  Only relevant for internal employees.
+                </p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {allEmployeeRoles.map((er) => (
+                    <label
+                      key={er}
+                      style={{ display: "flex", gap: 10, alignItems: "center" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(u.employeeRoles ?? []).includes(er)}
+                        onChange={() =>
+                          setUsers((prev) =>
+                            prev.map((x) =>
+                              x.id === u.id
+                                ? {
+                                    ...x,
+                                    employeeRoles: toggleInList(
+                                      x.employeeRoles ?? [],
+                                      er
+                                    ),
+                                  }
+                                : x
+                            )
+                          )
+                        }
+                      />
+                      <span style={{ fontSize: 13 }}>{er}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </AppShell>
   );
@@ -361,6 +1059,33 @@ function EmployeeDashboardPage() {
 }
 
 function NewRequestPage() {
+  const { user, hasAnyRole } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const [requestType, setRequestType] = useState<
+    "gear" | "lessons" | "stage" | "delivery"
+  >(
+    (searchParams.get("type") as "gear" | "lessons" | "stage" | "delivery") ||
+      "gear"
+  );
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [city, setCity] = useState("");
+  const [details, setDetails] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const canRequest = hasAnyRole(["customer", "musician"]);
+
+  useEffect(() => {
+    if (!user) {
+      const next = `${location.pathname}${location.search}`;
+      navigate(`/account?next=${encodeURIComponent(next)}`);
+      return;
+    }
+  }, [user, location.pathname, location.search, navigate]);
+
   return (
     <AppShell
       title="New request"
@@ -374,6 +1099,61 @@ function NewRequestPage() {
           maxWidth: 640,
         }}
       >
+        {!canRequest ? (
+          <p className={ui.error} style={{ margin: 0 }}>
+            Requests are available for customer and musician accounts.
+          </p>
+        ) : null}
+
+        {submitted ? (
+          <div
+            style={{
+              padding: spacing.lg,
+              borderRadius: 12,
+              backgroundColor: "#020617",
+              border: "1px solid #1f2937",
+              color: "#9ca3af",
+              fontSize: 14,
+            }}
+          >
+            Request submitted (demo). Next step will be routing to ops/employee
+            queues.
+          </div>
+        ) : null}
+
+        <Section title="Service type">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.sm }}>
+            <Button
+              variant={requestType === "gear" ? "primary" : "secondary"}
+              onClick={() => setRequestType("gear")}
+              disabled={!canRequest}
+            >
+              Gear / backline
+            </Button>
+            <Button
+              variant={requestType === "lessons" ? "primary" : "secondary"}
+              onClick={() => setRequestType("lessons")}
+              disabled={!canRequest}
+            >
+              Lessons
+            </Button>
+            <Button
+              variant={requestType === "stage" ? "primary" : "secondary"}
+              onClick={() => setRequestType("stage")}
+              disabled={!canRequest}
+            >
+              Stage setup
+            </Button>
+            <Button
+              variant={requestType === "delivery" ? "primary" : "secondary"}
+              onClick={() => setRequestType("delivery")}
+              disabled={!canRequest}
+            >
+              Delivery & pickup
+            </Button>
+          </div>
+        </Section>
+
         <Section title="Who are you?">
           <div
             style={{
@@ -397,19 +1177,23 @@ function NewRequestPage() {
           >
             <input
               placeholder="Event name or venue"
+              value={eventName}
+              onChange={(e) => setEventName(e.target.value)}
               style={{
                 padding: `${spacing.sm}px ${spacing.md}px`,
-                borderRadius: 999,
+                borderRadius: 12,
                 border: "1px solid #374151",
                 backgroundColor: "#020617",
                 color: "white",
               }}
             />
             <input
-              placeholder="Date"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
               style={{
                 padding: `${spacing.sm}px ${spacing.md}px`,
-                borderRadius: 999,
+                borderRadius: 12,
                 border: "1px solid #374151",
                 backgroundColor: "#020617",
                 color: "white",
@@ -417,9 +1201,11 @@ function NewRequestPage() {
             />
             <input
               placeholder="City"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
               style={{
                 padding: `${spacing.sm}px ${spacing.md}px`,
-                borderRadius: 999,
+                borderRadius: 12,
                 border: "1px solid #374151",
                 backgroundColor: "#020617",
                 color: "white",
@@ -431,10 +1217,12 @@ function NewRequestPage() {
         <Section title="What do you need?">
           <textarea
             placeholder="Backline, PA, lights, transport, on-site crew… give as much detail as you can."
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
             style={{
               minHeight: 120,
               padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 16,
+              borderRadius: 12,
               border: "1px solid #374151",
               backgroundColor: "#020617",
               color: "white",
@@ -451,8 +1239,28 @@ function NewRequestPage() {
             marginTop: spacing.md,
           }}
         >
-          <Button>Submit request</Button>
-          <Button variant="ghost">Save as draft</Button>
+          <Button
+            disabled={!canRequest}
+            onClick={() => {
+              if (!canRequest) return;
+              setSubmitted(true);
+            }}
+          >
+            Submit request
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setEventName("");
+              setEventDate("");
+              setCity("");
+              setDetails("");
+              setSubmitted(false);
+              setRequestType((searchParams.get("type") as any) || "gear");
+            }}
+          >
+            Clear
+          </Button>
         </div>
       </div>
     </AppShell>
@@ -560,6 +1368,7 @@ function RequestsPage() {
 function AccountPage() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -571,6 +1380,14 @@ function AccountPage() {
     setSubmitting(true);
     try {
       await login(email, password);
+
+      const next = searchParams.get("next");
+      if (next && next.startsWith("/")) {
+        navigate(next);
+        return;
+      }
+
+      navigate("/");
     } catch (err) {
       setError("Login failed. Please check your details and try again.");
     } finally {
@@ -668,15 +1485,407 @@ function AccountPage() {
   );
 }
 
+function InstrumentDetailsPage() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
+  const { user, hasAnyRole } = useAuth();
+  const navigate = useNavigate();
+
+  const canRent = hasAnyRole(["customer", "musician"]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [item, setItem] = useState<{
+    id: string;
+    name: string;
+    category: string;
+    dailyRate: number;
+    available: boolean;
+  } | null>(null);
+
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [fulfilment, setFulfilment] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setError(null);
+    setLoading(true);
+    if (!id) {
+      setItem(null);
+      setLoading(false);
+      return;
+    }
+
+    api
+      .getPublicInstrument(id)
+      .then((found) => setItem(found))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false));
+  }, [api, id]);
+
+  const wantsRent = searchParams.get("rent") === "1";
+
+  useEffect(() => {
+    if (!wantsRent) return;
+    if (user) return;
+
+    const next = `${location.pathname}${location.search}`;
+    navigate(`/account?next=${encodeURIComponent(next)}`);
+  }, [wantsRent, user, location.pathname, location.search, navigate]);
+
+  const startMs = startDate ? Date.parse(startDate) : NaN;
+  const endMs = endDate ? Date.parse(endDate) : NaN;
+  const days =
+    Number.isFinite(startMs) && Number.isFinite(endMs)
+      ? Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24)))
+      : null;
+
+  if (loading) {
+    return (
+      <AppShell title="Instrument" subtitle="Loading...">
+        <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading details...</p>
+      </AppShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppShell title="Instrument" subtitle="Error">
+        <p className={ui.error}>{error}</p>
+        <Button variant="secondary" onClick={() => navigate("/")}>
+          Back
+        </Button>
+      </AppShell>
+    );
+  }
+
+  if (!item) {
+    return (
+      <AppShell title="Instrument" subtitle="Not found">
+        <p style={{ color: "#9ca3af", fontSize: 14 }}>Item not found.</p>
+        <Button variant="secondary" onClick={() => navigate("/")}>
+          Back to browse
+        </Button>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell
+      title={item.name}
+      subtitle={`${item.category} · $${item.dailyRate}/day`}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.lg,
+          maxWidth: 720,
+        }}
+      >
+        <div
+          style={{
+            padding: spacing.lg,
+            borderRadius: 12,
+            backgroundColor: "#020617",
+            border: "1px solid #1f2937",
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.sm,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: item.available ? "#9ca3af" : "#f87171",
+              fontSize: 13,
+            }}
+          >
+            {item.available ? "Available" : "Unavailable"}
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.sm,
+              marginTop: spacing.sm,
+              flexWrap: "wrap",
+            }}
+          >
+            <Button variant="secondary" onClick={() => navigate("/")}>
+              Back
+            </Button>
+            <Button
+              disabled={!item.available}
+              onClick={() => {
+                const target = `/instruments/${encodeURIComponent(
+                  item.id
+                )}?rent=1`;
+                if (!user) {
+                  navigate(`/account?next=${encodeURIComponent(target)}`);
+                  return;
+                }
+                navigate(target);
+              }}
+            >
+              {user ? "Start rental" : "Sign in to rent"}
+            </Button>
+          </div>
+        </div>
+
+        {wantsRent ? (
+          <div
+            style={{
+              padding: spacing.lg,
+              borderRadius: 12,
+              backgroundColor: "#020617",
+              border: "1px solid #1f2937",
+            }}
+          >
+            {!user ? (
+              <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
+                Sign in to request a rental.
+              </p>
+            ) : !canRent ? (
+              <p style={{ margin: 0, color: "#9ca3af", fontSize: 14 }}>
+                Rentals are available for customer and musician accounts.
+              </p>
+            ) : (
+              <>
+                <p style={{ margin: 0, fontWeight: 600 }}>Rental request</p>
+                <p
+                  style={{
+                    marginTop: spacing.xs,
+                    color: "#9ca3af",
+                    fontSize: 14,
+                  }}
+                >
+                  Select dates and fulfilment. Submitting will create a demo
+                  request (no backend yet).
+                </p>
+
+                {submitError ? (
+                  <p className={ui.error} style={{ margin: 0 }}>
+                    {submitError}
+                  </p>
+                ) : null}
+
+                {submitted ? (
+                  <div
+                    style={{
+                      marginTop: spacing.md,
+                      padding: spacing.md,
+                      borderRadius: 12,
+                      border: "1px solid #1f2937",
+                      color: "#9ca3af",
+                      fontSize: 14,
+                    }}
+                  >
+                    Request submitted (demo). You can now continue browsing.
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: spacing.md,
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: spacing.md,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <label style={{ fontSize: 13 }}>Start date</label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        style={{
+                          padding: `${spacing.sm}px ${spacing.md}px`,
+                          borderRadius: 12,
+                          border: "1px solid #374151",
+                          backgroundColor: "#020617",
+                          color: "white",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <label style={{ fontSize: 13 }}>End date</label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        style={{
+                          padding: `${spacing.sm}px ${spacing.md}px`,
+                          borderRadius: 12,
+                          border: "1px solid #374151",
+                          backgroundColor: "#020617",
+                          color: "white",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <label style={{ fontSize: 13 }}>Fulfilment</label>
+                      <select
+                        value={fulfilment}
+                        onChange={(e) =>
+                          setFulfilment(e.target.value as "pickup" | "delivery")
+                        }
+                        style={{
+                          padding: `${spacing.sm}px ${spacing.md}px`,
+                          borderRadius: 12,
+                          border: "1px solid #374151",
+                          backgroundColor: "#020617",
+                          color: "white",
+                        }}
+                      >
+                        <option value="pickup">Pickup</option>
+                        <option value="delivery">Delivery</option>
+                      </select>
+                    </div>
+                    {fulfilment === "delivery" ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
+                        <label style={{ fontSize: 13 }}>Delivery address</label>
+                        <input
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          placeholder="Street, city"
+                          style={{
+                            padding: `${spacing.sm}px ${spacing.md}px`,
+                            borderRadius: 12,
+                            border: "1px solid #374151",
+                            backgroundColor: "#020617",
+                            color: "white",
+                          }}
+                        />
+                      </div>
+                    ) : null}
+
+                    <div
+                      style={{
+                        gridColumn: "1 / -1",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <label style={{ fontSize: 13 }}>Notes (optional)</label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Pickup time, special handling, venue constraints..."
+                        style={{
+                          minHeight: 90,
+                          padding: `${spacing.sm}px ${spacing.md}px`,
+                          borderRadius: 12,
+                          border: "1px solid #374151",
+                          backgroundColor: "#020617",
+                          color: "white",
+                          resize: "vertical",
+                        }}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        gridColumn: "1 / -1",
+                        display: "flex",
+                        gap: spacing.sm,
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Button
+                        onClick={() => {
+                          setSubmitError(null);
+                          if (!startDate || !endDate) {
+                            setSubmitError(
+                              "Please select a start and end date."
+                            );
+                            return;
+                          }
+                          if (
+                            !Number.isFinite(startMs) ||
+                            !Number.isFinite(endMs) ||
+                            endMs < startMs
+                          ) {
+                            setSubmitError(
+                              "End date must be on or after start date."
+                            );
+                            return;
+                          }
+                          if (
+                            fulfilment === "delivery" &&
+                            !deliveryAddress.trim()
+                          ) {
+                            setSubmitError("Please enter a delivery address.");
+                            return;
+                          }
+                          setSubmitted(true);
+                        }}
+                      >
+                        Submit rental request
+                      </Button>
+                      <span style={{ color: "#9ca3af", fontSize: 13 }}>
+                        {days
+                          ? `Estimated total: $${(
+                              days * item.dailyRate
+                            ).toFixed(0)} (${days} day${days === 1 ? "" : "s"})`
+                          : "Select dates to see estimate"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </AppShell>
+  );
+}
+
 function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [accountType, setAccountType] = React.useState<
-    "admin" | "rental_provider" | "musician" | "customer"
-  >("customer");
+  const [accountType, setAccountType] = React.useState<"musician" | "customer">(
+    "customer"
+  );
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -718,17 +1927,11 @@ function RegisterPage() {
           <select
             value={accountType}
             onChange={(e) =>
-              setAccountType(
-                e.target.value as
-                  | "admin"
-                  | "rental_provider"
-                  | "musician"
-                  | "customer"
-              )
+              setAccountType(e.target.value as "musician" | "customer")
             }
             style={{
               padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
+              borderRadius: 12,
               border: "1px solid #374151",
               backgroundColor: "#020617",
               color: "white",
@@ -736,9 +1939,10 @@ function RegisterPage() {
           >
             <option value="customer">Customer / organiser</option>
             <option value="musician">Musician</option>
-            <option value="rental_provider">Employee (rental provider)</option>
-            <option value="admin">Owner (admin)</option>
           </select>
+          <p className={ui.help} style={{ margin: "6px 0 0 0" }}>
+            Employees must use an invite link. Admins cannot self-register.
+          </p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -749,7 +1953,7 @@ function RegisterPage() {
             onChange={(e) => setName(e.target.value)}
             style={{
               padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
+              borderRadius: 12,
               border: "1px solid #374151",
               backgroundColor: "#020617",
               color: "white",
@@ -766,7 +1970,7 @@ function RegisterPage() {
             onChange={(e) => setEmail(e.target.value)}
             style={{
               padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
+              borderRadius: 12,
               border: "1px solid #374151",
               backgroundColor: "#020617",
               color: "white",
@@ -783,7 +1987,7 @@ function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             style={{
               padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
+              borderRadius: 12,
               border: "1px solid #374151",
               backgroundColor: "#020617",
               color: "white",
@@ -808,41 +2012,150 @@ function RegisterPage() {
   );
 }
 
-function NavBar() {
-  const { user } = useAuth();
-  const linkStyle: CSSProperties = {
-    fontSize: 13,
-    padding: `${spacing.xs}px ${spacing.sm}px`,
-  };
+function InviteOnboardingPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    []
+  );
 
-  const activeStyle: CSSProperties = {
-    textDecoration: "underline",
-  };
+  const [token, setToken] = useState(searchParams.get("token") ?? "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.registerWithInvite({ token, name, email, password });
+      navigate("/account");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <nav
-      style={{
-        marginBottom: spacing.md,
-        display: "flex",
-        gap: spacing.sm,
-      }}
+    <AppShell
+      title="Employee onboarding"
+      subtitle="Use your private invite link to create an employee account."
     >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          maxWidth: 420,
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Invite token</label>
+          <input
+            required
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 12,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Name</label>
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 12,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Email (must match invite)</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 12,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Password</label>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              borderRadius: 12,
+              border: "1px solid #374151",
+              backgroundColor: "#020617",
+              color: "white",
+            }}
+          />
+        </div>
+
+        {error && <p className={ui.error}>{error}</p>}
+
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Creating..." : "Create employee account"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/account")}
+        >
+          Back to account
+        </Button>
+      </form>
+    </AppShell>
+  );
+}
+
+function NavBar() {
+  const { user } = useAuth();
+  return (
+    <nav className={ui.nav}>
       <NavLink
         to="/"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
+        className={({ isActive }) =>
+          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+        }
       >
-        Home
+        Browse
       </NavLink>
       {user?.role.includes("admin") && (
         <NavLink
           to="/admin"
-          style={({ isActive }) => ({
-            ...linkStyle,
-            ...(isActive ? activeStyle : {}),
-          })}
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
         >
           Admin
         </NavLink>
@@ -850,38 +2163,49 @@ function NavBar() {
       {user?.role.includes("rental_provider") && (
         <NavLink
           to="/employee"
-          style={({ isActive }) => ({
-            ...linkStyle,
-            ...(isActive ? activeStyle : {}),
-          })}
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
         >
           Employee
         </NavLink>
       )}
-      <NavLink
-        to="/new-request"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        New request
-      </NavLink>
-      <NavLink
-        to="/requests"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
-      >
-        Requests
-      </NavLink>
+      {user && (
+        <NavLink
+          to="/messages"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          Messages
+        </NavLink>
+      )}
+
+      {user?.role.includes("customer") && (
+        <>
+          <NavLink
+            to="/new-request"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            New request
+          </NavLink>
+          <NavLink
+            to="/requests"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Requests
+          </NavLink>
+        </>
+      )}
       <NavLink
         to="/account"
-        style={({ isActive }) => ({
-          ...linkStyle,
-          ...(isActive ? activeStyle : {}),
-        })}
+        className={({ isActive }) =>
+          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+        }
       >
         Account
       </NavLink>
@@ -889,34 +2213,80 @@ function NavBar() {
   );
 }
 
+function MessagesPage() {
+  return (
+    <AppShell
+      title="Messages"
+      subtitle="Inbox for client support and internal coordination."
+    >
+      <ChatInbox />
+    </AppShell>
+  );
+}
+
 function App() {
   return (
-    <div style={{ paddingTop: spacing.sm }}>
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<HomeDashboardPage />} />
-        <Route path="/new-request" element={<NewRequestPage />} />
-        <Route path="/requests" element={<RequestsPage />} />
-        <Route
-          path="/admin"
-          element={
-            <RequireRole role="admin">
-              <AdminDashboardPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/employee"
-          element={
-            <RequireAnyRole roles={["rental_provider"]}>
-              <EmployeeDashboardPage />
-            </RequireAnyRole>
-          }
-        />
-        <Route path="/account" element={<AccountPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Routes>
-    </div>
+    <AppFrame>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <NavBar />
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <Routes>
+            <Route path="/" element={<HomeDashboardPage />} />
+            <Route
+              path="/instruments/:id"
+              element={<InstrumentDetailsPage />}
+            />
+            <Route path="/new-request" element={<NewRequestPage />} />
+            <Route path="/requests" element={<RequestsPage />} />
+            <Route
+              path="/messages"
+              element={
+                <RequireAnyRole
+                  roles={["customer", "musician", "rental_provider", "admin"]}
+                >
+                  <MessagesPage />
+                </RequireAnyRole>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <RequireRole role="admin">
+                  <AdminDashboardPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <RequireRole role="admin">
+                  <AdminUsersPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/employee"
+              element={
+                <RequireAnyRole roles={["rental_provider"]}>
+                  <EmployeeDashboardPage />
+                </RequireAnyRole>
+              }
+            />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/invite" element={<InviteOnboardingPage />} />
+          </Routes>
+        </div>
+      </div>
+    </AppFrame>
   );
 }
 

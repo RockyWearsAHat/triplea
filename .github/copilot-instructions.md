@@ -4,9 +4,9 @@ This project contains a suite of three related apps built with Vite and TypeScri
 
 ## Overview
 
-- **Triple A Musician** – "Uber Driver" style app for performers.
-- **Triple A Music** – "Uber Eats" style app for customers booking music and venues.
-- **Triple A Muse** – "Uber"-style marketplace for instruments, lessons, and stage services.
+- **Triple A Musician** – like the “Uber Driver” app for performers.
+- **Triple A Music** – like “Uber Eats” for customers/organizers booking musicians and venues.
+- **Triple A Muse** – like “Uber” as a services marketplace used by both musicians and customers (rentals, lessons, stage/logistics services).
 
 The repository is organized into three sub-projects:
 
@@ -90,6 +90,15 @@ Core concepts:
 
 ## Cross-App Considerations
 
+- **Overarching Product Split (Non-Negotiable)**
+
+  - Each app has a distinct “job to be done”:
+    - Musician = performer work app (ratings, gigs, obligations, perks).
+    - Music = customer/organizer booking app (discover → request → confirm → manage event).
+    - Muse = shared marketplace/services app (both performers and customers consume rentals/lessons/stage services).
+  - When implementing pages, copy, nav, and access controls, do not blur these responsibilities across apps.
+  - Admin/employee operations support the whole ecosystem, but should not change the above product split.
+
 - **Shared Design System**
 
   - Common UI components (buttons, forms, navigation) and theme across all three apps.
@@ -111,6 +120,8 @@ Core concepts:
   - Create, edit, and deactivate employee and musician accounts.
   - Moderate profiles, listings, reviews, and reported content.
   - Create and assign subcontractor tasks (e.g., delivering music supplies, transporting instruments, on-site support) and track their status.
+
+  - **Employee onboarding rule:** employees must never be able to invite other employees (invite creation/revocation is admin-only behavior).
 
 - **Platform Strategy**
   - Design all UIs mobile-first, then enhance for larger screens.

@@ -1,15 +1,16 @@
 // Simple shared design tokens
 
 export const colors = {
-  primary: "#ff6b35",
-  primaryDark: "#c64918",
-  background: "#050816",
-  surface: "#111827",
-  surfaceAlt: "#020617",
-  text: "#f9fafb",
-  textMuted: "#9ca3af",
-  accent: "#22c55e",
-  danger: "#ef4444",
+  // Palette from copilot-instructions.md
+  primary: "#E59D0D", // Gold accent (primary actions)
+  primaryDark: "#1C276E", // Dark blue accent (borders / secondary)
+  background: "#000000", // Dark mode background
+  surface: "rgba(255,255,255,0.06)",
+  surfaceAlt: "rgba(255,255,255,0.04)",
+  text: "#FFFFFF",
+  textMuted: "#ADB8E0", // Light blue accent
+  accent: "#825ECA", // Light purple accent
+  danger: "#4E238B", // Dark purple accent (used for error emphasis)
 };
 
 export const spacing = {

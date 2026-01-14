@@ -1,0 +1,86 @@
+/* Global look & feel shared across all Triple A apps.
+   "Tux" vibe: dark, clean, high-contrast, minimal borders.
+   Palette is defined in copilot-instructions.md.
+*/
+
+:root {
+  /* Brand palette */
+  --taa-blue-900: #1c276e;
+  --taa-blue-200: #adb8e0;
+  --taa-gold-500: #e59d0d;
+  --taa-purple-400: #825eca;
+  --taa-purple-900: #4e238b;
+  --taa-gray-600: #4b4e63;
+  --taa-white: #ffffff;
+  --taa-black: #000000;
+
+  /* Theme tokens (default: dark) */
+  --bg: var(--taa-black);
+  --text: var(--taa-white);
+  --text-muted: var(--taa-blue-200);
+
+  /* Surfaces are derived from black + white alpha for a “tux” look */
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.09);
+  --border: color-mix(in srgb, var(--taa-gray-600) 65%, transparent);
+
+  --primary: var(--taa-gold-500);
+  --primary-contrast: var(--taa-black);
+
+  --focus: color-mix(in srgb, var(--taa-gold-500) 70%, var(--taa-blue-200));
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  --max-width: 1240px;
+  --page-pad: clamp(14px, 2vw, 24px);
+
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    sans-serif;
+}
+
+/* Basic reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  min-height: 100dvh;
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--taa-gold-500) 35%, transparent);
+}

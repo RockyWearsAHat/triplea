@@ -4,6 +4,13 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import authRoutes from "./routes/auth";
+import adminRoutes from "./routes/admin";
+import chatRoutes from "./routes/chat";
+import ownerRoutes from "./routes/owner";
+import publicRoutes from "./routes/public";
+import gigsRoutes from "./routes/gigs";
+import { attachUser } from "./middleware/auth";
+import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 
 const app = express();
 
@@ -19,8 +26,14 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+app.use(attachUser);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/owner", ownerRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api/gigs", gigsRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const MONGO_URI = process.env.MONGO_URI ?? "";
@@ -36,6 +49,8 @@ async function start() {
     await mongoose.connect(MONGO_URI);
     // eslint-disable-next-line no-console
     console.log("Connected to MongoDB");
+
+    await seedDemoDataIfEnabled();
 
     app.listen(PORT, () => {
       // eslint-disable-next-line no-console
