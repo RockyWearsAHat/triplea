@@ -71,26 +71,6 @@ const perks: Perk[] = [
   },
 ];
 
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        padding: `${spacing.sm}px ${spacing.md}px`,
-        borderRadius: 999,
-        backgroundColor: "var(--surface)",
-        border: "1px solid var(--border)",
-        display: "inline-flex",
-        flexDirection: "column",
-        gap: 2,
-        minWidth: 120,
-      }}
-    >
-      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</span>
-      <span style={{ fontSize: 16, fontWeight: 600 }}>{value}</span>
-    </div>
-  );
-}
-
 function Section({
   title,
   children,
@@ -172,6 +152,65 @@ function LoginPage() {
           Create a musician account
         </Button>
       </form>
+    </AppShell>
+  );
+}
+
+function MusicianLandingPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <AppShell
+      title="Welcome"
+      subtitle="Your performer home base: requests, schedule, and support."
+    >
+      <section className={ui.hero}>
+        <div>
+          <p className={ui.heroKicker}>Triple A Musician</p>
+          <h2 className={ui.heroTitle}>You’re in the family.</h2>
+          <p className={ui.heroLead}>
+            One clean dashboard for your requests, bookings, and perks — with a
+            real team behind it.
+          </p>
+
+          <div className={ui.heroActions}>
+            {user?.role.includes("musician") ? (
+              <Button onClick={() => navigate("/dashboard")}>
+                Open my dashboard
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => navigate("/register")}>
+                  Join as a musician
+                </Button>
+                <Button variant="secondary" onClick={() => navigate("/login")}>
+                  Sign in
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className={ui.featureGrid}>
+          <div className={ui.featureCard}>
+            <p className={ui.featureTitle}>Requests</p>
+            <p className={ui.featureBody}>
+              Clear offers, quick decisions, no chaos.
+            </p>
+          </div>
+          <div className={ui.featureCard}>
+            <p className={ui.featureTitle}>Schedule</p>
+            <p className={ui.featureBody}>Today, this week, and what’s next.</p>
+          </div>
+          <div className={ui.featureCard}>
+            <p className={ui.featureTitle}>Perks</p>
+            <p className={ui.featureBody}>
+              Build reputation and unlock real rewards.
+            </p>
+          </div>
+        </div>
+      </section>
     </AppShell>
   );
 }
@@ -340,26 +379,27 @@ function MusicianDashboardPage() {
   return (
     <AppShell
       title="Dashboard"
-      subtitle="Today’s gigs, requests, and perks in one place."
+      subtitle="Your week at a glance — stay booked and supported."
     >
       <div
         ref={contentRef}
-        style={{ display: "flex", flexDirection: "column", gap: spacing.xl }}
+        className={ui.stack}
+        style={{ "--stack-gap": `${spacing.xl}px` } as React.CSSProperties}
       >
         <section className={ui.hero} data-reveal>
           <div>
-            <p className={ui.heroKicker}>Performer work app</p>
-            <h2 className={ui.heroTitle}>Run your gigs like a pro.</h2>
+            <p className={ui.heroKicker}>Triple A roster</p>
+            <h2 className={ui.heroTitle}>Welcome back.</h2>
             <p className={ui.heroLead}>
-              Track bookings and obligations, apply to new gigs, and build your
-              rating and perks — all with the same account across Triple A.
+              Keep your availability clean, respond to requests, and stay ready.
+              We’ll keep the details organized.
             </p>
             <div className={ui.heroActions}>
               <Button
                 variant="secondary"
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               >
-                View dashboard
+                Review today
               </Button>
               <Button onClick={() => navigate("/gigs")}>Browse gigs</Button>
             </div>
@@ -367,110 +407,196 @@ function MusicianDashboardPage() {
 
           <div className={ui.featureGrid}>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Bookings & obligations</p>
+              <p className={ui.featureTitle}>Bookings</p>
               <p className={ui.featureBody}>
-                See what’s next, confirm arrival, and keep details handy.
+                What’s next, where to be, and what to expect.
               </p>
             </div>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Gigs marketplace</p>
+              <p className={ui.featureTitle}>Open gigs</p>
               <p className={ui.featureBody}>
-                Browse open gigs and apply with a short message.
+                Apply in a minute with a short note.
               </p>
             </div>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Perks & reputation</p>
+              <p className={ui.featureTitle}>Reputation</p>
               <p className={ui.featureBody}>
-                Improve your rating over time and unlock better perks.
+                Keep it strong to unlock better requests and perks.
               </p>
             </div>
           </div>
         </section>
 
-        <Section title="Profile & rating">
-          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.lg }}>
-            <div style={{ flex: "1 1 220px" }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600 }}>
-                {user?.name ?? "Your profile"}
-              </h3>
-              <p className={ui.help} style={{ marginTop: spacing.sm }}>
-                {mockProfile.bio}
+        <Section title="Today">
+          <div
+            className={[ui.card, ui.cardPad, ui.rowBetween].join(" ")}
+            data-reveal
+          >
+            <div
+              className={ui.stack}
+              style={{ "--stack-gap": "6px" } as React.CSSProperties}
+            >
+              <p className={ui.cardTitle}>At-a-glance status</p>
+              <p className={ui.cardText}>
+                You have <strong>{upcomingBookings.length}</strong> upcoming
+                booking
+                {upcomingBookings.length === 1 ? "" : "s"} and{" "}
+                <strong>{requests.length}</strong> request
+                {requests.length === 1 ? "" : "s"}.
               </p>
-              <p style={{ marginTop: spacing.sm, fontSize: 14 }}>
-                Instruments: {mockProfile.instruments.join(", ")}
-                <br />
-                Genres: {mockProfile.genres.join(", ")}
-              </p>
-              <Button style={{ marginTop: spacing.md }}>Edit profile</Button>
             </div>
             <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.sm,
-                justifyContent: "center",
-              }}
+              className={ui.row}
+              style={{ "--row-gap": "8px" } as React.CSSProperties}
             >
-              <StatPill
-                label="Average rating"
-                value={`${mockProfile.averageRating.toFixed(1)} ★`}
-              />
-              <StatPill
-                label="Reviews"
-                value={`${mockProfile.reviewCount.toString()} total`}
-              />
+              <span className={ui.chip}>This week</span>
+              <Button variant="secondary" onClick={() => navigate("/bookings")}>
+                Open bookings
+              </Button>
             </div>
           </div>
         </Section>
 
+        <Section title="Profile & rating">
+          <div className={[ui.grid, ui.gridCards].join(" ")}>
+            <div
+              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+              style={{ "--stack-gap": "10px" } as React.CSSProperties}
+            >
+              <div>
+                <p className={ui.cardTitle}>{user?.name ?? "Your profile"}</p>
+                <p className={ui.cardText} style={{ marginTop: 6 }}>
+                  {mockProfile.bio}
+                </p>
+              </div>
+
+              <div className={ui.chipBar}>
+                {mockProfile.instruments.map((i) => (
+                  <span key={i} className={ui.chip}>
+                    {i}
+                  </span>
+                ))}
+                {mockProfile.genres.map((g) => (
+                  <span key={g} className={ui.chip}>
+                    {g}
+                  </span>
+                ))}
+              </div>
+
+              <Button variant="secondary">Edit profile</Button>
+            </div>
+
+            <div
+              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+              style={{ "--stack-gap": "12px" } as React.CSSProperties}
+            >
+              <div className={ui.rowBetween}>
+                <div>
+                  <p className={ui.cardTitle}>Rating</p>
+                  <p className={ui.cardText}>Performance reputation</p>
+                </div>
+                <span className={ui.chip}>
+                  {mockProfile.averageRating.toFixed(1)}★
+                </span>
+              </div>
+              <div className={ui.rowBetween}>
+                <p className={ui.help} style={{ fontSize: 13 }}>
+                  Reviews
+                </p>
+                <p className={ui.help} style={{ fontSize: 13 }}>
+                  {mockProfile.reviewCount} total
+                </p>
+              </div>
+              <p className={ui.help} style={{ fontSize: 13 }}>
+                Keep your rating high to unlock perks and better requests.
+              </p>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Requests inbox">
+          {requestsLoading ? (
+            <p className={ui.help}>Loading…</p>
+          ) : requestsError ? (
+            <p className={ui.error}>{requestsError}</p>
+          ) : requests.length === 0 ? (
+            <div className={ui.empty}>
+              No direct requests yet. Keep your profile tight and apply to a few
+              gigs — your first inbound offer usually follows.
+            </div>
+          ) : (
+            <div className={[ui.grid, ui.gridCards].join(" ")}>
+              {requests.slice(0, 6).map((r) => (
+                <div
+                  key={r.id}
+                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                  style={{ "--stack-gap": "10px" } as React.CSSProperties}
+                >
+                  <div className={ui.rowBetween}>
+                    <p className={ui.cardTitle}>Offer · ${r.priceOffered}</p>
+                    <span className={ui.chip}>{r.status}</span>
+                  </div>
+                  <p className={ui.cardText}>Attached gig: {r.gigId}</p>
+                  <div
+                    className={ui.row}
+                    style={{ "--row-gap": "8px" } as React.CSSProperties}
+                  >
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate("/messages")}
+                    >
+                      Message
+                    </Button>
+                    <Button onClick={() => navigate("/bookings")}>
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
         <Section title="Bookings & obligations">
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
+            className={ui.stack}
+            style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
           >
             {upcomingBookings.map((b) => (
               <div
                 key={b.id}
                 data-reveal
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: spacing.lg,
-                  flexWrap: "wrap",
-                }}
+                className={[ui.card, ui.cardPad, ui.rowBetween].join(" ")}
               >
                 <div>
-                  <h3 style={{ fontWeight: 600 }}>
-                    Wedding reception · Downtown Loft
-                  </h3>
-                  <p
-                    style={{
-                      marginTop: spacing.xs,
-                      color: "#9ca3af",
-                      fontSize: 14,
-                    }}
-                  >
-                    Sat · 19:00–23:00 · Smart casual · 2x 60min sets
+                  <p className={ui.cardTitle}>Upcoming booking</p>
+                  <p className={ui.cardText}>
+                    Payout: ${b.payout.toFixed(0)} · Status: {b.status}
                   </p>
-                  <p style={{ marginTop: spacing.xs, fontSize: 14 }}>
-                    Payout: ${b.payout.toFixed(0)}
+                  <p className={ui.help} style={{ marginTop: 6, fontSize: 13 }}>
+                    Details and schedule fields can be wired to real booking
+                    data next.
                   </p>
                 </div>
                 <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                    minWidth: 180,
-                  }}
+                  className={ui.stack}
+                  style={
+                    {
+                      "--stack-gap": `${spacing.sm}px`,
+                      minWidth: 200,
+                    } as React.CSSProperties
+                  }
                 >
                   <Button variant="secondary">View details</Button>
                   {b.status === "requested" ? (
-                    <div style={{ display: "flex", gap: spacing.sm }}>
+                    <div
+                      className={ui.row}
+                      style={
+                        {
+                          "--row-gap": `${spacing.sm}px`,
+                        } as React.CSSProperties
+                      }
+                    >
                       <Button fullWidth>Accept</Button>
                       <Button variant="ghost" fullWidth>
                         Decline
@@ -487,38 +613,24 @@ function MusicianDashboardPage() {
 
         <Section title="Perks & rewards">
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
+            className={ui.stack}
+            style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
           >
             {perks.map((perk) => (
               <div
                 key={perk.id}
                 data-reveal
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{
-                  border: "1px dashed var(--border-strong)",
-                }}
+                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                style={
+                  {
+                    "--stack-gap": "8px",
+                    border: "1px dashed var(--border-strong)",
+                  } as React.CSSProperties
+                }
               >
-                <h3 style={{ fontWeight: 600 }}>{perk.name}</h3>
-                <p
-                  style={{
-                    marginTop: spacing.xs,
-                    fontSize: 14,
-                  }}
-                  className={ui.help}
-                >
-                  {perk.description}
-                </p>
-                <p
-                  style={{
-                    marginTop: spacing.sm,
-                    fontSize: 13,
-                  }}
-                  className={ui.help}
-                >
+                <p className={ui.cardTitle}>{perk.name}</p>
+                <p className={ui.cardText}>{perk.description}</p>
+                <p className={ui.help} style={{ fontSize: 13 }}>
                   Unlock rules:{" "}
                   {perk.minRating ? `Rating ≥ ${perk.minRating}` : null}
                   {perk.minRating && perk.minCompletedBookings ? " · " : null}
@@ -704,7 +816,7 @@ function MusicianDashboardPage() {
         </Section>
 
         <Section title="Notifications (coming soon)">
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+          <p className={ui.help} style={{ fontSize: 14 }}>
             This home screen will also surface booking changes, new requests,
             and perk unlocks so you always know what needs attention.
           </p>
@@ -720,7 +832,7 @@ function BookingsPage() {
       title="Bookings overview"
       subtitle="Upcoming and past gigs, with quick access to details."
     >
-      <p style={{ color: "#9ca3af", fontSize: 14 }}>
+      <p className={ui.help} style={{ fontSize: 14 }}>
         This is a placeholder route. You can expand it with filters (by date,
         venue, status) and a timeline-style history.
       </p>
@@ -734,7 +846,7 @@ function PerksPage() {
       title="Perks center"
       subtitle="Track what you’ve unlocked and what’s coming next."
     >
-      <p style={{ color: "#9ca3af", fontSize: 14 }}>
+      <p className={ui.help} style={{ fontSize: 14 }}>
         This route is a good home for detailed perk tiers, progress bars, and
         redemption history.
       </p>
@@ -957,7 +1069,7 @@ function GigDetailPage() {
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 6 }}
                 >
-                  <label style={{ fontSize: 13, color: "#9ca3af" }}>
+                  <label style={{ fontSize: 13, color: "var(--text-muted)" }}>
                     Message to customer (optional)
                   </label>
                   <textarea
@@ -1025,10 +1137,19 @@ function NavBar() {
   const { user } = useAuth();
   return (
     <nav className={ui.nav}>
+      <NavLink
+        to="/"
+        className={({ isActive }) =>
+          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+        }
+      >
+        Overview
+      </NavLink>
+
       {user?.role.includes("musician") && (
         <>
           <NavLink
-            to="/"
+            to="/dashboard"
             className={({ isActive }) =>
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
@@ -1132,7 +1253,7 @@ function App() {
         <div className={ui.chrome}>
           <header className={ui.header}>
             <h1 className={ui.title}>Triple A Musician</h1>
-            <p className={ui.subtitle}>Performer work app</p>
+            <p className={ui.subtitle}>Performer console</p>
           </header>
           <NavBar />
         </div>
@@ -1140,8 +1261,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={<MusicianLandingPage />} />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <RequireRole role="musician">
                   <MusicianDashboardPage />

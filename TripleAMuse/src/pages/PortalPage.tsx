@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { AppShell, Button, spacing, useScrollReveal, useAuth } from "@shared";
 import { useNavigate } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import { TripleAApiClient } from "@shared/api/client";
-import { Tag } from "../components/Tag";
-import { Section } from "../components/Section";
 import {
   API_BASE_URL,
   apiAssetUrl,
-  openMusicRegister,
-  openMusicianRegister,
+  openMusic,
+  openMusician,
 } from "../lib/urls";
 
 export function PortalPage() {
@@ -58,48 +62,55 @@ export function PortalPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
-  useEffect(() => {
-    if (selectedCategory !== "All") return;
-    if (instruments.length <= 18) return;
-    if (categories.length === 0) return;
-    setSelectedCategory(categories[0]);
-  }, [categories, instruments.length, selectedCategory]);
+  const stackLgStyle = useMemo(
+    () => ({ "--stack-gap": `${spacing.lg}px` }) as CSSProperties,
+    [],
+  );
 
-  const visibleInstruments = useMemo(() => {
-    if (selectedCategory === "All") return instruments;
-    return instruments.filter((i) => i.category === selectedCategory);
+  const gridLgStyle = useMemo(
+    () => ({ "--grid-gap": `${spacing.lg}px` }) as CSSProperties,
+    [],
+  );
+
+  const stackSmStyle = useMemo(
+    () => ({ "--stack-gap": `${spacing.sm}px` }) as CSSProperties,
+    [],
+  );
+
+  const previewInstruments = useMemo(() => {
+    const base = instruments.filter((i) => i.available);
+    const filtered =
+      selectedCategory === "All"
+        ? base
+        : base.filter((i) => i.category === selectedCategory);
+    return filtered.slice(0, 10);
   }, [instruments, selectedCategory]);
+
+  const heroImageUrl = useMemo(() => {
+    const firstWithImage = instruments.find((i) => i.available && i.imageUrl);
+    return apiAssetUrl(firstWithImage?.imageUrl);
+  }, [instruments]);
 
   const serviceOptions = useMemo(
     () => [
       {
         id: "lessons",
-        title: "Lessons",
-        description: "Coaching for instrument, voice, and production.",
+        title: "Coaching",
+        description:
+          "1:1 or group sessions for instrument, voice, and production.",
       },
       {
-        id: "stage",
-        title: "Event support",
-        description:
-          "On-site coordination: load-in, timelines, and crew support.",
+        id: "support",
+        title: "On-site support",
+        description: "Coordination for load-in, timelines, and day-of details.",
       },
       {
         id: "delivery",
-        title: "Delivery & pickup",
-        description: "We bring your rental to the venue and back.",
+        title: "Delivery run",
+        description: "Pickup and drop-off for rentals — venue or doorstep.",
       },
     ],
     [],
-  );
-
-  const [rentalsLimit, setRentalsLimit] = useState(12);
-  useEffect(() => {
-    setRentalsLimit(12);
-  }, [selectedCategory]);
-
-  const displayedInstruments = useMemo(
-    () => visibleInstruments.slice(0, rentalsLimit),
-    [visibleInstruments, rentalsLimit],
   );
 
   type DealItem =
@@ -123,7 +134,7 @@ export function PortalPage() {
       {
         id: "deal-starter",
         title: "Starter package",
-        subtitle: "A small bundle to request in Muse.",
+        subtitle: "A quick request with the essentials — tweak what you need.",
         items: [
           ...(picks[0]
             ? ([{ kind: "instrument", id: picks[0] }] as const)
@@ -134,7 +145,7 @@ export function PortalPage() {
       {
         id: "deal-backline",
         title: "Backline + delivery",
-        subtitle: "Pick your gear, we handle delivery.",
+        subtitle: "Choose the gear — we handle the transport.",
         items: [
           ...(picks[1]
             ? ([{ kind: "instrument", id: picks[1] }] as const)
@@ -148,7 +159,7 @@ export function PortalPage() {
       {
         id: "deal-coaching",
         title: "Practice & prep",
-        subtitle: "Rental + lessons.",
+        subtitle: "Rental + coaching to get performance-ready.",
         items: [
           ...(picks[3]
             ? ([{ kind: "instrument", id: picks[3] }] as const)
@@ -158,6 +169,33 @@ export function PortalPage() {
       },
     ];
   }, [instruments]);
+
+  const [dealRemoved, setDealRemoved] = useState<Record<string, string[]>>({});
+
+  function dealKey(item: DealItem): string {
+    return `${item.kind}:${item.id}`;
+  }
+
+  function isDealItemRemoved(dealId: string, item: DealItem): boolean {
+    return (dealRemoved[dealId] ?? []).includes(dealKey(item));
+  }
+
+  function toggleDealItem(dealId: string, item: DealItem) {
+    setDealRemoved((prev) => {
+      const key = dealKey(item);
+      const next = new Set(prev[dealId] ?? []);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return { ...prev, [dealId]: Array.from(next) };
+    });
+  }
+
+  function resetDeal(dealId: string) {
+    setDealRemoved((prev) => {
+      const { [dealId]: _, ...rest } = prev;
+      return rest;
+    });
+  }
 
   function dealInstrumentById(id: string) {
     return instruments.find((i) => i.id === id);
@@ -192,7 +230,7 @@ export function PortalPage() {
   }
 
   useScrollReveal(contentRef, [
-    displayedInstruments.length,
+    previewInstruments.length,
     deals.length,
     catalogBusy,
     selectedCategory,
@@ -210,45 +248,26 @@ export function PortalPage() {
 
   return (
     <AppShell
-      title="Portal"
-      subtitle="Browse rentals and services. Use Music/Musician for booking workflows."
+      title="Muse"
+      subtitle="Start here for the brand overview and quick entry points."
     >
-      <div
-        ref={contentRef}
-        style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}
-      >
+      <div ref={contentRef} className={ui.stack} style={stackLgStyle}>
         <section className={ui.hero} data-reveal>
           <div>
-            <p className={ui.heroKicker}>Triple A Muse</p>
-            <h2 className={ui.heroTitle}>Rentals & services, made simple.</h2>
+            <p className={ui.heroKicker}>Triple A Music</p>
+            <h2 className={ui.heroTitle}>Where live music gets organized.</h2>
             <p className={ui.heroLead}>
-              Explore gear, lessons, and event support. When you’re ready to
-              book musicians/venues or manage performer work, jump into the
-              dedicated apps.
+              Pick a workspace to jump in fast. Hosting an event? Running your
+              performer workflow? Need rentals or day-of support? Start here.
             </p>
 
             <div className={ui.heroActions}>
-              <Button
-                onClick={() =>
-                  document
-                    .getElementById("muse-funnel")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                Choose a path
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  document
-                    .getElementById("muse-preview")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                Browse rentals
+              <Button onClick={openMusic}>I’m hosting an event</Button>
+              <Button variant="secondary" onClick={openMusician}>
+                I’m performing
               </Button>
               <Button variant="ghost" onClick={requestInMuse}>
-                Request rentals/services
+                Rentals & support
               </Button>
               {!user ? (
                 <Button variant="ghost" onClick={() => navigate("/account")}>
@@ -257,159 +276,152 @@ export function PortalPage() {
               ) : null}
             </div>
           </div>
+
+          <div className={[ui.media, ui.mediaWide].join(" ")}>
+            {heroImageUrl ? (
+              <img src={heroImageUrl} alt="Catalog preview" loading="lazy" />
+            ) : (
+              <div className={ui.mediaPlaceholder}>Catalog</div>
+            )}
+          </div>
         </section>
 
-        <div id="muse-funnel" />
-        <Section title="Where should you go?">
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle} data-reveal>
+            What you get
+          </h2>
+          <div className={ui.featureGrid} data-reveal>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Host workspace</p>
+              <p className={ui.featureBody}>
+                Build an event, request musicians, and track confirmations in
+                one place.
+              </p>
+            </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Performer workspace</p>
+              <p className={ui.featureBody}>
+                Keep your availability clean, respond to requests, and manage
+                your week.
+              </p>
+            </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Tickets when you need them</p>
+              <p className={ui.featureBody}>
+                Turn on ticketing per event; inventory follows the venue’s
+                capacity.
+              </p>
+            </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Support layer</p>
+              <p className={ui.featureBody}>
+                Rentals, coaching, delivery, and day-of help — requested through
+                Muse.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle} data-reveal>
+            Choose a workspace
+          </h2>
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: spacing.lg,
-            }}
+            className={[ui.grid, ui.gridCards].join(" ")}
+            style={gridLgStyle}
           >
             <div
-              className={[ui.card, ui.cardPad].join(" ")}
+              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
               data-reveal
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.sm,
-              }}
+              style={stackSmStyle}
             >
-              <Tag label="Hosts & organizers" />
-              <p style={{ fontWeight: 650 }}>Triple A Music</p>
-              <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Create events, book musicians/venues, and manage bookings.
+              <span className={ui.chip}>Host</span>
+              <p className={ui.cardTitle}>Run the event</p>
+              <p className={ui.cardText}>
+                Create the gig, request musicians, manage bookings, and
+                optionally sell tickets.
               </p>
-              <Button variant="secondary" onClick={openMusicRegister}>
-                Open Music
+              <Button variant="secondary" onClick={openMusic}>
+                Open Host Console
               </Button>
             </div>
 
             <div
-              className={[ui.card, ui.cardPad].join(" ")}
+              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
               data-reveal
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.sm,
-              }}
+              style={stackSmStyle}
             >
-              <Tag label="Performers" />
-              <p style={{ fontWeight: 650 }}>Triple A Musician</p>
-              <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Your work hub: requests, schedule, and payout workflow.
+              <span className={ui.chip}>Performer</span>
+              <p className={ui.cardTitle}>Run your week</p>
+              <p className={ui.cardText}>
+                Handle requests fast, keep your schedule accurate, and stay
+                ready.
               </p>
-              <Button variant="secondary" onClick={openMusicianRegister}>
-                Open Musician
+              <Button variant="secondary" onClick={openMusician}>
+                Open Performer Console
               </Button>
             </div>
 
             <div
-              className={[ui.card, ui.cardPad].join(" ")}
+              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
               data-reveal
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.sm,
-              }}
+              style={stackSmStyle}
             >
-              <Tag label="Rentals & services" />
-              <p style={{ fontWeight: 650 }}>Stay in Muse</p>
-              <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Request rentals, lessons, delivery, and event support.
+              <span className={ui.chip}>Support</span>
+              <p className={ui.cardTitle}>Request rentals or help</p>
+              <p className={ui.cardText}>
+                Ask for rentals, coaching, delivery, or coordination — we’ll
+                follow up.
               </p>
               <Button variant="secondary" onClick={requestInMuse}>
-                Request in Muse
+                Open Support Inbox
               </Button>
             </div>
           </div>
-        </Section>
+        </section>
 
-        <div
-          data-reveal
-          style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.sm,
-              overflowX: "auto",
-              paddingBottom: spacing.xs,
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            <Button
-              variant={selectedCategory === "All" ? "secondary" : "ghost"}
-              onClick={() => setSelectedCategory("All")}
-            >
-              All rentals
-            </Button>
-            {categories.map((c) => (
-              <Button
-                key={c}
-                variant={selectedCategory === c ? "secondary" : "ghost"}
-                onClick={() => setSelectedCategory(c)}
-              >
-                {c}
-              </Button>
-            ))}
-          </div>
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle} data-reveal>
+            Instrument rentals (preview)
+          </h2>
 
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.sm,
-              overflowX: "auto",
-              paddingBottom: spacing.xs,
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            {serviceOptions.map((s) => (
-              <Button
-                key={s.id}
-                variant="ghost"
-                onClick={() => {
-                  document
-                    .getElementById("muse-services")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-              >
-                {s.title}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div id="muse-preview" />
-        <Section title="Preview gear">
           {catalogError ? <p className={ui.error}>{catalogError}</p> : null}
-          {catalogBusy ? (
-            <p className={ui.help}>Loading...</p>
-          ) : displayedInstruments.length === 0 ? (
-            <p className={ui.help}>No items available.</p>
-          ) : (
+          {catalogBusy ? <p className={ui.help}>Loading…</p> : null}
+
+          {categories.length > 0 ? (
             <div
-              style={{
-                display: "flex",
-                gap: spacing.lg,
-                overflowX: "auto",
-                paddingBottom: spacing.xs,
-                WebkitOverflowScrolling: "touch",
-              }}
+              data-reveal
+              className={ui.scroller}
+              style={{ "--scroller-gap": "8px" } as CSSProperties}
             >
-              {displayedInstruments.slice(0, 10).map((item) => (
+              <Button
+                variant={selectedCategory === "All" ? "secondary" : "ghost"}
+                onClick={() => setSelectedCategory("All")}
+              >
+                All
+              </Button>
+              {categories.slice(0, 10).map((c) => (
+                <Button
+                  key={c}
+                  variant={selectedCategory === c ? "secondary" : "ghost"}
+                  onClick={() => setSelectedCategory(c)}
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+
+          {!catalogBusy && previewInstruments.length === 0 ? (
+            <p className={ui.help}>No preview items available.</p>
+          ) : (
+            <div className={ui.scroller}>
+              {previewInstruments.map((item) => (
                 <div
                   key={item.id}
                   data-reveal
-                  className={[ui.card, ui.cardPad].join(" ")}
-                  style={{
-                    minWidth: 260,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                  }}
+                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                  style={{ ...(stackSmStyle as CSSProperties), minWidth: 260 }}
                 >
                   <div className={[ui.media, ui.mediaSquare].join(" ")}>
                     {item.imageUrl ? (
@@ -418,83 +430,64 @@ export function PortalPage() {
                         alt={item.name}
                         loading="lazy"
                       />
-                    ) : null}
+                    ) : (
+                      <div className={ui.mediaPlaceholder}>Rental</div>
+                    )}
                   </div>
-                  <p style={{ fontWeight: 600 }}>{item.name}</p>
-                  <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+                  <p className={ui.cardTitle}>{item.name}</p>
+                  <p className={ui.cardText}>
                     {item.category} · ${item.dailyRate}/day
                   </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: spacing.sm,
-                      marginTop: spacing.xs,
-                    }}
-                  >
-                    <Button variant="secondary" onClick={requestInMuse}>
-                      Request rental
-                    </Button>
-                    {!user ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => navigate("/account?next=/messages")}
-                      >
-                        Sign in to request
-                      </Button>
-                    ) : null}
-                  </div>
+                  <Button variant="secondary" onClick={requestInMuse}>
+                    Request rental
+                  </Button>
                 </div>
               ))}
             </div>
           )}
-        </Section>
+        </section>
 
-        <div id="muse-services" />
-        <Section title="Services">
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle} data-reveal>
+            Services (preview)
+          </h2>
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.lg,
-            }}
+            className={[ui.grid, ui.gridCards].join(" ")}
+            style={gridLgStyle}
           >
             {serviceOptions.map((s) => (
               <div
                 key={s.id}
                 data-reveal
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: spacing.sm,
-                }}
+                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                style={stackSmStyle}
               >
-                <Tag label="Service" />
-                <p style={{ fontWeight: 650 }}>{s.title}</p>
-                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                  {s.description}
-                </p>
+                <span className={ui.chip}>Service</span>
+                <p className={ui.cardTitle}>{s.title}</p>
+                <p className={ui.cardText}>{s.description}</p>
                 <Button variant="secondary" onClick={requestInMuse}>
-                  Request
+                  Request service
                 </Button>
               </div>
             ))}
           </div>
-        </Section>
+        </section>
 
-        <div id="muse-deals" />
-        <Section title="Packages">
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.lg,
-              overflowX: "auto",
-              paddingBottom: spacing.xs,
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle} data-reveal>
+            Bundles (preview)
+          </h2>
+          <div className={ui.scroller}>
             {deals.map((deal) => {
-              const estimated = dealEstimatedDailyTotal(deal);
+              const visibleItems = deal.items.filter(
+                (item) => !isDealItemRemoved(deal.id, item),
+              );
+
+              const estimated = dealEstimatedDailyTotal({
+                ...deal,
+                items: visibleItems,
+              });
+
               const firstInstrument = deal.items.find(
                 (i): i is { kind: "instrument"; id: string } =>
                   i.kind === "instrument",
@@ -504,214 +497,107 @@ export function PortalPage() {
                 <div
                   key={deal.id}
                   data-reveal
-                  className={[ui.card, ui.cardPad].join(" ")}
-                  style={{
-                    minWidth: 320,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                  }}
+                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                  style={{ ...(stackSmStyle as CSSProperties), minWidth: 340 }}
                 >
                   <div>
-                    <p style={{ fontWeight: 650 }}>{deal.title}</p>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        color: "var(--text-muted)",
-                        fontSize: 13,
-                      }}
-                    >
+                    <p className={ui.cardTitle}>{deal.title}</p>
+                    <p className={ui.cardText} style={{ marginTop: 6 }}>
                       {deal.subtitle}
                     </p>
                   </div>
 
                   <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                    className={ui.stack}
+                    style={{ "--stack-gap": "8px" } as CSSProperties}
                   >
                     {deal.items.map((item, idx) => {
                       const line = dealLine(item);
+                      const removed = isDealItemRemoved(deal.id, item);
                       return (
                         <div
                           key={`${item.kind}:${item.id}:${idx}`}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: spacing.sm,
-                            border: "1px solid var(--border)",
-                            borderRadius: "var(--radius-md)",
-                            padding: "10px 12px",
-                            background: "var(--surface)",
-                          }}
+                          className={ui.lineItem}
                         >
                           <div style={{ minWidth: 0 }}>
-                            <p
-                              style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
-                            >
-                              {line.title}
-                            </p>
+                            <p className={ui.lineItemTitle}>{line.title}</p>
                             {line.meta ? (
-                              <p
-                                style={{
-                                  marginTop: 4,
-                                  color: "var(--text-muted)",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {line.meta}
-                              </p>
+                              <p className={ui.lineItemMeta}>{line.meta}</p>
                             ) : null}
                           </div>
-                          <Tag label="Included" />
+                          <Button
+                            type="button"
+                            variant={removed ? "secondary" : "ghost"}
+                            onClick={() => toggleDealItem(deal.id, item)}
+                            style={{ minHeight: 30, padding: "6px 10px" }}
+                          >
+                            {removed ? "Add" : "Remove"}
+                          </Button>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: spacing.sm,
-                      alignItems: "center",
-                    }}
-                  >
-                    <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                  <div className={ui.rowBetween}>
+                    <p className={ui.help} style={{ fontSize: 13 }}>
                       Est. gear total: ${estimated.toFixed(0)}/day
                     </p>
-                    <Button
-                      variant="secondary"
-                      disabled={!firstInstrument}
-                      onClick={requestInMuse}
+                    <div
+                      className={ui.row}
+                      style={{ "--row-gap": "8px" } as CSSProperties}
                     >
-                      Request this package
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => resetDeal(deal.id)}
+                        disabled={!dealRemoved[deal.id]?.length}
+                        style={{ minHeight: 34, padding: "7px 10px" }}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={!firstInstrument}
+                        onClick={requestInMuse}
+                      >
+                        Send request
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </Section>
-
-        <Section title="More gear (preview)">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.lg,
-            }}
-          >
-            {catalogBusy ? (
-              <p className={ui.help}>Loading catalog...</p>
-            ) : visibleInstruments.length === 0 ? (
-              <p className={ui.help}>No items available.</p>
-            ) : (
-              displayedInstruments.map((item, idx) => (
-                <div
-                  key={item.id}
-                  data-reveal={idx < 6 ? true : undefined}
-                  className={[ui.card, ui.cardPad].join(" ")}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                  }}
-                >
-                  <div className={[ui.media, ui.mediaSquare].join(" ")}>
-                    {item.imageUrl ? (
-                      <img
-                        src={apiAssetUrl(item.imageUrl)}
-                        alt={item.name}
-                        loading="lazy"
-                      />
-                    ) : null}
-                  </div>
-                  <p style={{ fontWeight: 600 }}>{item.name}</p>
-                  <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-                    {item.category} · ${item.dailyRate}/day
-                  </p>
-                  <p
-                    style={{
-                      color: item.available
-                        ? "var(--text-muted)"
-                        : "var(--taa-purple-400)",
-                      fontSize: 13,
-                    }}
-                  >
-                    {item.available ? "Available" : "Unavailable"}
-                  </p>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: spacing.sm,
-                      marginTop: spacing.sm,
-                    }}
-                  >
-                    <Button variant="secondary" onClick={requestInMuse}>
-                      Request rental
-                    </Button>
-                    {!user ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => navigate("/account?next=/messages")}
-                      >
-                        Sign in to request
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {!catalogBusy && visibleInstruments.length > rentalsLimit ? (
-            <div data-reveal style={{ marginTop: spacing.md }}>
-              <Button
-                variant="secondary"
-                onClick={() => setRentalsLimit((n) => n + 12)}
-              >
-                Show more
-              </Button>
-            </div>
-          ) : null}
-        </Section>
+        </section>
 
         <section className={ui.hero} data-reveal>
           <div>
-            <p className={ui.heroKicker}>What this is</p>
-            <h2 className={ui.heroTitle}>
-              Everything around the gig — handled.
-            </h2>
+            <p className={ui.heroKicker}>Why this page exists</p>
+            <h2 className={ui.heroTitle}>One brand. Three workspaces.</h2>
             <p className={ui.heroLead}>
-              Muse is the marketplace for the stuff that makes gigs happen:
-              rentals, lessons, delivery, and event support.
+              Muse is the entry point. Jump into hosting or performing, and use
+              the support inbox when you need rentals, coaching, delivery, or
+              on-site help.
             </p>
           </div>
 
           <div className={ui.featureGrid}>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Transparent rentals</p>
+              <p className={ui.featureTitle}>Clear entry points</p>
               <p className={ui.featureBody}>
-                See daily rates, availability, and pickup/delivery options.
+                Pick Host or Performer and get to work immediately.
               </p>
             </div>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Lessons & coaching</p>
+              <p className={ui.featureTitle}>Real inventory</p>
               <p className={ui.featureBody}>
-                Book 1:1 or group sessions — voice, instruments, production.
+                Browse actual instruments with images and day rates.
               </p>
             </div>
             <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Stage & logistics</p>
+              <p className={ui.featureTitle}>Human support</p>
               <p className={ui.featureBody}>
-                Delivery, crew, and event support when you need it.
+                Send a request and we coordinate the details with you.
               </p>
             </div>
           </div>

@@ -200,6 +200,18 @@
   display: block;
 }
 
+.mediaPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subtle);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 860px) {
   .hero {
     grid-template-columns: 1fr;
@@ -267,4 +279,113 @@
   color: var(--text-subtle);
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* Layout utilities (reduce per-page inline flex/grid) */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap, 16px);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--row-gap, 10px);
+}
+
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--row-gap, 10px);
+}
+
+.grid {
+  display: grid;
+  gap: var(--grid-gap, 12px);
+}
+
+.gridCards {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.gridTight {
+  gap: 10px;
+}
+
+/* Horizontal scroller row for cards/chips */
+.scroller {
+  display: flex;
+  gap: var(--scroller-gap, 14px);
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chipBar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Text primitives */
+.kicker {
+  color: color-mix(in srgb, var(--accent) 75%, var(--text-muted));
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  margin: 0;
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.cardText {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  width: 100%;
+}
+
+.empty {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  background: var(--surface);
+}
+
+.lineItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.lineItemTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineItemMeta {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }

@@ -81,7 +81,7 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
     email: string;
     name: string;
     roles: string[];
-  }): Promise<typeof User | null> {
+  }): Promise<import("../models/User").IUser | null> {
     const existing = await User.findOne({ email: params.email }).exec();
     if (existing) return existing;
 

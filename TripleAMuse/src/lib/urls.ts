@@ -8,6 +8,14 @@ export function openExternal(url: string) {
   window.open(url, "_blank", "noreferrer");
 }
 
+export function openMusic() {
+  openExternal(MUSIC_ORIGIN);
+}
+
+export function openMusician() {
+  openExternal(MUSICIAN_ORIGIN);
+}
+
 export function openMusicRegister() {
   openExternal(`${MUSIC_ORIGIN}/register`);
 }

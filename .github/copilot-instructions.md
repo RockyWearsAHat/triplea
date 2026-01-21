@@ -48,8 +48,8 @@ This project contains a suite of three related apps built with Vite and TypeScri
 
 - **Triple A Musician** – like the “Uber Driver” app for performers.
 - **Triple A Music** – like “Uber Eats” for customers/organizers booking musicians and venues.
-- **Triple A Muse** – like an “Uber Eats”-style web hub: interactive browse-first surface for Triple A offerings (rentals + services), plus clear funnels to Music (customers) and Musician (performers).
-  - Implementation note (current repo direction): Muse is a **portal-first funnel**. It can preview inventory/services, but primary flows should route users into Music (hosts) or Musician (performers) rather than implementing a full marketplace checkout inside Muse.
+- **Triple A Muse** – the **front door** for the Triple A Music brand: a clean overview + routing hub that funnels users into Music (hosts) or Musician (performers).
+  - Implementation note (current repo direction): Muse is an **in-between**. It can preview support offerings (rentals/services) and explain “what Triple A is”, but primary workflows live in Music (booking/tickets) and Musician (performer ops).
 
 ### Differentiation rules (must follow)
 
@@ -64,10 +64,10 @@ This project contains a suite of three related apps built with Vite and TypeScri
   - Visual cues: status cards, “today/this week” focus, requests inbox.
 
 - **Triple A Muse (Rentals & Services)**
-  - Job: browse rentals/services and funnel users to the right app.
-  - UI vibe: storefront.
-  - Visual cues: strong catalog cards with images, category browsing, deals.
-  - Implementation note: keep Muse **preview + funnels** by default; avoid blurring responsibilities with Music (booking) or Musician (performer ops).
+  - Job: **overview + routing** (start here, then enter the right app).
+  - UI vibe: brand front door (clean, visual-first).
+  - Visual cues: clear “Host” vs “Performer” funnels, plus lightweight previews of support offerings.
+  - Implementation note: keep Muse **overview + funnels** by default; avoid blurring responsibilities with Music (booking/tickets) or Musician (performer ops).
 
 The repository is organized into three sub-projects:
 
@@ -160,6 +160,20 @@ Core concepts:
 
 This section summarizes a direct conversation with the owner and is the current north-star for UX and product shape.
 
+### Verified from Discord chat (source of truth)
+
+These items are directly supported by `.github/discord-chat-history.md` and should be treated as current truth unless superseded by newer owner direction.
+
+- **Domains:** use the `.org` domains now; `.com` can be added later and pointed to the same deployments.
+- **Admin routing:** keep admin entry simple as **`/admin`** for now (admin subdomain/prefix is optional/aesthetic).
+- **Review workflow:** prefer a **live, web-accessible dev environment** so the owner can review without installing/running locally.
+- **Ticket vendor direction (Triple A Music):** the platform should support **ticket sales** for events (customer-facing ticket purchasing).
+- **Open For Tickets toggle:** make ticket selling an **optional per-event setting** (e.g., “Open For Tickets”).
+- **Ticket modes:** support at least two modes conceptually: **general admission (“at the door”)** and **assigned seating** (more complex / higher-cost).
+- **Capacity source of truth:** **venue/location sets seat capacity**; ticket inventory is derived from that capacity (not set by artists).
+- **Fees:** keep platform fees low and simple initially (fine to iterate later).
+- **Future integrations:** external ticket vendor integrations can be explored later to avoid overselling and sync inventory.
+
 ### What the owner asked for (high signal)
 
 - **Muse should feel like Uber Eats / Pizza Hut**:
@@ -185,6 +199,11 @@ This section summarizes a direct conversation with the owner and is the current 
   - Pricing can be placeholders initially; owner expects to edit later.
 - **Brand assets**:
   - Owner has a logo to provide (email/text).
+
+### Notes on source-of-truth
+
+- The Discord log currently captured in `.github/discord-chat-history.md` is mostly about domains, admin routing, and ticketing direction.
+- The Muse “Uber Eats / Pizza Hut” positioning and detailed Muse UX rules below are still valid working guidance for UI quality, but if they conflict with the Discord log or newer owner direction, **prioritize the Discord log** and update this document accordingly.
 
 ### UX rules to follow in Muse (non-negotiable)
 

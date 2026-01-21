@@ -34,7 +34,7 @@ function App() {
         <div className={ui.chrome}>
           <header className={ui.header}>
             <h1 className={ui.title}>Triple A Muse</h1>
-            <p className={ui.subtitle}>Portal & funnels</p>
+            <p className={ui.subtitle}>Preview &amp; entry</p>
           </header>
           <NavBar />
         </div>

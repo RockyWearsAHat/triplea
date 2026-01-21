@@ -2,10 +2,6 @@ Rocky
 rockywearsahat
 Online
 
-Rocky — 1/14/26, 1:13 AM
-which I assume is just like more than worth it for just launching the service
-Man — 1/14/26, 1:14 AM
-Lmao
 Rocky — 1/14/26, 1:14 AM
 it is a plausable investment but in my opinion money like that can be used for much better things
 the .orgs are all $7.50 a piece
@@ -84,3 +80,5 @@ I love that! Maybe this would be a good option for the artist to turn an “Open
 And yes, I would like to be the ticket vendor
 Rocky — 2:46 PM
 The venue itself would set the seat capacity and then users could link to 24tix or whatever it is, idk if there is a way to get affiliate links or whatever we could deal with that when we get to it. The venue itself as it lists will set the seating capacity, musicians could apply to the venue or the venue host themself could request an artist at their price/at an offered price. The tickets would solely be based on the capacity of the venue that was set by the host not by the artist or by you or anyone else, each type of user should be able to set up their profiles/events/links/whatever so the site itself handles most of the logistics, the artist basically has their schedule and a dashboard where they can request things from you, "hosts" can post new venues/events looking for talent, and you and your crew basically act as orchestrators for getting the event setup, or your profit simply comes from ticket sales or just being the facilitator, preferably low fees like $1-2 for each ticket and maybe like 1% max of $20 on the venue (I think that's fair and customers/hosts would be happy to pay that for the simplicity, but feel free to lmk) or if you are booked to help setup you would get your pay for that as well obviously bc that's active work, but as a marketplace those would be your fees then whatever services you want to offer I'll try to make a way for them to easily be setup, but each category/service initial setup will probably have to be coded rather than just having like a dynamic system. All items within these categories could be dynamic (like all your instrument rentals, your different packages for setting up venues, but these different views like "Rentals", "Bundles"... etc would have to be set up by hand but I'll think on it if there's a better way). Either way I'll get the system working as a marketplace facilitator for as much as I can, it's complex but not difficult just alot
+Man — 3:56 PM
+I was interested in getting the layout of these places to be the exclusive ticket vendor. Uber Eats gets paid by the customer, and then pays McDonald’s. I was hoping to pay the Venue, and control everything over the top. I like the 24tix, I would just be unsure, because idk if they would sell tickets for a local lounge or something. I agree 100% with you, I just want to make sure I have everything covered.
