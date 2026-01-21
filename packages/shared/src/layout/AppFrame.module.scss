@@ -4,17 +4,32 @@
   padding: var(--page-pad);
   display: flex;
   justify-content: center;
-  background: radial-gradient(
-      circle at top,
-      color-mix(in srgb, var(--taa-blue-900) 45%, transparent),
-      transparent 55%
-    ),
-    var(--bg);
+  background: var(--bg);
+}
+
+/* Per-app theming. These variables are consumed by shared primitives styles. */
+.appMusic {
+  --app-accent: var(--taa-blue-200);
+  --app-glow: var(--taa-blue-900);
+  --app-hero-accent: var(--taa-blue-200);
+}
+
+.appMusician {
+  --app-accent: var(--taa-purple-900);
+  --app-glow: var(--taa-purple-900);
+  --app-hero-accent: var(--taa-purple-400);
+}
+
+.appMuse {
+  --app-accent: var(--taa-purple-400);
+  --app-glow: var(--taa-blue-200);
+  --app-hero-accent: var(--taa-purple-400);
 }
 
 .container {
   width: 100%;
-  max-width: 100%;
+  max-width: var(--max-width);
   display: flex;
   flex-direction: column;
+  margin: 0 auto;
 }

@@ -7,6 +7,25 @@ type RequireBaseProps = {
   fallback?: ReactNode;
 };
 
+export function RequireAuth({ children, fallback }: RequireBaseProps) {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) {
+    return (
+      <>
+        {fallback ?? (
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+            Please sign in to continue.
+          </p>
+        )}
+      </>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export function RequireRole({
   role,
   children,
@@ -19,7 +38,7 @@ export function RequireRole({
     return (
       <>
         {fallback ?? (
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
             You are not authorised to view this area.
           </p>
         )}
@@ -42,7 +61,7 @@ export function RequireAnyRole({
     return (
       <>
         {fallback ?? (
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
             You are not authorised to view this area.
           </p>
         )}
@@ -65,7 +84,7 @@ export function RequirePermission({
     return (
       <>
         {fallback ?? (
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
             You are not authorised to perform this action.
           </p>
         )}

@@ -7,6 +7,8 @@ export interface IMusicianProfile extends Document {
   bio?: string;
   averageRating: number;
   reviewCount: number;
+  defaultHourlyRate?: number | null;
+  acceptsDirectRequests?: boolean;
 }
 
 const MusicianProfileSchema = new Schema<IMusicianProfile>(
@@ -17,11 +19,13 @@ const MusicianProfileSchema = new Schema<IMusicianProfile>(
     bio: { type: String },
     averageRating: { type: Number, required: true },
     reviewCount: { type: Number, required: true },
+    defaultHourlyRate: { type: Number, default: null },
+    acceptsDirectRequests: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const MusicianProfile = model<IMusicianProfile>(
   "MusicianProfile",
-  MusicianProfileSchema
+  MusicianProfileSchema,
 );

@@ -1,5 +1,47 @@
 # Triple A Apps – Project Instructions
 
+This document is a living brief. Keep it updated as product decisions are made.
+
+## Current North Star (Jan 2026)
+
+The apps must feel like **real services**: clean, professional, guided, and **visual-first**.
+
+Non-negotiables from current context:
+
+- **Each app must be clearly differentiated** at a glance.
+  - Distinct purpose, distinct navigation, distinct visual identity.
+  - Users should never wonder “what app am I in?” or “what page is this?”
+- **Visual > text**.
+  - Prefer images, cards, and clear hierarchy over paragraphs.
+  - Text should be short labels + microcopy that guides the next action.
+- **Trust-building UI**.
+  - Consistent spacing, consistent components, clear primary actions.
+  - Avoid "demo-ish" blocks of text; make the UI self-explanatory.
+- **Professional visual language (no "hobby" UI)**.
+  - Avoid glass/blur, heavy gradients, exaggerated shadows, and hover “lift” effects.
+  - Prefer flatter surfaces, thin borders, restrained radii, and crisp typography.
+  - Gold is for primary actions + important emphasis only.
+
+## Design System Contract (Apple-inspired)
+
+These rules exist to keep all three apps looking like real, professional services.
+
+- **Single source of truth**: Use shared tokens + primitives from `packages/shared`.
+  - Prefer `packages/shared/src/styles/global.scss` CSS variables for colors/surfaces/text.
+  - Prefer `packages/shared/src/styles/primitives.module.scss` classes (`ui.card`, `ui.input`, `ui.help`, `ui.error`, `ui.section`, `ui.sectionTitle`, `ui.chip`).
+- **No hardcoded UI colors in pages**: Avoid inline hex colors like `#020617`, `#374151`, `#9ca3af`, `#f87171` in app screens.
+  - If something needs a new color/state, add a token (CSS variable) or a shared primitive class.
+- **Gold discipline**: `#E59D0D` is reserved for primary actions and key emphasis only.
+  - App identity (nav active, accents) should use the per-app accent (`--accent` / `--app-accent`), not gold.
+- **Calm surfaces**: Prefer subtle borders and flat surfaces over loud contrasts.
+  - Avoid dark “demo blocks” with thick borders; use cards with consistent padding.
+- **Typography & spacing**: Short labels + microcopy; whitespace-first layout.
+  - Avoid long paragraphs near the top of screens (especially in Muse).
+  - Keep forms consistent: label → input → help/error.
+- **Use real images** wherever possible.
+  - Instruments and locations are already seeded with images and exposed via public image endpoints.
+  - Frontends should display these images by default (not optional “later”).
+
 This project contains a suite of three related apps built with Vite and TypeScript, targeting both mobile and desktop, for web and (ideally) standalone builds.
 
 ## Overview
@@ -7,6 +49,25 @@ This project contains a suite of three related apps built with Vite and TypeScri
 - **Triple A Musician** – like the “Uber Driver” app for performers.
 - **Triple A Music** – like “Uber Eats” for customers/organizers booking musicians and venues.
 - **Triple A Muse** – like an “Uber Eats”-style web hub: interactive browse-first surface for Triple A offerings (rentals + services), plus clear funnels to Music (customers) and Musician (performers).
+  - Implementation note (current repo direction): Muse is a **portal-first funnel**. It can preview inventory/services, but primary flows should route users into Music (hosts) or Musician (performers) rather than implementing a full marketplace checkout inside Muse.
+
+### Differentiation rules (must follow)
+
+- **Triple A Music (Hosts/Organizers)**
+  - Job: post stages/locations, create gigs, discover/request musicians, manage bookings.
+  - UI vibe: booking marketplace.
+  - Visual cues: stage/location imagery, performer cards, “post gig” and “manage gigs” CTAs.
+
+- **Triple A Musician (Performers)**
+  - Job: see upcoming obligations, accept/decline, manage profile + direct-request settings, respond to inbound requests.
+  - UI vibe: work dashboard.
+  - Visual cues: status cards, “today/this week” focus, requests inbox.
+
+- **Triple A Muse (Rentals & Services)**
+  - Job: browse rentals/services and funnel users to the right app.
+  - UI vibe: storefront.
+  - Visual cues: strong catalog cards with images, category browsing, deals.
+  - Implementation note: keep Muse **preview + funnels** by default; avoid blurring responsibilities with Music (booking) or Musician (performer ops).
 
 The repository is organized into three sub-projects:
 
@@ -143,7 +204,6 @@ This section summarizes a direct conversation with the owner and is the current 
 ## Cross-App Considerations
 
 - **Overarching Product Split (Non-Negotiable)**
-
   - Each app has a distinct “job to be done”:
     - Musician = performer onboarding + work app (profile, gigs, obligations, perks).
     - Music = consumer marketplace (discover → request → confirm → manage event).
@@ -153,22 +213,18 @@ This section summarizes a direct conversation with the owner and is the current 
   - Admin/employee operations support the whole ecosystem, but should not change the above product split.
 
 - **Shared Design System**
-
   - Common UI components (buttons, forms, navigation) and theme across all three apps.
   - Shared typography, color palette, and spacing for a cohesive brand.
 
 - **Shared Types & APIs**
-
   - Central definitions for core entities: `User`, `MusicianProfile`, `Booking`, `Event`, `Instrument`, `Location`, `Perk`.
   - Reuse API client utilities across apps (authentication, bookings, payments).
 
 - **Authentication & Accounts**
-
   - Unified sign-in system (email/password, social login, or magic links).
   - Role-based access: musicians, customers, admins, teachers, rental providers.
 
 - **Admin & Moderation**
-
   - Dedicated admin view/dashboard for managing all users and content.
   - Create, edit, and deactivate employee and musician accounts.
   - Moderate profiles, listings, reviews, and reported content.
@@ -186,12 +242,36 @@ This section summarizes a direct conversation with the owner and is the current 
 ## Development Guidelines
 
 - Use Vite + TypeScript for each app under its respective folder.
-- Keep shared logic in a dedicated shared package or folder (e.g. `packages/shared/`) if you later convert to a monorepo.
+- Keep shared logic in a dedicated shared package or folder (e.g. `packages/shared/`).
 - Aim for clear separation of concerns: UI components, domain models, and API access should be modular and reusable.
+- Avoid multi-thousand-line React files.
+  - Prefer `src/pages/*` for route-level screens and `src/components/*` for reusable UI.
+  - Prefer small hooks/utilities (`src/lib/*`, `src/hooks/*`) over repeating logic inline.
+
+## UI Implementation Guidelines (working rules)
+
+- Prefer shared primitives/components over per-page inline styling.
+- Each app should set an explicit app identity for theming (e.g., app-specific accent/glow).
+- Default aesthetic: flat, professional, service-provider UI (minimal gradients/shadows; restrained rounding).
+- Use image-first cards:
+  - Muse: instruments must show images.
+  - Music: locations/stages should show images when available.
+  - Musician: use a strong, clean dashboard layout; avoid long copy.
+- Every page should have a clear title that describes the page (not just the app name).
+
+## Demo & Seeding Expectations
+
+- Demo users must always exist when `SEED_DEMO_DATA=true` with password `test`:
+  - `admin@admin.com`
+  - `music@music.com`
+  - `musician@music.com`
+  - `muse@music.com`
+- Seeded instruments and locations include images.
+  - Public endpoints provide `imageUrl` and image binary routes (e.g. `/api/public/instruments/:id/images/0`).
 
 This document is meant as a living brief. As the project evolves, update it with more specific UX flows, API contracts, and implementation details so collaborators (including your friend) can quickly understand the vision and structure.
 
-# PLEASE VIEW ./github/conversation-discussing-app-needs.md FOR CONTEXT ON HOW THESE INSTRUCTIONS WERE DERIVED AND THE OVERALL GOAL OF THE APPLICATION.
+# PLEASE VIEW ./github/discord-chat-history.md FOR THE ACTUAL CONVERSATION(S) THAT LED TO THE THESE INSTRUCTIONS BEING DERIVED AND THE OVERALL GOAL OF THE APPLICATION. IF THERE ARE CONFLICTIONS WITH THE MOST RECENT CHAT HISTORY, PLEASE PRIORITIZE THE CHAT HISTORY MARKDOWN DOCUMENT AND UPDATE THE COPILOT INSTRUCTIONS IN ACCORDANCE. ANYTHING NOT MENTIONED IN THE CHAT HISTORY BUT WRITTEN HERE SHOULD BE CONSIDERED SECONDARY AND SUBJECT TO CHANGE BASED ON THE CHAT HISTORY, HOWEVER NOT IMMEDIATLEY INCORRECT. JUST NOTE THIS IS A WORKING DOCUMENT AND THINGS CHANGE, YOU MAY EDIT THIS DOCUMENT AS NEEDED BASED ON THE CHAT HISTORY AND NEW INSTRUCTIONS FROM THE USER, HOWEVER BE VERY CAREFUL ABOUT REMOVING THINGS THAT MAY BE "UNNECESSARY" BECAUSE THEY WERE NOT MENTIONED IN THE CHAT HISTORY. IF YOU ARE UNSURE, PLEASE ASK THE USER FOR CLARIFICATION. THANK YOU!
 
 The color palette I would like to use is:
 

@@ -8,6 +8,7 @@ import type {
   ChatMessage,
   GigApplication,
   Gig,
+  ArtistRequest,
   Instrument,
   Location,
   MusicianProfile,
@@ -41,7 +42,7 @@ export class TripleAApiClient {
 
   private async request<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: HeadersInit = {
@@ -290,11 +291,11 @@ export class TripleAApiClient {
   }
 
   async adminRevokeEmployeeInvite(
-    inviteId: string
+    inviteId: string,
   ): Promise<{ id: string; revokedAt: string }> {
     return await this.request<{ id: string; revokedAt: string }>(
       `/admin/invites/employee/${inviteId}/revoke`,
-      { method: "POST" }
+      { method: "POST" },
     );
   }
 
@@ -309,7 +310,7 @@ export class TripleAApiClient {
   async chatListConversations(): Promise<ChatConversation[]> {
     const data = await this.request<{ conversations: ChatConversation[] }>(
       "/chat/conversations",
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.conversations;
   }
@@ -317,7 +318,7 @@ export class TripleAApiClient {
   async chatListMessages(conversationId: string): Promise<ChatMessage[]> {
     const data = await this.request<{ messages: ChatMessage[] }>(
       `/chat/conversations/${conversationId}/messages`,
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.messages;
   }
@@ -331,7 +332,7 @@ export class TripleAApiClient {
       {
         method: "POST",
         body: JSON.stringify({ body: params.body }),
-      }
+      },
     );
   }
 
@@ -375,10 +376,7 @@ export class TripleAApiClient {
   }
 
   // Customers: discovery and booking search
-  async musicDiscovery(params: {
-    genre?: string;
-    maxBudget?: number;
-  }): Promise<
+  async musicDiscovery(params: { genre?: string; maxBudget?: number }): Promise<
     Array<{
       musician: MusicianProfile;
       priceEstimate: number;
@@ -406,7 +404,7 @@ export class TripleAApiClient {
   async getPublicMusician(id: string): Promise<MusicianProfile> {
     const data = await this.request<{ musician: MusicianProfile }>(
       `/public/musicians/${encodeURIComponent(id)}`,
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.musician;
   }
@@ -417,14 +415,14 @@ export class TripleAApiClient {
   }> {
     return await this.request<{ instruments: Instrument[] }>(
       "/public/marketplace/catalog",
-      { method: "GET" }
+      { method: "GET" },
     );
   }
 
   async getPublicInstrument(id: string): Promise<Instrument> {
     const data = await this.request<{ instrument: Instrument }>(
       `/public/instruments/${encodeURIComponent(id)}`,
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.instrument;
   }
@@ -432,7 +430,7 @@ export class TripleAApiClient {
   async listPublicLocations(): Promise<Location[]> {
     const data = await this.request<{ locations: Location[] }>(
       "/public/locations",
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.locations;
   }
@@ -447,7 +445,7 @@ export class TripleAApiClient {
   async getPublicGig(id: string): Promise<Gig> {
     const data = await this.request<{ gig: Gig }>(
       `/public/gigs/${encodeURIComponent(id)}`,
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.gig;
   }
@@ -495,7 +493,7 @@ export class TripleAApiClient {
 
   async applyToGig(
     gigId: string,
-    params: { message?: string }
+    params: { message?: string },
   ): Promise<{
     id: string;
     gigId: string;
@@ -512,7 +510,7 @@ export class TripleAApiClient {
   async listGigApplications(gigId: string): Promise<GigApplication[]> {
     const data = await this.request<{ applications: GigApplication[] }>(
       `/gigs/${encodeURIComponent(gigId)}/applications`,
-      { method: "GET" }
+      { method: "GET" },
     );
     return data.applications;
   }
@@ -524,12 +522,120 @@ export class TripleAApiClient {
   }): Promise<{ id: string; status: string; decidedAt: string }> {
     return await this.request(
       `/gigs/${encodeURIComponent(
-        params.gigId
+        params.gigId,
       )}/applications/${encodeURIComponent(params.applicationId)}/decision`,
       {
         method: "POST",
         body: JSON.stringify({ decision: params.decision }),
-      }
+      },
     );
+  }
+
+  // --- Musician profile & direct request settings ---
+
+  async getMyMusicianProfile(): Promise<MusicianProfile> {
+    const data = await this.request<{ musician: MusicianProfile }>(
+      "/musicians/me",
+      { method: "GET" },
+    );
+    return data.musician;
+  }
+
+  async updateMyMusicianProfile(params: {
+    instruments?: string[];
+    genres?: string[];
+    bio?: string;
+    defaultHourlyRate?: number | null;
+    acceptsDirectRequests?: boolean;
+  }): Promise<MusicianProfile> {
+    const data = await this.request<{ musician: MusicianProfile }>(
+      "/musicians/me",
+      {
+        method: "PATCH",
+        body: JSON.stringify(params),
+      },
+    );
+    return data.musician;
+  }
+
+  // --- Host stages / locations ---
+
+  async createStageLocation(params: {
+    name: string;
+    address?: string;
+    city?: string;
+  }): Promise<Location> {
+    const data = await this.request<Location>("/locations", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return data;
+  }
+
+  async listMyStageLocations(): Promise<Location[]> {
+    const data = await this.request<{ locations: Location[] }>(
+      "/locations/mine",
+      { method: "GET" },
+    );
+    return data.locations;
+  }
+
+  // --- Direct artist requests for gigs ---
+
+  async requestArtistForGig(params: {
+    gigId: string;
+    musicianUserId: string;
+    priceOffered?: number;
+    message?: string;
+  }): Promise<ArtistRequest> {
+    const data = await this.request<ArtistRequest>(
+      `/gigs/${encodeURIComponent(params.gigId)}/request-artist`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          musicianUserId: params.musicianUserId,
+          priceOffered: params.priceOffered,
+          message: params.message,
+        }),
+      },
+    );
+    return data;
+  }
+
+  async listMyArtistRequests(): Promise<ArtistRequest[]> {
+    const data = await this.request<{ requests: ArtistRequest[] }>(
+      "/artist-requests/mine",
+      { method: "GET" },
+    );
+    return data.requests;
+  }
+
+  async decideArtistRequest(params: {
+    id: string;
+    decision: "accept" | "decline";
+  }): Promise<{ id: string; status: string; decidedAt: string }> {
+    return await this.request<{
+      id: string;
+      status: string;
+      decidedAt: string;
+    }>(`/artist-requests/${encodeURIComponent(params.id)}/decision`, {
+      method: "POST",
+      body: JSON.stringify({ decision: params.decision }),
+    });
+  }
+
+  // --- Admin / employee: instrument listings ---
+
+  async createInstrumentListing(params: {
+    name: string;
+    category: string;
+    dailyRate: number;
+    available?: boolean;
+  }): Promise<Instrument> {
+    const data = await this.request<Instrument>("/instruments", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return data;
   }
 }

@@ -1,4 +1,4 @@
-import { Schema, model, type Document } from "mongoose";
+import { Schema, model, type Document, Types } from "mongoose";
 
 export interface IStoredImage {
   filename: string;
@@ -11,6 +11,7 @@ export interface ILocation extends Document {
   address?: string;
   city?: string;
   images: IStoredImage[];
+  createdByUserId?: Types.ObjectId;
 }
 
 const StoredImageSchema = new Schema<IStoredImage>(
@@ -19,7 +20,7 @@ const StoredImageSchema = new Schema<IStoredImage>(
     mimeType: { type: String, required: true },
     data: { type: Buffer, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const LocationSchema = new Schema<ILocation>(
@@ -27,9 +28,10 @@ const LocationSchema = new Schema<ILocation>(
     name: { type: String, required: true },
     address: { type: String },
     city: { type: String },
+    createdByUserId: { type: Schema.Types.ObjectId, ref: "User" },
     images: { type: [StoredImageSchema], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Location = model<ILocation>("Location", LocationSchema);

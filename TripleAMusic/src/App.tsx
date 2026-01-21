@@ -4,13 +4,13 @@ import type {
   Event,
   Gig,
   GigApplication,
+  Location,
   MusicianProfile,
 } from "@shared";
 import {
   AppFrame,
   AppShell,
   Button,
-  colors,
   spacing,
   TripleAApiClient,
   RequireAnyRole,
@@ -36,35 +36,6 @@ interface DiscoveryResult {
   priceEstimate: number;
   distanceMinutes: number;
 }
-
-const discoveryResults: DiscoveryResult[] = [
-  {
-    musician: {
-      id: "m1",
-      userId: "u1",
-      instruments: ["DJ"],
-      genres: ["House", "Pop"],
-      bio: "High‑energy open‑format DJ for clubs and private events.",
-      averageRating: 4.9,
-      reviewCount: 212,
-    },
-    priceEstimate: 780,
-    distanceMinutes: 18,
-  },
-  {
-    musician: {
-      id: "m2",
-      userId: "u2",
-      instruments: ["Vocals", "Piano"],
-      genres: ["Jazz", "Soul"],
-      bio: "Elegant background sets for dinners and hotel lounges.",
-      averageRating: 4.7,
-      reviewCount: 96,
-    },
-    priceEstimate: 520,
-    distanceMinutes: 11,
-  },
-];
 
 const events: Event[] = [
   {
@@ -103,18 +74,7 @@ const bookings: Booking[] = [
 ];
 
 function Chip({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        padding: `${spacing.xs}px ${spacing.sm}px`,
-        borderRadius: 999,
-        border: "1px solid #374151",
-        fontSize: 12,
-      }}
-    >
-      {label}
-    </span>
-  );
+  return <span className={ui.chip}>{label}</span>;
 }
 
 function Section({
@@ -125,10 +85,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section style={{ marginBottom: spacing.xl }}>
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: spacing.md }}>
-        {title}
-      </h2>
+    <section className={ui.section}>
+      <h2 className={ui.sectionTitle}>{title}</h2>
       {children}
     </section>
   );
@@ -164,11 +122,12 @@ function LoginPage() {
     }
   }
 
+  const userRoles = user?.role ?? [];
+  const isCustomer = userRoles.includes("customer");
+  const hasAnyRole = userRoles.length > 0;
+
   return (
-    <AppShell
-      title="Sign in as customer"
-      subtitle="Use the same account across Triple A apps."
-    >
+    <AppShell title="Sign in">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -185,13 +144,7 @@ function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -201,19 +154,16 @@ function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
-        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
+        {error && <p className={ui.error}>{error}</p>}
         {user && (
-          <p style={{ color: "#9ca3af", fontSize: 13 }}>
-            You are signed in as {user.email}.
+          <p className={ui.help}>
+            {user.email}
+            {!isCustomer &&
+              hasAnyRole &&
+              " · This account is not set up as a host yet."}
           </p>
         )}
         <Button type="submit" disabled={submitting}>
@@ -225,7 +175,7 @@ function LoginPage() {
           variant="ghost"
           onClick={() => navigate("/register")}
         >
-          Create a customer account
+          Create an account for bookings
         </Button>
       </form>
     </AppShell>
@@ -256,10 +206,7 @@ function RegisterPage() {
   }
 
   return (
-    <AppShell
-      title="Create customer account"
-      subtitle="Sign up to book musicians and manage events."
-    >
+    <AppShell title="Create account">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -275,13 +222,7 @@ function RegisterPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -291,13 +232,7 @@ function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -307,16 +242,10 @@ function RegisterPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
-        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
+        {error && <p className={ui.error}>{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Creating..." : "Create account"}
         </Button>
@@ -332,21 +261,156 @@ function RegisterPage() {
   );
 }
 function CustomerDashboardPage() {
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    [],
+  );
+
+  const { user } = useAuth();
+
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResult[]>(
+    [],
+  );
+  const [discoveryBusy, setDiscoveryBusy] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
+  const [myStages, setMyStages] = useState<Location[]>([]);
+  const [stageName, setStageName] = useState("");
+  const [stageAddress, setStageAddress] = useState("");
+  const [stageCity, setStageCity] = useState("");
+  const [stageBusy, setStageBusy] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+
+  const [activeRequestMusician, setActiveRequestMusician] =
+    useState<DiscoveryResult | null>(null);
+  const [myGigs, setMyGigs] = useState<Gig[]>([]);
+  const [requestGigId, setRequestGigId] = useState<string>("");
+  const [requestPrice, setRequestPrice] = useState<string>("");
+  const [requestBusy, setRequestBusy] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDiscoveryError(null);
+    setDiscoveryBusy(true);
+    api
+      .musicDiscovery({})
+      .then((results) => setDiscoveryResults(results))
+      .catch((err) =>
+        setDiscoveryError(
+          err instanceof Error ? err.message : "Failed to load discovery",
+        ),
+      )
+      .finally(() => setDiscoveryBusy(false));
+  }, [api]);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .listMyStageLocations()
+      .then((res) => setMyStages(res))
+      .catch(() => {
+        // Ignore errors for now; user might not be a host yet.
+      });
+  }, [api, user]);
+
+  function apiImageUrl(pathname?: string): string | undefined {
+    if (!pathname) return undefined;
+    if (/^https?:\/\//i.test(pathname)) return pathname;
+    return `http://localhost:4000${pathname}`;
+  }
+
+  useEffect(() => {
+    if (!activeRequestMusician) return;
+    if (!user) return;
+    if (myGigs.length > 0) return;
+    api
+      .listMyGigs()
+      .then((g) => setMyGigs(g))
+      .catch(() => {
+        // Best-effort; surface errors when submitting.
+      });
+  }, [activeRequestMusician, user, myGigs.length, api]);
+
+  async function handleCreateStage(e: React.FormEvent) {
+    e.preventDefault();
+    setStageError(null);
+    setStageBusy(true);
+    try {
+      const created = await api.createStageLocation({
+        name: stageName,
+        address: stageAddress,
+        city: stageCity,
+      });
+      setMyStages((prev) => [created, ...prev]);
+      setStageName("");
+      setStageAddress("");
+      setStageCity("");
+    } catch (err) {
+      setStageError(
+        err instanceof Error ? err.message : "Failed to create stage",
+      );
+    } finally {
+      setStageBusy(false);
+    }
+  }
+
+  function startRequestFor(result: DiscoveryResult) {
+    setActiveRequestMusician(result);
+    setRequestError(null);
+    setRequestSuccess(null);
+    const suggested =
+      typeof result.musician.defaultHourlyRate === "number" &&
+      result.musician.defaultHourlyRate > 0
+        ? result.musician.defaultHourlyRate
+        : result.priceEstimate;
+    setRequestPrice(String(Math.round(suggested)));
+    setRequestGigId("");
+  }
+
+  async function handleSubmitArtistRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeRequestMusician) return;
+    setRequestError(null);
+    setRequestSuccess(null);
+    setRequestBusy(true);
+    try {
+      if (!requestGigId) {
+        throw new Error("Select a gig to attach this request to.");
+      }
+      const price = Number(requestPrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        throw new Error("Enter a positive offer amount.");
+      }
+
+      await api.requestArtistForGig({
+        gigId: requestGigId,
+        musicianUserId: activeRequestMusician.musician.userId,
+        priceOffered: price,
+      });
+
+      setRequestSuccess("Request sent to artist.");
+    } catch (err) {
+      setRequestError(
+        err instanceof Error ? err.message : "Failed to send request",
+      );
+    } finally {
+      setRequestBusy(false);
+    }
+  }
+
   return (
     <AppShell
-      title="Triple A Music"
-      subtitle="Customer app (like Uber Eats): discover musicians/venues and manage every booking."
+      title="Host dashboard"
+      subtitle="Stages, gigs, discovery, and direct artist requests."
     >
       <div
         style={{ display: "flex", flexDirection: "column", gap: spacing.xl }}
       >
         <Section title="Event setup">
           <div
+            className={[ui.card, ui.cardPad].join(" ")}
             style={{
-              padding: spacing.lg,
-              borderRadius: 12,
-              backgroundColor: "#020617",
-              border: "1px solid #1f2937",
               display: "flex",
               flexDirection: "column",
               gap: spacing.md,
@@ -355,36 +419,18 @@ function CustomerDashboardPage() {
             <div style={{ display: "flex", gap: spacing.md, flexWrap: "wrap" }}>
               <input
                 placeholder="Describe your event (e.g. rooftop cocktail, wedding)"
-                style={{
-                  flex: "1 1 260px",
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  backgroundColor: "#020617",
-                  color: colors.text,
-                }}
+                className={ui.input}
+                style={{ flex: "1 1 260px" }}
               />
               <input
                 placeholder="Guests"
-                style={{
-                  width: 120,
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  backgroundColor: "#020617",
-                  color: colors.text,
-                }}
+                className={ui.input}
+                style={{ width: 120 }}
               />
               <input
                 placeholder="Budget"
-                style={{
-                  width: 140,
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  borderRadius: 999,
-                  border: "1px solid #374151",
-                  backgroundColor: "#020617",
-                  color: colors.text,
-                }}
+                className={ui.input}
+                style={{ width: 140 }}
               />
             </div>
             <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
@@ -400,6 +446,121 @@ function CustomerDashboardPage() {
           </div>
         </Section>
 
+        <Section title="Your stages & locations">
+          {!user ? (
+            <p className={ui.help}>
+              Sign in as a host to post stages and gig locations.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: spacing.md,
+              }}
+            >
+              <form
+                onSubmit={handleCreateStage}
+                className={[ui.card, ui.cardPad].join(" ")}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.sm,
+                  maxWidth: 520,
+                }}
+              >
+                <p className={ui.help}>
+                  Post a stage or venue you host events at. You can reuse it
+                  across multiple gigs.
+                </p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label style={{ fontSize: 13 }}>Stage name</label>
+                  <input
+                    required
+                    value={stageName}
+                    onChange={(e) => setStageName(e.target.value)}
+                    placeholder="e.g. Skyline Rooftop, Harbor Hall"
+                    className={ui.input}
+                  />
+                </div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label style={{ fontSize: 13 }}>Address (optional)</label>
+                  <input
+                    value={stageAddress}
+                    onChange={(e) => setStageAddress(e.target.value)}
+                    className={ui.input}
+                  />
+                </div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label style={{ fontSize: 13 }}>City (optional)</label>
+                  <input
+                    value={stageCity}
+                    onChange={(e) => setStageCity(e.target.value)}
+                    className={ui.input}
+                  />
+                </div>
+                {stageError && <p className={ui.error}>{stageError}</p>}
+                <Button type="submit" disabled={stageBusy}>
+                  {stageBusy ? "Posting stage..." : "Post stage"}
+                </Button>
+              </form>
+
+              {myStages.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  {myStages.map((stage) => (
+                    <div
+                      key={stage.id}
+                      className={[ui.card, ui.cardPad].join(" ")}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "96px 1fr",
+                        gap: spacing.md,
+                        alignItems: "center",
+                      }}
+                    >
+                      <div className={[ui.media, ui.mediaSquare].join(" ")}>
+                        {stage.imageUrl ? (
+                          <img
+                            src={apiImageUrl(stage.imageUrl)}
+                            alt={stage.name}
+                            loading="lazy"
+                          />
+                        ) : null}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 650 }}>{stage.name}</div>
+                        {(stage.address || stage.city) && (
+                          <div className={ui.help}>
+                            {[stage.address, stage.city]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={ui.help}>
+                  You haven&apos;t posted any stages yet.
+                </p>
+              )}
+            </div>
+          )}
+        </Section>
+
         <Section title="Discovery & search">
           <div
             style={{
@@ -408,14 +569,15 @@ function CustomerDashboardPage() {
               gap: spacing.md,
             }}
           >
+            {discoveryBusy && (
+              <p className={ui.help}>Loading discovery results...</p>
+            )}
+            {discoveryError && <p className={ui.error}>{discoveryError}</p>}
             {discoveryResults.map((result) => (
               <div
                 key={result.musician.id}
+                className={[ui.card, ui.cardPad].join(" ")}
                 style={{
-                  padding: spacing.lg,
-                  borderRadius: 12,
-                  backgroundColor: "#020617",
-                  border: "1px solid #1f2937",
                   display: "flex",
                   flexWrap: "wrap",
                   gap: spacing.lg,
@@ -429,9 +591,9 @@ function CustomerDashboardPage() {
                   <p
                     style={{
                       marginTop: spacing.xs,
-                      color: "#9ca3af",
                       fontSize: 14,
                     }}
+                    className={ui.help}
                   >
                     {result.musician.bio}
                   </p>
@@ -443,8 +605,8 @@ function CustomerDashboardPage() {
                     style={{
                       marginTop: spacing.xs,
                       fontSize: 13,
-                      color: "#9ca3af",
                     }}
+                    className={ui.help}
                   >
                     {result.musician.averageRating.toFixed(1)} ★ ·{" "}
                     {result.musician.reviewCount}+ reviews · ~
@@ -463,7 +625,15 @@ function CustomerDashboardPage() {
                   <p style={{ fontSize: 24, fontWeight: 600 }}>
                     ${result.priceEstimate.toFixed(0)}
                   </p>
-                  <Button fullWidth>Request quote</Button>
+                  {result.musician.acceptsDirectRequests ? (
+                    <Button fullWidth onClick={() => startRequestFor(result)}>
+                      Request this artist
+                    </Button>
+                  ) : (
+                    <Button fullWidth disabled>
+                      Not accepting direct requests
+                    </Button>
+                  )}
                   <Button variant="ghost" fullWidth>
                     View profile
                   </Button>
@@ -472,6 +642,78 @@ function CustomerDashboardPage() {
             ))}
           </div>
         </Section>
+
+        {activeRequestMusician && (
+          <Section title="Request artist for a gig">
+            <form
+              onSubmit={handleSubmitArtistRequest}
+              className={[ui.card, ui.cardPad].join(" ")}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: spacing.md,
+              }}
+            >
+              <p style={{ fontSize: 14 }}>
+                You are requesting:
+                <br />
+                <span style={{ fontWeight: 600 }}>
+                  {activeRequestMusician.musician.bio ||
+                    `Artist #${activeRequestMusician.musician.id}`}
+                </span>
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: 13 }}>Which gig is this for?</label>
+                <select
+                  required
+                  value={requestGigId}
+                  onChange={(e) => setRequestGigId(e.target.value)}
+                  className={ui.input}
+                >
+                  <option value="">Select a gig with a stage</option>
+                  {myGigs.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title} — {g.date}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: 13 }}>Your offer (per gig)</label>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  value={requestPrice}
+                  onChange={(e) => setRequestPrice(e.target.value)}
+                  className={ui.input}
+                />
+              </div>
+              {requestError && (
+                <p style={{ fontSize: 13, color: "#f87171" }}>{requestError}</p>
+              )}
+              {requestSuccess && (
+                <p style={{ fontSize: 13, color: "#4ade80" }}>
+                  {requestSuccess}
+                </p>
+              )}
+              <div
+                style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}
+              >
+                <Button type="submit" disabled={requestBusy}>
+                  {requestBusy ? "Sending..." : "Send request"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setActiveRequestMusician(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Section>
+        )}
 
         <Section title="Booking management">
           <div
@@ -487,12 +729,12 @@ function CustomerDashboardPage() {
                 booking.status === "requested"
                   ? "Requested"
                   : booking.status === "confirmed"
-                  ? "Confirmed"
-                  : booking.status === "in_progress"
-                  ? "In progress"
-                  : booking.status === "completed"
-                  ? "Completed"
-                  : "Cancelled";
+                    ? "Confirmed"
+                    : booking.status === "in_progress"
+                      ? "In progress"
+                      : booking.status === "completed"
+                        ? "Completed"
+                        : "Cancelled";
 
               return (
                 <div
@@ -561,7 +803,7 @@ function BrowsePage() {
   const navigate = useNavigate();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
 
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -569,6 +811,14 @@ function BrowsePage() {
   const [results, setResults] = useState<DiscoveryResult[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  function apiImageUrl(pathname?: string): string | undefined {
+    if (!pathname) return undefined;
+    if (/^https?:\/\//i.test(pathname)) return pathname;
+    return `http://localhost:4000${pathname}`;
+  }
 
   useScrollReveal(contentRef, [results?.length ?? 0, loading]);
 
@@ -582,10 +832,19 @@ function BrowsePage() {
       .finally(() => setLoading(false));
   }, [api]);
 
+  useEffect(() => {
+    api
+      .listPublicLocations()
+      .then((l) => setLocations(l))
+      .catch(() => {
+        // Best-effort; browse should still work without it.
+      });
+  }, [api]);
+
   return (
     <AppShell
-      title="Triple A Music"
-      subtitle="Discover performers, post gigs, and manage bookings end-to-end."
+      title="Browse performers"
+      subtitle="Find musicians, then sign in to post gigs and book."
     >
       <div
         ref={contentRef}
@@ -658,6 +917,48 @@ function BrowsePage() {
         </section>
 
         <div id="music-performers" />
+
+        <Section title="Featured stages">
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.lg,
+              overflowX: "auto",
+              paddingBottom: spacing.xs,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {locations.slice(0, 10).map((loc) => (
+              <div
+                key={loc.id}
+                data-reveal
+                className={[ui.card, ui.cardPad].join(" ")}
+                style={{
+                  minWidth: 260,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.sm,
+                }}
+              >
+                <div className={[ui.media, ui.mediaWide].join(" ")}>
+                  {loc.imageUrl ? (
+                    <img
+                      src={apiImageUrl(loc.imageUrl)}
+                      alt={loc.name}
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+                <div style={{ fontWeight: 650 }}>{loc.name}</div>
+                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                  {[loc.city, loc.address].filter(Boolean).join(" · ") ||
+                    "Stage"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
         <Section title="Available performers">
           {loading ? (
             <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
@@ -678,7 +979,7 @@ function BrowsePage() {
           >
             {(results ?? []).map((r) => {
               const detailsPath = `/musicians/${encodeURIComponent(
-                r.musician.id
+                r.musician.id,
               )}`;
               return (
                 <div
@@ -781,7 +1082,7 @@ function MusicianDetailsPage() {
 
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
 
   const [loading, setLoading] = useState(true);
@@ -843,7 +1144,7 @@ function MusicianDetailsPage() {
   }, [wantsBooking, user, location.pathname, location.search, navigate]);
 
   const [selectedEventId, setSelectedEventId] = useState<string>(
-    events[0]?.id ?? "new"
+    events[0]?.id ?? "new",
   );
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
@@ -914,7 +1215,7 @@ function MusicianDetailsPage() {
             <Button
               onClick={() => {
                 const target = `/musicians/${encodeURIComponent(
-                  musician.id
+                  musician.id,
                 )}?book=1`;
                 if (!user) {
                   navigate(`/login?next=${encodeURIComponent(target)}`);
@@ -1207,7 +1508,7 @@ function MusicianDetailsPage() {
                           if (isNewEvent) {
                             if (!newEventName.trim() || !newEventDate) {
                               setSubmitError(
-                                "Please provide an event name and date."
+                                "Please provide an event name and date.",
                               );
                               return;
                             }
@@ -1263,7 +1564,7 @@ function EventsPage() {
 function PostGigPage() {
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1302,7 +1603,7 @@ function PostGigPage() {
         if (!locationId && simplified[0]) setLocationId(simplified[0].id);
       })
       .catch((e) =>
-        setLocationsError(e instanceof Error ? e.message : String(e))
+        setLocationsError(e instanceof Error ? e.message : String(e)),
       )
       .finally(() => setLocationsBusy(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1542,7 +1843,7 @@ function PostGigPage() {
 function MyGigsPage() {
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
   const navigate = useNavigate();
 
@@ -1630,7 +1931,7 @@ function MyGigsPage() {
 function GigApplicantsPage() {
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
   const { id } = useParams();
   const gigId = id ?? "";
@@ -1691,8 +1992,8 @@ function GigApplicantsPage() {
                 status: result.status as GigApplication["status"],
                 decidedAt: result.decidedAt,
               }
-            : a
-        )
+            : a,
+        ),
       );
     } catch (e) {
       setActionError(e instanceof Error ? e.message : String(e));
@@ -1975,7 +2276,7 @@ function AccountPage() {
 
 function App() {
   return (
-    <AppFrame>
+    <AppFrame app="music">
       <div
         style={{
           display: "flex",
@@ -1985,7 +2286,13 @@ function App() {
           minHeight: 0,
         }}
       >
-        <NavBar />
+        <div className={ui.chrome}>
+          <header className={ui.header}>
+            <h1 className={ui.title}>Triple A Music</h1>
+            <p className={ui.subtitle}>Hosts &amp; organizers</p>
+          </header>
+          <NavBar />
+        </div>
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />

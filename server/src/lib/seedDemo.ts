@@ -18,7 +18,7 @@ function mimeTypeForFilename(filename: string): string {
 }
 
 async function readSeedImages(
-  dirName: string
+  dirName: string,
 ): Promise<Array<{ filename: string; mimeType: string; data: Buffer }>> {
   const root = process.cwd();
   const abs = path.resolve(root, "..", dirName);
@@ -74,29 +74,70 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
       Location.countDocuments({}).exec(),
       Gig.countDocuments({}).exec(),
     ]);
+  // Seed core demo users if they do not exist.
+  const passwordHash = await bcrypt.hash("test", 10);
 
-  const existingTest = await User.findOne({ email: "test@test.com" }).exec();
-  if (!existingTest) {
-    const passwordHash = await bcrypt.hash("test", 10);
-    const roles = ["customer"];
-    const permissions = deriveDefaultPermissions(roles);
-    await User.create({
-      name: "Test Customer",
-      email: "test@test.com",
+  async function ensureUser(params: {
+    email: string;
+    name: string;
+    roles: string[];
+  }): Promise<typeof User | null> {
+    const existing = await User.findOne({ email: params.email }).exec();
+    if (existing) return existing;
+
+    const permissions = deriveDefaultPermissions(params.roles);
+    const created = await User.create({
+      name: params.name,
+      email: params.email,
       passwordHash,
-      roles,
+      roles: params.roles,
       permissions,
+    });
+    return created;
+  }
+
+  const adminUser = await ensureUser({
+    email: "admin@admin.com",
+    name: "Admin",
+    roles: ["admin"],
+  });
+
+  const musicUser = await ensureUser({
+    email: "music@music.com",
+    name: "Music Host",
+    roles: ["customer"],
+  });
+
+  const musicianUser = await ensureUser({
+    email: "musician@music.com",
+    name: "Demo Musician",
+    roles: ["musician"],
+  });
+
+  // "Muse" account: seeded without marketplace roles so the apps
+  // can guide the user into the right role/sub-app.
+  const existingMuse = await User.findOne({ email: "muse@music.com" }).exec();
+  if (!existingMuse) {
+    await User.create({
+      name: "Muse User",
+      email: "muse@music.com",
+      passwordHash,
+      roles: [],
+      permissions: [],
     });
   }
 
   if (musiciansCount === 0) {
-    await MusicianProfile.create([
+    const profiles: Parameters<typeof MusicianProfile.create>[0] = [
       {
+        userId: musicianUser ? String(musicianUser.id) : undefined,
         instruments: ["DJ"],
         genres: ["House", "Pop"],
         bio: "High-energy open-format DJ for clubs and private events.",
         averageRating: 4.9,
         reviewCount: 212,
+        defaultHourlyRate: 150,
+        acceptsDirectRequests: true,
       },
       {
         instruments: ["Vocals", "Piano"],
@@ -104,8 +145,11 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
         bio: "Elegant background sets for dinners and hotel lounges.",
         averageRating: 4.7,
         reviewCount: 96,
+        defaultHourlyRate: 120,
+        acceptsDirectRequests: true,
       },
-    ]);
+    ];
+    await MusicianProfile.create(profiles as any);
   }
 
   // Instruments + instrument images
@@ -191,24 +235,92 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
         }
       }
     }
+
+    // Ensure the host account has a few stage listings with real images
+    // so the host dashboard looks like a real product demo.
+    if (musicUser && seedImages.length) {
+      const desired = Math.min(3, seedImages.length);
+      const hostId = new mongoose.Types.ObjectId(musicUser.id);
+      const existingHostStages = await Location.countDocuments({
+        createdByUserId: hostId,
+      }).exec();
+
+      if (existingHostStages < 2) {
+        const picks = seedImages.slice(0, desired);
+        for (const img of picks) {
+          const meta = locationFromFilename(img.filename);
+          const already = await Location.findOne({
+            name: meta.name,
+            createdByUserId: hostId,
+          }).exec();
+          if (already) continue;
+
+          // Avoid stealing ownership of a shared seeded location; create a host-owned copy.
+          await Location.create({
+            name: meta.name,
+            city: meta.city,
+            createdByUserId: hostId,
+            images: [img],
+          });
+        }
+      }
+    }
   }
 
-  if (gigsCount === 0) {
-    const testUser = await User.findOne({ email: "test@test.com" }).exec();
-    const location = await Location.findOne({}).sort({ createdAt: -1 }).exec();
-    if (testUser) {
-      await Gig.create({
-        title: "Need a DJ for a small event",
-        description: "Open-format DJ, 2 hours, bring basic controller.",
-        date: "2026-02-01",
-        time: "20:00",
-        budget: 600,
-        locationId: location
-          ? new mongoose.Types.ObjectId(location.id)
-          : undefined,
-        createdByUserId: new mongoose.Types.ObjectId(testUser.id),
-        status: "open",
-      });
+  // Ensure the host has multiple gigs attached to a real stage/location.
+  if (musicUser) {
+    const hostId = new mongoose.Types.ObjectId(musicUser.id);
+    const hostLocations = await Location.find({ createdByUserId: hostId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .exec();
+
+    const fallbackLocation = await Location.findOne({})
+      .sort({ createdAt: -1 })
+      .exec();
+
+    const pickLocationId =
+      (hostLocations[0]?.id ?? fallbackLocation?.id)
+        ? new mongoose.Types.ObjectId(
+            (hostLocations[0]?.id ?? fallbackLocation?.id) as string,
+          )
+        : undefined;
+
+    const existingHostGigs = await Gig.countDocuments({
+      createdByUserId: hostId,
+    }).exec();
+
+    if (existingHostGigs < 2 && pickLocationId) {
+      const templates = [
+        {
+          title: "Need a DJ for a small event",
+          description: "Open-format DJ, 2 hours, bring basic controller.",
+          date: "2026-02-01",
+          time: "20:00",
+          budget: 600,
+        },
+        {
+          title: "Jazz trio for dinner service",
+          description: "Background sets, 3 hours, venue provides piano.",
+          date: "2026-02-10",
+          time: "18:30",
+          budget: 900,
+        },
+      ];
+
+      for (const t of templates) {
+        const exists = await Gig.findOne({
+          createdByUserId: hostId,
+          title: t.title,
+        }).exec();
+        if (exists) continue;
+        await Gig.create({
+          ...t,
+          locationId: pickLocationId,
+          createdByUserId: hostId,
+          status: "open",
+        });
+      }
     }
   }
 }

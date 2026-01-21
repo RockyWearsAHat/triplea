@@ -1,10 +1,15 @@
 import React from "react";
-import type { Booking, Gig, MusicianProfile, Perk } from "@shared";
+import type {
+  ArtistRequest,
+  Booking,
+  Gig,
+  MusicianProfile,
+  Perk,
+} from "@shared";
 import {
   AppFrame,
   AppShell,
   Button,
-  colors,
   spacing,
   TripleAApiClient,
   useScrollReveal,
@@ -72,15 +77,15 @@ function StatPill({ label, value }: { label: string; value: string }) {
       style={{
         padding: `${spacing.sm}px ${spacing.md}px`,
         borderRadius: 999,
-        backgroundColor: "#020617",
-        border: `1px solid ${colors.surfaceAlt ?? "#1f2937"}`,
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--border)",
         display: "inline-flex",
         flexDirection: "column",
         gap: 2,
         minWidth: 120,
       }}
     >
-      <span style={{ fontSize: 12, color: "#9ca3af" }}>{label}</span>
+      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</span>
       <span style={{ fontSize: 16, fontWeight: 600 }}>{value}</span>
     </div>
   );
@@ -94,10 +99,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section style={{ marginBottom: spacing.xl }}>
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: spacing.md }}>
-        {title}
-      </h2>
+    <section className={ui.section}>
+      <h2 className={ui.sectionTitle}>{title}</h2>
       {children}
     </section>
   );
@@ -125,10 +128,7 @@ function LoginPage() {
   }
 
   return (
-    <AppShell
-      title="Sign in as musician"
-      subtitle="Use the same account across Triple A apps."
-    >
+    <AppShell title="Sign in">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -145,13 +145,7 @@ function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -161,21 +155,11 @@ function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
-        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
-        {user && (
-          <p style={{ color: "#9ca3af", fontSize: 13 }}>
-            You are signed in as {user.email}.
-          </p>
-        )}
+        {error && <p className={ui.error}>{error}</p>}
+        {user && <p className={ui.help}>You are signed in as {user.email}.</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
         </Button>
@@ -216,10 +200,7 @@ function RegisterPage() {
   }
 
   return (
-    <AppShell
-      title="Create musician account"
-      subtitle="Sign up to manage gigs, ratings, and perks."
-    >
+    <AppShell title="Create musician account">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -235,13 +216,7 @@ function RegisterPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -251,13 +226,7 @@ function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -267,16 +236,10 @@ function RegisterPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              padding: `${spacing.sm}px ${spacing.md}px`,
-              borderRadius: 999,
-              border: "1px solid #374151",
-              backgroundColor: "#020617",
-              color: colors.text,
-            }}
+            className={ui.input}
           />
         </div>
-        {error && <p style={{ color: "#f87171", fontSize: 13 }}>{error}</p>}
+        {error && <p className={ui.error}>{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Creating..." : "Create account"}
         </Button>
@@ -292,14 +255,92 @@ function RegisterPage() {
   );
 }
 function MusicianDashboardPage() {
+  const api = React.useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    [],
+  );
+  const { user } = useAuth();
   const navigate = useNavigate();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   useScrollReveal(contentRef);
 
+  const [profileLoading, setProfileLoading] = React.useState(false);
+  const [profileError, setProfileError] = React.useState<string | null>(null);
+  const [defaultRateInput, setDefaultRateInput] = React.useState<string>("");
+  const [acceptsDirect, setAcceptsDirect] = React.useState(false);
+  const [savingProfile, setSavingProfile] = React.useState(false);
+  const [profileSaved, setProfileSaved] = React.useState<string | null>(null);
+
+  const [requests, setRequests] = React.useState<ArtistRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = React.useState(false);
+  const [requestsError, setRequestsError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!user) return;
+    setProfileError(null);
+    setProfileLoading(true);
+    api
+      .getMyMusicianProfile()
+      .then((m) => {
+        if (
+          typeof m.defaultHourlyRate === "number" &&
+          m.defaultHourlyRate > 0
+        ) {
+          setDefaultRateInput(String(m.defaultHourlyRate));
+        } else {
+          setDefaultRateInput("");
+        }
+        setAcceptsDirect(Boolean(m.acceptsDirectRequests));
+      })
+      .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setProfileLoading(false));
+  }, [api, user]);
+
+  React.useEffect(() => {
+    if (!user) return;
+    setRequestsError(null);
+    setRequestsLoading(true);
+    api
+      .listMyArtistRequests()
+      .then((r) => setRequests(r))
+      .catch((e) =>
+        setRequestsError(e instanceof Error ? e.message : String(e)),
+      )
+      .finally(() => setRequestsLoading(false));
+  }, [api, user]);
+
+  async function handleSaveDirectSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setProfileError(null);
+    setProfileSaved(null);
+    setSavingProfile(true);
+    try {
+      const rate = defaultRateInput.trim()
+        ? Number(defaultRateInput.trim())
+        : null;
+      if (rate !== null && (!Number.isFinite(rate) || rate <= 0)) {
+        throw new Error("Default hourly rate must be a positive number.");
+      }
+
+      const updated = await api.updateMyMusicianProfile({
+        defaultHourlyRate: rate,
+        acceptsDirectRequests: acceptsDirect,
+      });
+      void updated;
+      setProfileSaved("Saved.");
+    } catch (err) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to save settings",
+      );
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   return (
     <AppShell
-      title="Triple A Musician"
-      subtitle="Your performer hub for gigs, reputation, and earnings."
+      title="Dashboard"
+      subtitle="Today’s gigs, requests, and perks in one place."
     >
       <div
         ref={contentRef}
@@ -349,8 +390,10 @@ function MusicianDashboardPage() {
         <Section title="Profile & rating">
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.lg }}>
             <div style={{ flex: "1 1 220px" }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600 }}>Alex Rivers</h3>
-              <p style={{ marginTop: spacing.sm, color: "#9ca3af" }}>
+              <h3 style={{ fontSize: 20, fontWeight: 600 }}>
+                {user?.name ?? "Your profile"}
+              </h3>
+              <p className={ui.help} style={{ marginTop: spacing.sm }}>
                 {mockProfile.bio}
               </p>
               <p style={{ marginTop: spacing.sm, fontSize: 14 }}>
@@ -456,16 +499,16 @@ function MusicianDashboardPage() {
                 data-reveal
                 className={[ui.card, ui.cardPad].join(" ")}
                 style={{
-                  border: "1px dashed #374151",
+                  border: "1px dashed var(--border-strong)",
                 }}
               >
                 <h3 style={{ fontWeight: 600 }}>{perk.name}</h3>
                 <p
                   style={{
                     marginTop: spacing.xs,
-                    color: "#9ca3af",
                     fontSize: 14,
                   }}
+                  className={ui.help}
                 >
                   {perk.description}
                 </p>
@@ -473,8 +516,8 @@ function MusicianDashboardPage() {
                   style={{
                     marginTop: spacing.sm,
                     fontSize: 13,
-                    color: "#9ca3af",
                   }}
+                  className={ui.help}
                 >
                   Unlock rules:{" "}
                   {perk.minRating ? `Rating ≥ ${perk.minRating}` : null}
@@ -486,6 +529,178 @@ function MusicianDashboardPage() {
               </div>
             ))}
           </div>
+        </Section>
+
+        <Section title="Direct requests & pricing">
+          {profileLoading ? (
+            <p className={ui.help}>Loading...</p>
+          ) : !user ? (
+            <p className={ui.help}>
+              Sign in as a musician to manage direct request settings.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: spacing.md,
+                maxWidth: 520,
+              }}
+            >
+              <form
+                onSubmit={handleSaveDirectSettings}
+                className={[ui.card, ui.cardPad].join(" ")}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.sm,
+                }}
+              >
+                <p className={ui.help}>
+                  Set your default hourly rate and whether hosts can request you
+                  directly from Triple A Music. A gig must already have a
+                  stage/location before a host can send a request.
+                </p>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label style={{ fontSize: 13 }}>
+                    Default hourly rate (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={defaultRateInput}
+                    onChange={(e) => setDefaultRateInput(e.target.value)}
+                    placeholder="e.g. 120"
+                    className={ui.input}
+                  />
+                </div>
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={acceptsDirect}
+                    onChange={(e) => setAcceptsDirect(e.target.checked)}
+                  />
+                  Allow direct booking requests from hosts
+                </label>
+                {profileError && <p className={ui.error}>{profileError}</p>}
+                {profileSaved && (
+                  <p style={{ fontSize: 13, color: "var(--accent)" }}>
+                    {profileSaved}
+                  </p>
+                )}
+                <Button type="submit" disabled={savingProfile}>
+                  {savingProfile ? "Saving..." : "Save settings"}
+                </Button>
+              </form>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.sm,
+                }}
+              >
+                <h3 style={{ fontSize: 14, fontWeight: 600 }}>
+                  Incoming requests
+                </h3>
+                {requestsLoading ? (
+                  <p className={ui.help}>Loading...</p>
+                ) : requestsError ? (
+                  <p className={ui.error}>{requestsError}</p>
+                ) : requests.length === 0 ? (
+                  <p className={ui.help}>No direct requests yet.</p>
+                ) : (
+                  requests.map((r) => (
+                    <div
+                      key={r.id}
+                      className={[ui.card, ui.cardPad].join(" ")}
+                      style={{ fontSize: 13 }}
+                    >
+                      <div>
+                        Offer: ${r.priceOffered.toFixed(0)} · Status: {r.status}
+                      </div>
+                      {r.createdAt && (
+                        <div className={ui.help}>
+                          Requested at {new Date(r.createdAt).toLocaleString()}
+                        </div>
+                      )}
+                      {r.status === "pending" && (
+                        <div
+                          style={{
+                            marginTop: spacing.xs,
+                            display: "flex",
+                            gap: spacing.sm,
+                          }}
+                        >
+                          <Button
+                            variant="secondary"
+                            onClick={async () => {
+                              try {
+                                await api.decideArtistRequest({
+                                  id: r.id,
+                                  decision: "accept",
+                                });
+                                setRequests((prev) =>
+                                  prev.map((req) =>
+                                    req.id === r.id
+                                      ? { ...req, status: "accepted" }
+                                      : req,
+                                  ),
+                                );
+                              } catch (e) {
+                                setRequestsError(
+                                  e instanceof Error
+                                    ? e.message
+                                    : "Failed to accept request",
+                                );
+                              }
+                            }}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={async () => {
+                              try {
+                                await api.decideArtistRequest({
+                                  id: r.id,
+                                  decision: "decline",
+                                });
+                                setRequests((prev) =>
+                                  prev.map((req) =>
+                                    req.id === r.id
+                                      ? { ...req, status: "declined" }
+                                      : req,
+                                  ),
+                                );
+                              } catch (e) {
+                                setRequestsError(
+                                  e instanceof Error
+                                    ? e.message
+                                    : "Failed to decline request",
+                                );
+                              }
+                            }}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </Section>
 
         <Section title="Notifications (coming soon)">
@@ -530,7 +745,7 @@ function PerksPage() {
 function BrowseGigsPage() {
   const api = React.useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
   const navigate = useNavigate();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -573,13 +788,11 @@ function BrowseGigsPage() {
         style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
       >
         {loading ? (
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading...</p>
+          <p className={ui.help}>Loading...</p>
         ) : error ? (
-          <p style={{ color: "#f87171", fontSize: 14 }}>{error}</p>
+          <p className={ui.error}>{error}</p>
         ) : gigs.length === 0 ? (
-          <p style={{ color: "#9ca3af", fontSize: 14 }}>
-            No gigs available yet.
-          </p>
+          <p className={ui.help}>No gigs available yet.</p>
         ) : (
           gigs.map((gig) => (
             <div
@@ -599,9 +812,9 @@ function BrowseGigsPage() {
                 <p
                   style={{
                     marginTop: spacing.xs,
-                    color: "#9ca3af",
                     fontSize: 14,
                   }}
+                  className={ui.help}
                 >
                   Budget:{" "}
                   {typeof gig.budget === "number"
@@ -627,7 +840,7 @@ function BrowseGigsPage() {
 function GigDetailPage() {
   const api = React.useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    [],
   );
   const params = useParams();
   const gigId = params.id ?? "";
@@ -700,21 +913,21 @@ function GigDetailPage() {
       </Button>
 
       {loading ? (
-        <p style={{ color: "#9ca3af", fontSize: 14, marginTop: spacing.md }}>
+        <p className={ui.help} style={{ marginTop: spacing.md }}>
           Loading...
         </p>
       ) : error ? (
-        <p style={{ color: "#f87171", fontSize: 14, marginTop: spacing.md }}>
+        <p className={ui.error} style={{ marginTop: spacing.md }}>
           {error}
         </p>
       ) : !gig ? (
-        <p style={{ color: "#9ca3af", fontSize: 14, marginTop: spacing.md }}>
+        <p className={ui.help} style={{ marginTop: spacing.md }}>
           Gig not found.
         </p>
       ) : (
         <div style={{ marginTop: spacing.md }}>
           <Section title={gig.title}>
-            <p style={{ color: "#9ca3af", fontSize: 14 }}>
+            <p className={ui.help}>
               Budget:{" "}
               {typeof gig.budget === "number"
                 ? `$${gig.budget.toFixed(0)}`
@@ -730,9 +943,7 @@ function GigDetailPage() {
 
           <Section title="Apply">
             {submitted ? (
-              <p style={{ color: "#9ca3af", fontSize: 14 }}>
-                Application submitted.
-              </p>
+              <p className={ui.help}>Application submitted.</p>
             ) : (
               <form
                 onSubmit={handleApply}
@@ -753,22 +964,12 @@ function GigDetailPage() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
-                    style={{
-                      padding: `${spacing.sm}px ${spacing.md}px`,
-                      borderRadius: 12,
-                      border: "1px solid #374151",
-                      backgroundColor: "#020617",
-                      color: colors.text,
-                      resize: "vertical",
-                    }}
+                    className={ui.input}
+                    style={{ resize: "vertical" }}
                   />
                 </div>
 
-                {submitError && (
-                  <p style={{ color: "#f87171", fontSize: 13 }}>
-                    {submitError}
-                  </p>
-                )}
+                {submitError && <p className={ui.error}>{submitError}</p>}
 
                 <Button type="submit" disabled={submitting}>
                   {submitting ? "Submitting..." : "Apply"}
@@ -798,9 +999,7 @@ function ProfilePage() {
             <p>
               Signed in as <strong>{user.name}</strong> ({user.email})
             </p>
-            <p style={{ fontSize: 14, color: "#9ca3af" }}>
-              Roles: {user.role.join(", ")}
-            </p>
+            <p className={ui.help}>Roles: {user.role.join(", ")}</p>
             <Button
               variant="secondary"
               onClick={logout}
@@ -811,7 +1010,7 @@ function ProfilePage() {
           </>
         ) : (
           <>
-            <p style={{ color: "#9ca3af", fontSize: 14 }}>
+            <p className={ui.help}>
               You are not signed in. Use the Login link in the navigation to
               access your musician dashboard.
             </p>
@@ -920,7 +1119,7 @@ function MessagesPage() {
 
 function App() {
   return (
-    <AppFrame>
+    <AppFrame app="musician">
       <div
         style={{
           display: "flex",
@@ -930,7 +1129,13 @@ function App() {
           minHeight: 0,
         }}
       >
-        <NavBar />
+        <div className={ui.chrome}>
+          <header className={ui.header}>
+            <h1 className={ui.title}>Triple A Musician</h1>
+            <p className={ui.subtitle}>Performer work app</p>
+          </header>
+          <NavBar />
+        </div>
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />

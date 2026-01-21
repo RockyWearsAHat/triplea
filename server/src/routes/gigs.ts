@@ -5,6 +5,8 @@ import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
 import { Gig } from "../models/Gig";
 import { GigApplication } from "../models/GigApplication";
 import { Location } from "../models/Location";
+import { ArtistRequest } from "../models/ArtistRequest";
+import { MusicianProfile } from "../models/MusicianProfile";
 
 const router: Router = express.Router();
 
@@ -69,7 +71,7 @@ router.post(
       console.error("POST /gigs error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.get(
@@ -100,7 +102,7 @@ router.get(
       console.error("GET /gigs/mine error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.post(
@@ -149,7 +151,7 @@ router.post(
       console.error("POST /gigs/:id/apply error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.get(
@@ -213,7 +215,7 @@ router.get(
       console.error("GET /gigs/:id/applications error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.post(
@@ -250,7 +252,7 @@ router.post(
       application.status = decision === "accept" ? "accepted" : "denied";
       application.decidedAt = new Date();
       application.decidedByUserId = new mongoose.Types.ObjectId(
-        req.authUser!.id
+        req.authUser!.id,
       );
       await application.save();
 
@@ -263,11 +265,117 @@ router.post(
       // eslint-disable-next-line no-console
       console.error(
         "POST /gigs/:id/applications/:applicationId/decision error",
-        err
+        err,
       );
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
+);
+
+// Host requests a specific artist for a gig.
+// A gig must exist, belong to the host, and have a location before a request can be made.
+router.post(
+  "/:id/request-artist",
+  requireRole("customer"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params as { id: string };
+      const { musicianUserId, priceOffered, message } = req.body as {
+        musicianUserId?: string;
+        priceOffered?: number;
+        message?: string;
+      };
+
+      if (!musicianUserId) {
+        return res.status(400).json({ message: "musicianUserId is required" });
+      }
+
+      const gig = await Gig.findById(id).exec();
+      if (!gig) return res.status(404).json({ message: "Gig not found" });
+
+      const requesterId = String(req.authUser!.id);
+      if (String(gig.createdByUserId) !== requesterId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      if (!gig.locationId) {
+        return res.status(400).json({
+          message: "Gig must have a location before requesting an artist",
+        });
+      }
+
+      const musicianProfile = await MusicianProfile.findOne({
+        userId: musicianUserId,
+      }).exec();
+
+      if (!musicianProfile) {
+        return res.status(404).json({ message: "Musician not found" });
+      }
+
+      if (!musicianProfile.acceptsDirectRequests) {
+        return res.status(400).json({
+          message: "This artist is not accepting direct requests",
+        });
+      }
+
+      let resolvedPrice: number | undefined;
+      if (typeof priceOffered === "number") {
+        resolvedPrice = Number.isFinite(priceOffered)
+          ? priceOffered
+          : undefined;
+      } else if (
+        typeof musicianProfile.defaultHourlyRate === "number" &&
+        musicianProfile.defaultHourlyRate > 0
+      ) {
+        resolvedPrice = musicianProfile.defaultHourlyRate;
+      }
+
+      if (!resolvedPrice || resolvedPrice <= 0) {
+        return res.status(400).json({
+          message: "A positive priceOffered is required to request an artist",
+        });
+      }
+
+      const gigId = new mongoose.Types.ObjectId(gig.id);
+      const musicianUserObjectId = new mongoose.Types.ObjectId(musicianUserId);
+      const createdByUserId = new mongoose.Types.ObjectId(requesterId);
+
+      const existing = await ArtistRequest.findOne({
+        gigId,
+        musicianUserId: musicianUserObjectId,
+        status: "pending",
+      }).exec();
+      if (existing) {
+        return res.status(409).json({
+          message: "You already have a pending request for this artist",
+        });
+      }
+
+      const request = await ArtistRequest.create({
+        gigId,
+        musicianUserId: musicianUserObjectId,
+        createdByUserId,
+        priceOffered: resolvedPrice,
+        message,
+        status: "pending",
+      });
+
+      return res.status(201).json({
+        id: request.id,
+        gigId: String(request.gigId),
+        musicianUserId: String(request.musicianUserId),
+        priceOffered: request.priceOffered,
+        status: request.status,
+        message: request.message ?? null,
+        createdAt: (request as any).createdAt,
+        decidedAt: request.decidedAt ?? null,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /gigs/:id/request-artist error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
 );
 
 export default router;

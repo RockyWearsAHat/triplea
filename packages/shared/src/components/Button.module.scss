@@ -1,6 +1,7 @@
 .button {
   border-radius: var(--radius-md);
-  padding: 10px 16px;
+  padding: 9px 14px;
+  min-height: 38px;
   border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
@@ -8,9 +9,12 @@
   gap: 10px;
   cursor: pointer;
   font-weight: 600;
-  letter-spacing: 0.2px;
-  transition: transform 90ms ease, background-color 150ms ease,
-    border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+  letter-spacing: 0;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
 }
 
 .button:disabled {
@@ -25,31 +29,28 @@
 .primary {
   background: var(--primary);
   color: var(--primary-contrast);
-  border-color: color-mix(in srgb, var(--primary) 70%, var(--border));
+  border-color: color-mix(in srgb, var(--primary) 65%, var(--border-strong));
 }
 
 .secondary {
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
   border-color: var(--border);
 }
 
 .ghost {
   background: transparent;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--text) 70%, var(--text-muted));
   border-color: transparent;
 }
 
-.button:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
 .primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 85%, var(--taa-white));
+  background: color-mix(in srgb, var(--primary) 92%, #000);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--surface);
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 .ghost:hover:not(:disabled) {

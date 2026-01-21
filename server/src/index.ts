@@ -9,6 +9,10 @@ import chatRoutes from "./routes/chat";
 import ownerRoutes from "./routes/owner";
 import publicRoutes from "./routes/public";
 import gigsRoutes from "./routes/gigs";
+import musiciansRoutes from "./routes/musicians";
+import locationsRoutes from "./routes/locations";
+import artistRequestsRoutes from "./routes/artistRequests";
+import instrumentsRoutes from "./routes/instruments";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 
@@ -22,7 +26,7 @@ app.use(
       "http://localhost:5175",
     ],
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(cookieParser());
@@ -34,6 +38,10 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/owner", ownerRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/gigs", gigsRoutes);
+app.use("/api/musicians", musiciansRoutes);
+app.use("/api/locations", locationsRoutes);
+app.use("/api/artist-requests", artistRequestsRoutes);
+app.use("/api/instruments", instrumentsRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const MONGO_URI = process.env.MONGO_URI ?? "";

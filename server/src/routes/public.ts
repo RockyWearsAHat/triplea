@@ -46,6 +46,8 @@ router.get("/music/discovery", async (req: Request, res: Response) => {
             bio: m.bio,
             averageRating: m.averageRating,
             reviewCount: m.reviewCount,
+            defaultHourlyRate: m.defaultHourlyRate ?? undefined,
+            acceptsDirectRequests: m.acceptsDirectRequests ?? false,
           },
           priceEstimate,
           distanceMinutes,
@@ -78,6 +80,8 @@ router.get("/musicians/:id", async (req: Request, res: Response) => {
         bio: musician.bio,
         averageRating: musician.averageRating,
         reviewCount: musician.reviewCount,
+        defaultHourlyRate: musician.defaultHourlyRate ?? undefined,
+        acceptsDirectRequests: musician.acceptsDirectRequests ?? false,
       },
     });
   } catch (err) {
@@ -167,7 +171,7 @@ router.get(
       console.error("/public/instruments/:id/images/:index error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.get("/locations", async (_req: Request, res: Response) => {
@@ -244,7 +248,7 @@ router.get(
       console.error("/public/locations/:id/images/:index error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 );
 
 router.get("/gigs", async (_req: Request, res: Response) => {

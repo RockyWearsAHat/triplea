@@ -54,6 +54,9 @@ export interface MusicianProfile {
   bio?: string;
   averageRating: number;
   reviewCount: number;
+  // Marketplace settings for direct artist requests
+  defaultHourlyRate?: number; // suggested hourly rate for direct bookings
+  acceptsDirectRequests?: boolean; // whether hosts can request this artist directly
 }
 
 export type BookingStatus =
@@ -129,6 +132,23 @@ export interface GigApplication {
   createdAt?: string;
   decidedAt?: string | null;
   applicant?: GigApplicantSummary;
+}
+
+export type ArtistRequestStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled";
+
+export interface ArtistRequest {
+  id: string;
+  gigId: string;
+  musicianUserId: string;
+  priceOffered: number;
+  status: ArtistRequestStatus;
+  message?: string | null;
+  createdAt?: string;
+  decidedAt?: string | null;
 }
 
 export interface Perk {

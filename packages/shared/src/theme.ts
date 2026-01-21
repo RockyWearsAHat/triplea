@@ -1,17 +1,28 @@
 // Simple shared design tokens
 
+export const palette = {
+  blue900: "#1C276E",
+  blue200: "#ADB8E0",
+  gold500: "#E59D0D",
+  purple400: "#825ECA",
+  purple900: "#4E238B",
+  gray600: "#4B4E63",
+  white: "#FFFFFF",
+  black: "#000000",
+} as const;
+
+// Prefer CSS variables so app theming stays consistent even when UI uses inline styles.
 export const colors = {
-  // Palette from copilot-instructions.md
-  primary: "#E59D0D", // Gold accent (primary actions)
-  primaryDark: "#1C276E", // Dark blue accent (borders / secondary)
-  background: "#000000", // Dark mode background
-  surface: "rgba(255,255,255,0.06)",
-  surfaceAlt: "rgba(255,255,255,0.04)",
-  text: "#FFFFFF",
-  textMuted: "#ADB8E0", // Light blue accent
-  accent: "#825ECA", // Light purple accent
-  danger: "#4E238B", // Dark purple accent (used for error emphasis)
-};
+  primary: "var(--primary)",
+  primaryDark: palette.blue900,
+  background: "var(--bg)",
+  surface: "var(--surface)",
+  surfaceAlt: "var(--surface-2)",
+  text: "var(--text)",
+  textMuted: "var(--text-muted)",
+  accent: "var(--accent)",
+  danger: "var(--taa-purple-400)",
+} as const;
 
 export const spacing = {
   xs: 4,
