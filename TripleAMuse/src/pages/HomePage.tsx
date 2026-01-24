@@ -1,144 +1,92 @@
-import { AppShell, Button, spacing, SearchBar } from "@shared";
+import { AppShell, Button, spacing } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
-import CategoryBar from "@shared/components/CategoryBar";
-import ProductCard from "@shared/components/ProductCard";
-import { useMemo, useRef, useState } from "react";
+import { useRef } from "react";
+import {
+  openMusic,
+  openMusician,
+  openMusicRegister,
+  openMusicianRegister,
+} from "../lib/urls";
 
 export function HomePage() {
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-
-  const categories = useMemo(
-    () => ["All", "Strings", "Keyboards", "Drums", "Wind"],
-    [],
-  );
-  const deals = useMemo(
-    () => [
-      {
-        id: "starter",
-        title: "Starter package",
-        subtitle: "Essentials for a small gig",
-        price: "$45/day",
-      },
-      {
-        id: "backline",
-        title: "Backline + delivery",
-        subtitle: "Choose the gear — we handle transport",
-        price: "$120/day",
-      },
-    ],
-    [],
-  );
 
   return (
-    <AppShell title="Muse" subtitle="Everything around the gig — handled.">
+    <AppShell title="Triple A Muse" subtitle="Your gateway to live music">
       <div
         ref={contentRef}
         className={ui.stack}
-        style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
+        style={{ "--stack-gap": `${spacing.lg}px` } as React.CSSProperties}
       >
-        <section className={ui.section}>
-          <h2 className={ui.sectionTitle}>Get started</h2>
-          <div className={ui.row} style={{ gap: 12, flexWrap: "wrap" }}>
-            <Button onClick={() => window.open("/open/music", "_self")}>
-              Host an event
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => window.open("/open/musician", "_self")}
-            >
-              Join as performer
-            </Button>
-          </div>
-        </section>
+        {/* Hero / Brand Introduction */}
+        <section className={ui.hero} data-reveal>
+          <div>
+            <p className={ui.heroKicker}>Triple A Music</p>
+            <h2 className={ui.heroTitle}>Everything around the gig — handled.</h2>
+            <p className={ui.heroLead}>
+              A clean hub that points you to the right workspace — whether you
+              want to host, perform, or request support.
+            </p>
 
-        <section className={ui.section}>
-          <h2 className={ui.sectionTitle}>Deals & bundles</h2>
-          <div className={ui.scroller}>
-            {deals.map((d) => (
-              <div
-                key={d.id}
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{ minWidth: 260 }}
-              >
-                <p className={ui.cardTitle}>{d.title}</p>
-                <p className={ui.cardText}>{d.subtitle}</p>
-                <div
-                  className={ui.rowBetween}
-                  style={{ marginTop: spacing.sm }}
-                >
-                  <p className={ui.help}>{d.price}</p>
-                  <Button variant="secondary">Customize</Button>
-                </div>
+            <div className={ui.heroActions}>
+              <Button onClick={openMusic}>Browse concerts</Button>
+              <Button variant="secondary" onClick={openMusicRegister}>
+                Host an event
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <div className={[ui.card, ui.cardPad].join(" ")}>
+              <p className={ui.cardTitle}>For performers</p>
+              <p className={ui.cardText}>
+                Find gigs, manage your schedule, and rent instruments for your
+                next set.
+              </p>
+              <div className={ui.row} style={{ gap: 8 }}>
+                <Button onClick={openMusician}>Open dashboard</Button>
+                <Button variant="secondary" onClick={openMusicianRegister}>
+                  Join as artist
+                </Button>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className={ui.section}>
-          <h2 className={ui.sectionTitle}>Instrument rentals</h2>
-          <div style={{ marginTop: spacing.sm }}>
-            <div style={{ marginBottom: spacing.sm }}>
-              <SearchBar
-                placeholder="Search instruments or categories…"
-                onSearch={(q) => setQuery(q)}
-              />
-            </div>
-
-            <CategoryBar
-              categories={categories.map((c) => ({ id: c, label: c }))}
-              active={category}
-              onSelect={(id) => setCategory(id)}
-            />
-
-            <div
-              style={{
-                display: "grid",
-                gap: spacing.md,
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                marginTop: spacing.md,
-              }}
-            >
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ProductCard
-                  key={i}
-                  title={`Instrument ${i + 1}`}
-                  subtitle="Daily rental"
-                  price="$45"
-                />
-              ))}
             </div>
           </div>
         </section>
 
         <section className={ui.section}>
-          <h2 className={ui.sectionTitle}>Services</h2>
-          <div className={ui.scroller}>
-            <div
-              className={[ui.card, ui.cardPad].join(" ")}
-              style={{ minWidth: 260 }}
-            >
-              <p className={ui.cardTitle}>Coaching</p>
-              <p className={ui.cardText}>
-                Find 1:1 lessons and workshops with experienced instructors.
+          <h2 className={ui.sectionTitle}>Where are you headed?</h2>
+          <div className={ui.featureGrid}>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Find concerts</p>
+              <p className={ui.featureBody}>
+                Discover upcoming concerts near you and buy tickets in seconds.
               </p>
-              <Button variant="secondary" style={{ marginTop: spacing.sm }}>
-                Browse teachers
-              </Button>
             </div>
-            <div
-              className={[ui.card, ui.cardPad].join(" ")}
-              style={{ minWidth: 260 }}
-            >
-              <p className={ui.cardTitle}>Delivery & setup</p>
-              <p className={ui.cardText}>
-                We’ll deliver gear and handle load-in for your event.
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>For Hosts</p>
+              <p className={ui.featureBody}>
+                Post events, find artists, and manage bookings from one
+                dashboard.
               </p>
-              <Button variant="secondary" style={{ marginTop: spacing.sm }}>
-                Request delivery
-              </Button>
             </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>For Artists</p>
+              <p className={ui.featureBody}>
+                Browse gigs, apply to perform, rent gear, and build your career.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* About / Mission (at the bottom, per owner preference) */}
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>About Triple A</h2>
+          <div className={[ui.card, ui.cardPad].join(" ")}>
+            <p className={ui.cardText} style={{ maxWidth: 700 }}>
+              Triple A is the simplest way to organize live music — from
+              instrument rentals and performer booking to event support and
+              logistics.
+            </p>
           </div>
         </section>
       </div>

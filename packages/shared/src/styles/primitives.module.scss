@@ -79,7 +79,9 @@
   color: var(--text-muted);
   background: transparent;
   border: none;
-  transition: color 120ms ease, background 120ms ease;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
 }
 
 .navLink:hover {

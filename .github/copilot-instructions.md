@@ -91,7 +91,7 @@ Each sub-project is intended to be a separate Vite + TypeScript app, sharing a c
 
 ### 1. Triple A Musician (Performer app)
 
-Goal: Give musicians a clear view of their work, performance quality, and perks.
+Goal: Give musicians a clear view of their work, performance quality, perks, and access to rentals.
 
 Core concepts:
 
@@ -102,6 +102,10 @@ Core concepts:
   - List of upcoming and past gigs (time, location, payout, dress code, set list requirements).
   - Detail view for each booking, including contact info for the organizer.
   - Ability to accept/decline new bookings and confirm arrival / completion.
+- **Instrument rentals** (moved from Muse)
+  - Browse instruments and equipment available for rent.
+  - Request rentals for upcoming gigs.
+  - View rental terms, availability, and daily rates.
 - **Perks & rewards**
   - View perks based on rating or loyalty tier (e.g., embroidery for branding, free/discounted instrument rental, rehearsal room credits).
   - Clear rules for how to unlock or keep perks.
@@ -109,19 +113,25 @@ Core concepts:
   - New booking requests, changes to existing bookings.
   - Perk unlocks, rating changes, and important system messages.
 
-### 2. Triple A Music (Customer/Organizer app)
+### 2. Triple A Music (Consumer/Host app)
 
-Goal: Help customers discover musicians and locations, then book them for events.
+Goal: Serve as the public-facing ticket marketplace and host operations dashboard.
 
 Core concepts:
 
-- **Discovery & search**
-  - Browse musicians by genre, location, rating, price range.
-  - Filter by ensemble type (solo, band, DJ, etc.).
-- **Event setup & booking**
-  - Define event details (date, time, venue, budget, special requests).
-  - See available musicians and locations that match.
-  - Request and confirm bookings; view price estimates and final quotes.
+- **Public concert browsing** (no login required)
+  - Browse upcoming events and concerts.
+  - View event details, venue info, and ticket availability.
+  - Purchase tickets (general admission or assigned seating).
+- **Ticket purchasing**
+  - Simple checkout flow with platform fee.
+  - Access codes for entry.
+  - View purchased tickets in "My tickets" section.
+- **Host dashboard** (logged-in customers)
+  - Post events/gigs looking for talent.
+  - Manage venue/stage listings.
+  - Review applicants and send artist requests.
+  - Toggle "Open For Tickets" per event.
 - **Booking management**
   - List of upcoming and past events.
   - Status for each booking (requested, confirmed, in progress, completed, cancelled).
@@ -130,9 +140,9 @@ Core concepts:
   - Rate musicians and venues after events.
   - View historical ratings when choosing performers.
 
-### 3. Triple A Muse (Marketplace & services app)
+### 3. Triple A Muse (Brand Gateway & Funnel)
 
-Goal: Be the interactive, browse-first "front door" (web) for Triple A offerings and funnels.
+Goal: Be the brand front door that funnels users to the appropriate app (Music or Musician).
 
 Key positioning (as clarified by owner):
 
@@ -152,6 +162,10 @@ Core concepts:
   - "Logistics" here is service work (event coordination): decorations, acoustics, security coordination, on-site support, etc.
   - Important nuance: logistics/setup are not “rental gear” (owner explicitly does not want to rent out speakers/mics).
   - Offer package plans that can be customized.
+- **Note on instrument rentals**
+  - Rentals are now handled in **Musician app**, not Muse
+  - This keeps Muse as a pure funnel and gives performers direct access to gear
+
 - **Unified user identity**
   - Same user can be a performer, customer, and service consumer.
   - Single account with roles/permissions determining what they can list, rent, or book.

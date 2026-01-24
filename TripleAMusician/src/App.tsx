@@ -273,7 +273,151 @@ function PerksPage() {
     </AppShell>
   );
 }
+function RentalsPage() {
+  const api = React.useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    [],
+  );
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
 
+  const [instruments, setInstruments] = React.useState<
+    Array<{
+      id: string;
+      name: string;
+      category: string;
+      dailyRate: number;
+      available: boolean;
+      imageUrl?: string;
+    }>
+  >([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [category, setCategory] = React.useState("All");
+
+  useScrollReveal(contentRef, [instruments.length, loading, category]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api
+      .getMarketplaceCatalog()
+      .then((c) => {
+        if (cancelled) return;
+        setInstruments(c.instruments);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Failed to load instruments.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  const categories = React.useMemo(() => {
+    const cats = Array.from(new Set(instruments.map((i) => i.category))).sort();
+    return ["All", ...cats];
+  }, [instruments]);
+
+  const filtered = React.useMemo(() => {
+    if (category === "All") return instruments;
+    return instruments.filter((i) => i.category === category);
+  }, [instruments, category]);
+
+  function apiImageUrl(pathname?: string): string | undefined {
+    if (!pathname) return undefined;
+    if (/^https?:\/\//i.test(pathname)) return pathname;
+    return `http://localhost:4000${pathname}`;
+  }
+
+  return (
+    <AppShell
+      title="Instrument rentals"
+      subtitle="Rent quality gear for your next gig."
+    >
+      <div
+        ref={contentRef}
+        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
+      >
+        <div
+          className={ui.scroller}
+          style={{ "--scroller-gap": "8px" } as React.CSSProperties}
+        >
+          {categories.map((cat) => (
+            <Button
+              key={cat}
+              variant={category === cat ? "secondary" : "ghost"}
+              onClick={() => setCategory(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+
+        {loading ? (
+          <p className={ui.help}>Loading instruments...</p>
+        ) : error ? (
+          <p className={ui.error}>{error}</p>
+        ) : filtered.length === 0 ? (
+          <p className={ui.help}>No instruments available in this category.</p>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: spacing.md,
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            }}
+          >
+            {filtered.map((inst) => (
+              <div
+                key={inst.id}
+                data-reveal
+                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                style={{ "--stack-gap": "10px" } as React.CSSProperties}
+              >
+                <div className={[ui.media, ui.mediaSquare].join(" ")}>
+                  {inst.imageUrl ? (
+                    <img
+                      src={apiImageUrl(inst.imageUrl)}
+                      alt={inst.name}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={ui.mediaPlaceholder}>{inst.category}</div>
+                  )}
+                </div>
+                <div>
+                  <p className={ui.cardTitle}>{inst.name}</p>
+                  <p className={ui.cardText}>{inst.category}</p>
+                </div>
+                <div className={ui.rowBetween}>
+                  <span className={ui.chip}>
+                    {inst.available ? "Available" : "Unavailable"}
+                  </span>
+                  <p className={ui.help} style={{ margin: 0, fontWeight: 600 }}>
+                    ${inst.dailyRate}/day
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={!inst.available}
+                  fullWidth
+                >
+                  {inst.available ? "Request rental" : "Not available"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
 function BrowseGigsPage() {
   const api = React.useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
@@ -600,6 +744,15 @@ function NavBar() {
           >
             Gigs
           </NavLink>
+
+          <NavLink
+            to="/rentals"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Rentals
+          </NavLink>
         </>
       )}
 
@@ -722,6 +875,15 @@ function App() {
               element={
                 <RequireRole role="musician">
                   <GigDetailPage />
+                </RequireRole>
+              }
+            />
+
+            <Route
+              path="/rentals"
+              element={
+                <RequireRole role="musician">
+                  <RentalsPage />
                 </RequireRole>
               }
             />

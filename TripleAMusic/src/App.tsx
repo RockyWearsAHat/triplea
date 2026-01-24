@@ -29,7 +29,7 @@ import {
 } from "react-router-dom";
 import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
-import { DiscoveryPage } from "./pages/DiscoveryPage";
+
 import { ChatInbox } from "@shared";
 
 interface DiscoveryResult {
@@ -3563,7 +3563,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/account" element={<AccountPage />} />
-            <Route path="/" element={<DiscoveryPage />} />
+            <Route path="/" element={<BrowsePage />} />
             <Route path="/gigs/:id" element={<PublicGigDetailsPage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/gigs/:id/tickets" element={<PublicTicketsPage />} />
