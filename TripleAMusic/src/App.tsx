@@ -29,6 +29,7 @@ import {
 } from "react-router-dom";
 import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
+import { DiscoveryPage } from "./pages/DiscoveryPage";
 import { ChatInbox } from "@shared";
 
 interface DiscoveryResult {
@@ -883,6 +884,44 @@ function BrowsePage() {
     }
   });
 
+  function syncGigTicketsFromStorage() {
+    try {
+      const raw = localStorage.getItem("taa.music.gigTickets");
+      if (!raw) {
+        setGigTickets({});
+        return;
+      }
+      setGigTickets(
+        JSON.parse(raw) as Record<
+          string,
+          {
+            openForTickets: boolean;
+            mode: TicketMode;
+            price: number;
+            currency: "USD";
+          }
+        >,
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    // Keep browse in sync when ticketing is toggled elsewhere.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== "taa.music.gigTickets") return;
+      syncGigTicketsFromStorage();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", syncGigTicketsFromStorage);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", syncGigTicketsFromStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem("taa.music.gigTickets", JSON.stringify(gigTickets));
@@ -1264,22 +1303,6 @@ function BrowsePage() {
                         >
                           {t.openForTickets ? "Buy tickets" : "Tickets soon"}
                         </Button>
-                        {user?.role.includes("customer") ? (
-                          <Button
-                            variant="ghost"
-                            onClick={() =>
-                              setGigTickets((prev) => ({
-                                ...prev,
-                                [g.id]: {
-                                  ...getGigTicket(g.id),
-                                  openForTickets: true,
-                                },
-                              }))
-                            }
-                          >
-                            Enable (demo)
-                          </Button>
-                        ) : null}
                       </div>
                     </div>
                   );
@@ -1645,7 +1668,7 @@ function PublicGigDetailsPage() {
                     }))
                   }
                 >
-                  Enable ticketing (demo)
+                  Enable ticketing
                 </Button>
               ) : null}
             </div>
@@ -1679,6 +1702,7 @@ function PublicGigDetailsPage() {
 function PublicTicketsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
@@ -1780,7 +1804,7 @@ function PublicTicketsPage() {
   const platformFee = Math.round(subtotal * 0.05);
   const total = subtotal + platformFee;
 
-  async function checkoutDemo() {
+  async function checkout() {
     if (!id) return;
     if (!t.openForTickets) return;
     setCheckoutBusy(true);
@@ -1846,17 +1870,19 @@ function PublicTicketsPage() {
                 >
                   Back to event
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    setGigTickets((prev) => ({
-                      ...prev,
-                      [id]: { ...getGigTicket(id), openForTickets: true },
-                    }))
-                  }
-                >
-                  Enable ticketing (demo)
-                </Button>
+                {user?.role.includes("customer") ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      setGigTickets((prev) => ({
+                        ...prev,
+                        [id]: { ...getGigTicket(id), openForTickets: true },
+                      }))
+                    }
+                  >
+                    Enable ticketing
+                  </Button>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -1956,7 +1982,7 @@ function PublicTicketsPage() {
                     View my tickets
                   </Button>
                 ) : (
-                  <Button onClick={checkoutDemo} disabled={checkoutBusy}>
+                  <Button onClick={checkout} disabled={checkoutBusy}>
                     {checkoutBusy ? "Processing…" : "Checkout"}
                   </Button>
                 )}
@@ -2037,28 +2063,6 @@ function MyTicketsPage() {
       if (Number.isNaN(d.getTime())) return tab === "upcoming";
       return tab === "upcoming" ? d >= now : d < now;
     });
-
-  function markRefund(orderId: string) {
-    setOrders((prev) => {
-      const next = prev.map((o) =>
-        o.id === orderId ? { ...o, status: "refunded" as const } : o,
-      );
-      saveTicketOrders(next);
-      return next;
-    });
-    if (selectedId === orderId) setSelectedId(null);
-  }
-
-  function markTransferred(orderId: string) {
-    setOrders((prev) => {
-      const next = prev.map((o) =>
-        o.id === orderId ? { ...o, status: "transferred" as const } : o,
-      );
-      saveTicketOrders(next);
-      return next;
-    });
-    if (selectedId === orderId) setSelectedId(null);
-  }
 
   if (!user) {
     return (
@@ -2213,25 +2217,19 @@ function MyTicketsPage() {
                 }
               >
                 <div className={ui.empty}>
-                  This is the wallet UI. QR rendering + gate validation wiring
-                  comes next.
+                  Ticket wallet. QR rendering and gate validation will appear
+                  here.
                 </div>
 
                 <div
                   className={ui.row}
                   style={{ "--row-gap": "10px" } as React.CSSProperties}
                 >
-                  <Button
-                    variant="secondary"
-                    onClick={() => markTransferred(selected.id)}
-                  >
-                    Transfer (demo)
+                  <Button variant="secondary" disabled>
+                    Transfer
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => markRefund(selected.id)}
-                  >
-                    Refund (demo)
+                  <Button variant="ghost" disabled>
+                    Request refund
                   </Button>
                 </div>
               </div>
@@ -2415,7 +2413,7 @@ function MusicianDetailsPage() {
                   className={ui.help}
                 >
                   Choose an existing event or create a new one, then submit your
-                  request (demo).
+                  request.
                 </p>
 
                 {submitError ? (
@@ -2433,8 +2431,7 @@ function MusicianDetailsPage() {
                       fontSize: 14,
                     }}
                   >
-                    Booking request submitted (demo). Next step is wiring this
-                    to the backend.
+                    Request submitted. You’ll see status updates here.
                   </div>
                 ) : (
                   <div
@@ -2755,7 +2752,7 @@ function PostGigPage() {
   return (
     <AppShell
       title="Post a gig"
-      subtitle="Create a potential gig so musicians can see it (demo)."
+      subtitle="Create an event listing so musicians can see it."
     >
       {!isCustomer ? (
         <p className={ui.help} style={{ margin: 0, fontSize: 14 }}>
@@ -3553,7 +3550,10 @@ function App() {
       >
         <div className={ui.chrome}>
           <header className={ui.header}>
-            <h1 className={ui.title}>Triple A Music</h1>
+            <h1 className={[ui.title, ui.brandTitle].join(" ")}>
+              <span className={ui.brandDot} aria-hidden />
+              Triple A Music
+            </h1>
             <p className={ui.subtitle}>Concerts marketplace</p>
           </header>
           <NavBar />
@@ -3563,8 +3563,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/account" element={<AccountPage />} />
-            <Route path="/" element={<BrowsePage />} />
+            <Route path="/" element={<DiscoveryPage />} />
             <Route path="/gigs/:id" element={<PublicGigDetailsPage />} />
+            <Route path="/browse" element={<BrowsePage />} />
             <Route path="/gigs/:id/tickets" element={<PublicTicketsPage />} />
             <Route path="/my-tickets" element={<MyTicketsPage />} />
             <Route path="/musicians/:id" element={<MusicianDetailsPage />} />

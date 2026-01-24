@@ -1,0 +1,4 @@
+.header { display:flex; gap:16px; align-items:center; justify-content:space-between }
+.stats { display:flex; gap:12px; flex-wrap:wrap }
+.grid { display:grid; gap:16px; grid-template-columns: 1fr 320px }
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr } }

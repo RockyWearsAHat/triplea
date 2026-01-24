@@ -1,6 +1,5 @@
 import { AppShell, Button, spacing } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
-import { Section } from "../components/Section";
 
 export function EmployeeDashboardPage() {
   return (
@@ -11,7 +10,8 @@ export function EmployeeDashboardPage() {
       <div
         style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
       >
-        <Section title="Your tasks today">
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Your tasks today</h2>
           <div
             style={{
               display: "flex",
@@ -36,7 +36,7 @@ export function EmployeeDashboardPage() {
               </div>
             </div>
           </div>
-        </Section>
+        </section>
       </div>
     </AppShell>
   );

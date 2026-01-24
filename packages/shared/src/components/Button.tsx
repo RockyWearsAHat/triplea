@@ -3,6 +3,7 @@ import styles from "./Button.module.scss";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   leftIcon?: ReactNode;
 }
@@ -10,6 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({
   children,
   variant = "primary",
+  size = "md",
   fullWidth,
   leftIcon,
   style,
@@ -20,14 +22,23 @@ export function Button({
     variant === "secondary"
       ? styles.secondary
       : variant === "ghost"
-      ? styles.ghost
-      : styles.primary;
+        ? styles.ghost
+        : styles.primary;
+
+  const sizeClass =
+    size === "sm" ? styles.sm : size === "lg" ? styles.lg : styles.md;
 
   const fullWidthClass = fullWidth ? styles.fullWidth : "";
 
   return (
     <button
-      className={[styles.button, variantClass, fullWidthClass, className]
+      className={[
+        styles.button,
+        variantClass,
+        sizeClass,
+        fullWidthClass,
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
       style={style}

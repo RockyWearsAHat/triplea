@@ -1,0 +1,21 @@
+.categoryBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  margin-right: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Active button customization: rely on Button.secondary for visual weight; add gold outline */
+.active {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}

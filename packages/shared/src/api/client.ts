@@ -345,18 +345,18 @@ export class TripleAApiClient {
     // TODO: replace with real fetch(`${this.baseUrl}/musicians/${musicianId}/dashboard`)
     const profile: MusicianProfile = {
       id: musicianId,
-      userId: "demo",
+      userId: "local",
       instruments: ["Guitar", "Vocals"],
       genres: ["Pop", "Funk"],
-      bio: "Demo musician profile from TripleAApiClient.",
+      bio: "Reliable, high‑energy performer for weddings, corporate events, and clubs.",
       averageRating: 4.8,
       reviewCount: 42,
     };
 
     const upcomingBookings: Booking[] = [
       {
-        id: "b-demo-1",
-        eventId: "e-demo-1",
+        id: "b-1",
+        eventId: "e-1",
         musicianId,
         payout: 400,
         status: "confirmed",
@@ -365,9 +365,10 @@ export class TripleAApiClient {
 
     const perks: Perk[] = [
       {
-        id: "perk-demo-1",
-        name: "Demo perk",
-        description: "Unlocked via API client mock.",
+        id: "perk-1",
+        name: "Priority support",
+        description:
+          "Fast responses and proactive coordination on tight timelines.",
         minRating: 4.5,
       },
     ];

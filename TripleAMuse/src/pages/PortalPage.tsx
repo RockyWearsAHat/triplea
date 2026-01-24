@@ -5,7 +5,14 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { AppShell, Button, spacing, useScrollReveal, useAuth } from "@shared";
+import {
+  AppShell,
+  Button,
+  spacing,
+  useScrollReveal,
+  useAuth,
+  cx,
+} from "@shared";
 import { useNavigate } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import { TripleAApiClient } from "@shared/api/client";
@@ -277,7 +284,7 @@ export function PortalPage() {
             </div>
           </div>
 
-          <div className={[ui.media, ui.mediaWide].join(" ")}>
+          <div className={cx(ui.media, ui.mediaWide)}>
             {heroImageUrl ? (
               <img src={heroImageUrl} alt="Catalog preview" loading="lazy" />
             ) : (
@@ -326,12 +333,9 @@ export function PortalPage() {
           <h2 className={ui.sectionTitle} data-reveal>
             Choose a workspace
           </h2>
-          <div
-            className={[ui.grid, ui.gridCards].join(" ")}
-            style={gridLgStyle}
-          >
+          <div className={cx(ui.grid, ui.gridCards)} style={gridLgStyle}>
             <div
-              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+              className={cx(ui.card, ui.cardPad, ui.stack)}
               data-reveal
               style={stackSmStyle}
             >
@@ -347,7 +351,7 @@ export function PortalPage() {
             </div>
 
             <div
-              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+              className={cx(ui.card, ui.cardPad, ui.stack)}
               data-reveal
               style={stackSmStyle}
             >
@@ -363,7 +367,7 @@ export function PortalPage() {
             </div>
 
             <div
-              className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+              className={cx(ui.card, ui.cardPad, ui.stack)}
               data-reveal
               style={stackSmStyle}
             >
@@ -382,7 +386,7 @@ export function PortalPage() {
 
         <section className={ui.section}>
           <h2 className={ui.sectionTitle} data-reveal>
-            Instrument rentals (preview)
+            Instrument rentals
           </h2>
 
           {catalogError ? <p className={ui.error}>{catalogError}</p> : null}
@@ -413,17 +417,17 @@ export function PortalPage() {
           ) : null}
 
           {!catalogBusy && previewInstruments.length === 0 ? (
-            <p className={ui.help}>No preview items available.</p>
+            <p className={ui.help}>No items available right now.</p>
           ) : (
             <div className={ui.scroller}>
               {previewInstruments.map((item) => (
                 <div
                   key={item.id}
                   data-reveal
-                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                  className={cx(ui.card, ui.cardPad, ui.stack)}
                   style={{ ...(stackSmStyle as CSSProperties), minWidth: 260 }}
                 >
-                  <div className={[ui.media, ui.mediaSquare].join(" ")}>
+                  <div className={cx(ui.media, ui.mediaSquare)}>
                     {item.imageUrl ? (
                       <img
                         src={apiAssetUrl(item.imageUrl)}
@@ -449,17 +453,14 @@ export function PortalPage() {
 
         <section className={ui.section}>
           <h2 className={ui.sectionTitle} data-reveal>
-            Services (preview)
+            Services
           </h2>
-          <div
-            className={[ui.grid, ui.gridCards].join(" ")}
-            style={gridLgStyle}
-          >
+          <div className={cx(ui.grid, ui.gridCards)} style={gridLgStyle}>
             {serviceOptions.map((s) => (
               <div
                 key={s.id}
                 data-reveal
-                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                className={cx(ui.card, ui.cardPad, ui.stack)}
                 style={stackSmStyle}
               >
                 <span className={ui.chip}>Service</span>
@@ -475,7 +476,7 @@ export function PortalPage() {
 
         <section className={ui.section}>
           <h2 className={ui.sectionTitle} data-reveal>
-            Bundles (preview)
+            Bundles
           </h2>
           <div className={ui.scroller}>
             {deals.map((deal) => {
@@ -497,7 +498,7 @@ export function PortalPage() {
                 <div
                   key={deal.id}
                   data-reveal
-                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
+                  className={cx(ui.card, ui.cardPad, ui.stack)}
                   style={{ ...(stackSmStyle as CSSProperties), minWidth: 340 }}
                 >
                   <div>

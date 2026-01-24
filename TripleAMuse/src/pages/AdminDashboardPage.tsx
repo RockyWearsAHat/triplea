@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppShell, Button, spacing, useAuth } from "@shared";
+import { AppShell, Button, spacing, useAuth, StatCard } from "@shared";
 import { useNavigate } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import {
   TripleAApiClient,
   type EmployeeInviteSummary,
 } from "@shared/api/client";
-import { Section } from "../components/Section";
 import { API_BASE_URL } from "../lib/urls";
 
 export function AdminDashboardPage() {
@@ -95,10 +94,9 @@ export function AdminDashboardPage() {
       title="Admin dashboard"
       subtitle="Control access, employees, and high-level operations."
     >
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}
-      >
-        <Section title="People & access">
+      <div className={ui.pageContent}>
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>People & access</h2>
           <div className={[ui.card, ui.cardPad].join(" ")}>
             <p className={ui.help}>
               Assign roles like operations, gear tech, and drivers to employees.
@@ -114,18 +112,11 @@ export function AdminDashboardPage() {
               </Button>
             </div>
           </div>
-        </Section>
+        </section>
 
-        <Section title="Employee onboarding">
-          <div
-            className={[ui.card, ui.cardPad].join(" ")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-              maxWidth: 520,
-            }}
-          >
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Employee onboarding</h2>
+          <div className={[ui.formCard].join(" ")}>
             <p className={ui.help}>
               Employees can only register via a private, expiring invite link.
               Admin accounts cannot be self-registered.
@@ -137,8 +128,8 @@ export function AdminDashboardPage() {
               </p>
             ) : null}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 13 }}>Employee email</label>
+            <div className={ui.field}>
+              <label className={ui.label}>Employee email</label>
               <input
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
@@ -159,7 +150,7 @@ export function AdminDashboardPage() {
             </Button>
 
             {inviteLink && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className={ui.field}>
                 <p className={ui.help}>
                   Copy and email this link to the employee:
                 </p>
@@ -167,22 +158,9 @@ export function AdminDashboardPage() {
               </div>
             )}
 
-            <hr
-              style={{
-                border: 0,
-                borderTop: "1px solid var(--border)",
-                width: "100%",
-              }}
-            />
+            <div className={ui.divider} />
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: spacing.md,
-              }}
-            >
+            <div className={ui.rowBetween}>
               <p className={ui.help}>Recent invites</p>
               <Button
                 variant="secondary"
@@ -196,50 +174,14 @@ export function AdminDashboardPage() {
             {invitesError && <p className={ui.error}>{invitesError}</p>}
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table className={ui.table}>
                 <thead>
                   <tr>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        fontSize: 12,
-                        color: "var(--text-muted)",
-                        paddingBottom: 8,
-                      }}
-                    >
-                      Email
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        fontSize: 12,
-                        color: "var(--text-muted)",
-                        paddingBottom: 8,
-                      }}
-                    >
-                      Status
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        fontSize: 12,
-                        color: "var(--text-muted)",
-                        paddingBottom: 8,
-                      }}
-                    >
-                      Expires
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        fontSize: 12,
-                        color: "var(--text-muted)",
-                        paddingBottom: 8,
-                      }}
-                    >
-                      Created
-                    </th>
-                    <th style={{ paddingBottom: 8 }} />
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Expires</th>
+                    <th>Created</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -269,55 +211,29 @@ export function AdminDashboardPage() {
 
                       return (
                         <tr key={inv.id}>
-                          <td
-                            style={{
-                              padding: "8px 0",
-                              borderTop: "1px solid var(--border)",
-                              fontSize: 13,
-                            }}
-                          >
-                            {inv.email}
+                          <td>{inv.email}</td>
+                          <td>
+                            <span
+                              className={
+                                status === "Active"
+                                  ? ui.badgeSuccess
+                                  : status === "Expired"
+                                    ? ui.badgeWarning
+                                    : status === "Revoked"
+                                      ? ui.badgeError
+                                      : ui.badgeNeutral
+                              }
+                            >
+                              {status}
+                            </span>
                           </td>
-                          <td
-                            style={{
-                              padding: "8px 0",
-                              borderTop: "1px solid var(--border)",
-                              fontSize: 13,
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {status}
-                          </td>
-                          <td
-                            style={{
-                              padding: "8px 0",
-                              borderTop: "1px solid var(--border)",
-                              fontSize: 13,
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {new Date(inv.expiresAt).toLocaleString()}
-                          </td>
-                          <td
-                            style={{
-                              padding: "8px 0",
-                              borderTop: "1px solid var(--border)",
-                              fontSize: 13,
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {new Date(inv.createdAt).toLocaleString()}
-                          </td>
-                          <td
-                            style={{
-                              padding: "8px 0",
-                              borderTop: "1px solid var(--border)",
-                              textAlign: "right",
-                            }}
-                          >
+                          <td>{new Date(inv.expiresAt).toLocaleString()}</td>
+                          <td>{new Date(inv.createdAt).toLocaleString()}</td>
+                          <td style={{ textAlign: "right" }}>
                             {canRevoke ? (
                               <Button
                                 variant="secondary"
+                                size="sm"
                                 onClick={() => revokeInvite(inv.id)}
                                 disabled={revokeBusyId === inv.id}
                               >
@@ -337,28 +253,23 @@ export function AdminDashboardPage() {
               </table>
             </div>
           </div>
-        </Section>
+        </section>
 
-        <Section title="Operational overview">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: spacing.lg,
-            }}
-          >
-            <div className={[ui.card, ui.cardPad].join(" ")}>
-              <p className={ui.help}>Active employees</p>
-              <p style={{ fontSize: 28, fontWeight: 600 }}>5</p>
-              <p className={ui.help}>3 on logistics, 2 on staging.</p>
-            </div>
-            <div className={[ui.card, ui.cardPad].join(" ")}>
-              <p className={ui.help}>Open gear tickets</p>
-              <p style={{ fontSize: 28, fontWeight: 600 }}>4</p>
-              <p className={ui.help}>2 for tonight, 2 this weekend.</p>
-            </div>
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Operational overview</h2>
+          <div className={ui.statGrid}>
+            <StatCard
+              title="Active employees"
+              value={5}
+              subtitle="3 on logistics, 2 on staging."
+            />
+            <StatCard
+              title="Open gear tickets"
+              value={4}
+              subtitle="2 for tonight, 2 this weekend."
+            />
           </div>
-        </Section>
+        </section>
       </div>
     </AppShell>
   );

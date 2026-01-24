@@ -17,7 +17,11 @@
   /* Theme tokens (default: dark)
      Goal: flatter, service-provider UI. Brand colors are accents (not the whole UI).
   */
-  --bg: var(--taa-black);
+  /* App glow defaults; overridden per app in AppFrame */
+  --app-glow: var(--taa-blue-900);
+
+  /* Slightly lifted from pure black to avoid “hobby dark UI” harshness */
+  --bg: color-mix(in srgb, var(--taa-black) 94%, var(--app-glow));
   --text: var(--taa-white);
   --text-muted: color-mix(in srgb, var(--taa-white) 72%, var(--taa-gray-600));
   --text-subtle: color-mix(in srgb, var(--taa-white) 55%, var(--taa-gray-600));
@@ -26,27 +30,42 @@
   --app-accent: var(--taa-blue-200);
   --accent: var(--app-accent);
 
-  /* Surfaces are derived from black + white alpha for a “tux” look */
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-2: rgba(255, 255, 255, 0.06);
-  --surface-3: rgba(255, 255, 255, 0.09);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Surfaces are derived from black + white alpha for a clean “tux” look */
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.065);
+  --surface-3: rgba(255, 255, 255, 0.095);
+  --border: rgba(255, 255, 255, 0.11);
+  --border-strong: rgba(255, 255, 255, 0.18);
 
   /* Primary actions only (gold) */
   --primary: var(--taa-gold-500);
   --primary-contrast: var(--taa-black);
 
+  /* Semantic state colors */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: var(--taa-blue-200);
+
   --focus: color-mix(in srgb, var(--primary) 65%, var(--accent));
 
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 16px;
 
-  --shadow-1: none;
+  /* Subtle depth (no “lift” effects) */
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 18px rgba(0, 0, 0, 0.22);
 
   --max-width: 1240px;
   --page-pad: clamp(14px, 2vw, 24px);
+
+  /* Typography scale */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
 
   --font:
     system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
@@ -65,7 +84,14 @@
   --border: rgba(0, 0, 0, 0.1);
   --border-strong: rgba(0, 0, 0, 0.16);
 
+  /* Darken gold for better contrast on white backgrounds */
+  --primary: #c88a0a;
   --primary-contrast: var(--taa-white);
+
+  /* Adjust semantic colors for light backgrounds */
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
 }
 
 /* Basic reset */
@@ -102,7 +128,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.4;
-  font-size: 14px;
+  font-size: 15px;
   min-height: 100%;
   display: flex;
   flex-direction: column;

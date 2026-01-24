@@ -10,7 +10,7 @@ import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 
 import { NavBar } from "./components/NavBar";
-import { PortalPage } from "./pages/PortalPage";
+import { HomePage } from "./pages/HomePage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
@@ -33,14 +33,17 @@ function App() {
       >
         <div className={ui.chrome}>
           <header className={ui.header}>
-            <h1 className={ui.title}>Triple A Muse</h1>
-            <p className={ui.subtitle}>Preview &amp; entry</p>
+            <h1 className={[ui.title, ui.brandTitle].join(" ")}>
+              <span className={ui.brandDot} aria-hidden />
+              Triple A Muse
+            </h1>
+            <p className={ui.subtitle}>Entry hub</p>
           </header>
           <NavBar />
         </div>
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
-            <Route path="/" element={<PortalPage />} />
+            <Route path="/" element={<HomePage />} />
             <Route
               path="/messages"
               element={

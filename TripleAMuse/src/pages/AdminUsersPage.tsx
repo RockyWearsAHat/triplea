@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, Button, spacing } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
@@ -125,17 +126,18 @@ export function AdminUsersPage() {
               }}
             >
               <div>
-                <p style={{ fontWeight: 600, marginBottom: 8 }}>Roles</p>
+                <p className={ui.label} style={{ marginBottom: 8 }}>
+                  Roles
+                </p>
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  className={ui.stack}
+                  style={{ "--stack-gap": "6px" } as CSSProperties}
                 >
                   {allRoles.map((r) => (
-                    <label
-                      key={r}
-                      style={{ display: "flex", gap: 10, alignItems: "center" }}
-                    >
+                    <label key={r} className={ui.checkboxLabel}>
                       <input
                         type="checkbox"
+                        className={ui.checkbox}
                         checked={u.role.includes(r)}
                         onChange={() =>
                           setUsers((prev) =>
@@ -147,24 +149,25 @@ export function AdminUsersPage() {
                           )
                         }
                       />
-                      <span style={{ fontSize: 13 }}>{r}</span>
+                      {r}
                     </label>
                   ))}
                 </div>
               </div>
 
               <div>
-                <p style={{ fontWeight: 600, marginBottom: 8 }}>Permissions</p>
+                <p className={ui.label} style={{ marginBottom: 8 }}>
+                  Permissions
+                </p>
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  className={ui.stack}
+                  style={{ "--stack-gap": "6px" } as CSSProperties}
                 >
                   {allPermissions.map((p) => (
-                    <label
-                      key={p}
-                      style={{ display: "flex", gap: 10, alignItems: "center" }}
-                    >
+                    <label key={p} className={ui.checkboxLabel}>
                       <input
                         type="checkbox"
+                        className={ui.checkbox}
                         checked={(u.permissions ?? []).includes(p)}
                         onChange={() =>
                           setUsers((prev) =>
@@ -182,29 +185,28 @@ export function AdminUsersPage() {
                           )
                         }
                       />
-                      <span style={{ fontSize: 13 }}>{p}</span>
+                      {p}
                     </label>
                   ))}
                 </div>
               </div>
 
               <div>
-                <p style={{ fontWeight: 600, marginBottom: 8 }}>
+                <p className={ui.label} style={{ marginBottom: 8 }}>
                   Employee roles
                 </p>
                 <p className={ui.help} style={{ marginBottom: 8 }}>
                   Only relevant for internal employees.
                 </p>
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  className={ui.stack}
+                  style={{ "--stack-gap": "6px" } as CSSProperties}
                 >
                   {allEmployeeRoles.map((er) => (
-                    <label
-                      key={er}
-                      style={{ display: "flex", gap: 10, alignItems: "center" }}
-                    >
+                    <label key={er} className={ui.checkboxLabel}>
                       <input
                         type="checkbox"
+                        className={ui.checkbox}
                         checked={(u.employeeRoles ?? []).includes(er)}
                         onChange={() =>
                           setUsers((prev) =>
@@ -222,7 +224,7 @@ export function AdminUsersPage() {
                           )
                         }
                       />
-                      <span style={{ fontSize: 13 }}>{er}</span>
+                      {er}
                     </label>
                   ))}
                 </div>
