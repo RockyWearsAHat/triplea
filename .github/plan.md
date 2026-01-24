@@ -1,396 +1,640 @@
-# Plan: Triple A Apps UI Transformation — Uber/Apple-Inspired Professional Overhaul
+# Plan: Flat, Clean, Professional UI Redesign
 
-**Status:** � COMPLETE  
-**Goal:** Transform all three Triple A apps into polished, professional, unified services inspired by Uber Eats (Muse), Uber Driver (Musician), and Uber (Music) with Apple Store design principles.
+**Status:** � COMPLETE — All steps applied and verified with passing builds on 2026-01-24
+**Goal:** Transform the current "shiny" multi-element styling into a flat, clean, modern UI that guides users to clear actions
 
 ---
 
 ## Context
 
-### Current Problems Identified
+### Root Cause Analysis
 
-1. **Layout feels like "collection of elements"** — pages lack visual hierarchy and cohesive flow
-2. **Services confusion** — unclear what each app actually does at first glance
-3. **No visual identity differentiation** — apps blend together, no clear "what am I looking at?"
-4. **Too much text, not enough visual** — UX is text-heavy, not browse-first
-5. **Missing Uber/Apple patterns:**
-   - No prominent location/search bar (Uber pattern)
-   - No horizontal category scrollers with icons (Uber Eats pattern)
-   - No clean product cards with imagery (Apple Store pattern)
-   - No prominent CTAs that guide the user journey
-   - No clear "order/booking flow" visual progression
+The current UI suffers from several problems that make it feel "shiny" and unprofessional:
 
-### Owner Vision (from discord-chat-history.md)
+1. **Over-styled individual elements** — Cards have gradients, shadows, glows, and box-shadows that make each element feel like a separate design island
+2. **Hero section is overdesigned** — The `.hero` class uses gradient backgrounds, accent-tinted borders, and shadow effects
+3. **App frame has radial gradient background glow** — Creates a "game UI" feel instead of service app
+4. **Visual clutter** — Too many visual treatments competing for attention
+5. **Navigation has pill styling with borders and surface colors** — Feels heavy
+6. **Typography/copy is unfocused** — Multiple buttons doing similar things, unclear hierarchy
+7. **Action redundancy** — Same action available multiple times in close proximity
 
-From the owner ("Man"):
+### What Owner Expects (from discord-chat-history + copilot-instructions)
 
-> "Muse should feel like **Uber Eats**" — browse-first, interactive, rentals/services catalog  
-> "Music is like **Uber**" — authoritative/operational, booking marketplace for events  
-> "Musician is like **Uber Driver**" — clean work dashboard, rating, obligations, perks
+- **"Uber Eats / Pizza Hut" feel** — Interactive, self-explanatory, offerings up front
+- **Professional, real service aesthetic** — Not hobby UI, not demo-ish
+- **Single clear purpose per app** — Muse = rentals/services + funnel, Music = booking, Musician = work dashboard
+- **Visual-first, text-light** — Short labels, clear CTAs, no explaining at the top
+- **Guide users to actions** — Clear, obvious, single-access patterns
 
-Key patterns to apply:
+### Design Principles for This Redesign
 
-- **Uber Eats**: Category bar, horizontal scrollers, "deal" bundles, quick add-to-cart
-- **Uber Driver**: Status dashboard, today's schedule at-a-glance, earnings prominent
-- **Uber**: Location/destination UI, search-first, clear booking funnel
-- **Apple Store**: Premium product cards, crisp imagery, minimal text, restrained design
-
-### Design Principles
-
-1. **Browse-first, not text-first** — imagery and cards above prose
-2. **One clear action per screen** — no competing CTAs
-3. **Category navigation** — horizontal scrollers with icons/images
-4. **Card-based layouts** — consistent, tappable, image-forward
-5. **Status-forward dashboards** — "what's happening now" at the top
-6. **Professional restraint** — no flashy effects, flat surfaces, thin borders
+1. **Remove all gradients from surfaces** — Pure flat colors only
+2. **Remove radial background glows** — Solid backgrounds
+3. **Remove shadow-1 from cards** — Use border-only definition or very subtle shadow
+4. **Simplify navigation** — Remove pill container, use simple underline or dot active states
+5. **One primary CTA per section** — Clear action hierarchy
+6. **Larger, clearer typography hierarchy** — Scannable, not cluttered
+7. **Consistent spacing** — No inline styles, use design tokens
 
 ---
 
-## Phase 1: Shared Design System Updates
+## Steps
 
-### Step 1.1: Add Uber-Inspired Category Scroller Component
+### Step 1: Remove radial gradient glow from AppFrame — `packages/shared/src/layout/AppFrame.module.scss`
 
-**File:** `packages/shared/src/components/CategoryBar.tsx`  
-**Operation:** `CREATE_FILE`
-
-Creates a horizontal scrolling category bar (like Uber Eats food categories) with:
-
-- Icon or image support per category
-- Active state highlighting with gold accent
-- Smooth horizontal scrolling
-
-### Step 1.2: Add CategoryBar Styles
-
-**File:** `packages/shared/src/components/CategoryBar.module.scss`  
-**Operation:** `CREATE_FILE`
-
-### Step 1.3: Add Product Card Component (Apple Store inspired)
-
-**File:** `packages/shared/src/components/ProductCard.tsx`  
-**Operation:** `CREATE_FILE`
-
-Professional product card with:
-
-- Image with badge support
-- Title, subtitle, price
-- Action button
-- Compact/featured variants
-
-### Step 1.4: Add ProductCard Styles
-
-**File:** `packages/shared/src/components/ProductCard.module.scss`  
-**Operation:** `CREATE_FILE`
-
-### Step 1.5: Add Status Dashboard Card (Uber Driver inspired)
-
-**File:** `packages/shared/src/components/StatusCard.tsx`  
-**Operation:** `CREATE_FILE`
-
-Driver-style status card with:
-
-- Colored status indicator (active/idle/busy/offline)
-- Title and subtitle
-- Large metric display (earnings)
-- Action buttons
-
-### Step 1.6: Add StatusCard Styles
-
-**File:** `packages/shared/src/components/StatusCard.module.scss`  
-**Operation:** `CREATE_FILE`
-
-### Step 1.7: Add Search Bar Component (Uber inspired)
-
-**File:** `packages/shared/src/components/SearchBar.tsx`  
-**Operation:** `CREATE_FILE`
-
-Prominent search bar with:
-
-- Search icon
-- Large variant for hero sections
-- Enter to search behavior
-
-### Step 1.8: Add SearchBar Styles
-
-**File:** `packages/shared/src/components/SearchBar.module.scss`  
-**Operation:** `CREATE_FILE`
-
-### Step 1.9: Export New Components
-
-**File:** `packages/shared/src/index.ts`  
-**Operation:** `INSERT_AFTER` StatCard export
-
-Add exports for: CategoryBar, ProductCard, StatusCard, SearchBar
-
----
-
-## Phase 2: Triple A Muse — Uber Eats Transformation
-
-### Step 2.1: Create New Muse Home Page
-
-**File:** `TripleAMuse/src/pages/HomePage.tsx`  
-**Operation:** `CREATE_FILE`
-
-**Structure:**
-
-```
-┌─────────────────────────────────────────────┐
-│  HERO: "Everything for your gig."           │
-│  ┌─────────────────────────────────────┐    │
-│  │  🔍 Search rentals, lessons...      │    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
-
-┌─────────┬─────────┬─────────┐
-│ 🎤 Host │ 🎸 Play │ 📦 Rent │  ← Quick Actions
-└─────────┴─────────┴─────────┘
-
-BUNDLES & DEALS
-┌─────────────┬─────────────┬─────────────┐
-│ Starter     │ Practice    │ Event Ready │
-│ $45/day     │ $85         │ Custom      │
-└─────────────┴─────────────┴─────────────┘
-
-INSTRUMENT RENTALS
-[All] [Strings] [Keyboards] [Drums] [Wind]
-┌──────┬──────┬──────┬──────┬──────┐
-│Guitar│Piano │Drums │Violin│Trumpet│ → scroll
-└──────┴──────┴──────┴──────┴──────┘
-
-SERVICES
-┌─────────────┬─────────────┬─────────────┐
-│ 🎓 Coaching │ 🚚 Delivery │ 🎪 Support  │
-└─────────────┴─────────────┴─────────────┘
-
-FOOTER CTA
-"Everything around the gig — handled."
-[Find musicians] [Join as performer]
-```
-
-### Step 2.2: Create HomePage Styles
-
-**File:** `TripleAMuse/src/pages/HomePage.module.scss`  
-**Operation:** `CREATE_FILE`
-
----
-
-## Phase 3: Triple A Musician — Uber Driver Transformation
-
-### Step 3.1: Create Driver-Style Dashboard
-
-**File:** `TripleAMusician/src/pages/DashboardPage.tsx`  
-**Operation:** `CREATE_FILE`
-
-**Structure:**
-
-```
-┌─────────────────────────────────────────────┐
-│ █ You have requests        │    $450       │
-│   2 pending requests       │  This week    │
-│   [Browse open gigs]                       │
-└─────────────────────────────────────────────┘
-
-┌───────────┬───────────┬───────────┐
-│   4.8     │    5      │    12     │
-│  Rating   │ Requests  │ Completed │
-└───────────┴───────────┴───────────┘
-
-INCOMING REQUESTS
-┌─────────────────────────────────────────────┐
-│  $250              [Decline] [Accept]       │
-│  Gig #abc123                                │
-├─────────────────────────────────────────────┤
-│  $180              [Decline] [Accept]       │
-│  Gig #def456                                │
-└─────────────────────────────────────────────┘
-
-TODAY
-┌─────────────────────────────────────────────┐
-│     No bookings scheduled for today.        │
-│            [Find a gig]                     │
-└─────────────────────────────────────────────┘
-
-┌─────────┬─────────┬─────────┬─────────┐
-│ 🎯 Gigs │ 📅 Sched│ ⭐ Perks│ 💬 Msgs │
-└─────────┴─────────┴─────────┴─────────┘
-```
-
-### Step 3.2: Create DashboardPage Styles
-
-**File:** `TripleAMusician/src/pages/DashboardPage.module.scss`  
-**Operation:** `CREATE_FILE`
-
----
-
-## Phase 4: Triple A Music — Uber Marketplace Transformation
-
-### Step 4.1: Create Uber-Style Discovery Page
-
-**File:** `TripleAMusic/src/pages/DiscoveryPage.tsx`  
-**Operation:** `CREATE_FILE`
-
-**Structure:**
-
-```
-Find your sound.
-┌─────────────────────────────────────────────┐
-│  🔍 Search musicians, genres, locations...  │
-└─────────────────────────────────────────────┘
-[All] [Wedding] [Corporate] [Private] [Concert]
-
-BOOK NOW                      [Plan an event →]
-┌─────────────────────────────────────────────┐
-│ What kind?    │ When?        │ Guests      │
-│ [Wedding ▼]   │ [Date]       │ [50]        │
-│              [See available musicians]      │
-└─────────────────────────────────────────────┘
-
-AVAILABLE MUSICIANS                   8 found
-┌──────────────────────┬──────────────────────┐
-│ (Avatar) Musician #1 │ (Avatar) Musician #2 │
-│ 4.8★ · 45 reviews    │ 4.6★ · 32 reviews    │
-│ $250                 │ $180                 │
-│ [Guitar] [Vocals]    │ [Piano] [Jazz]       │
-│ [View] [Request]     │ [View] [Request]     │
-└──────────────────────┴──────────────────────┘
-
-YOUR VENUES                       [Manage →]
-┌──────┬──────┬──────┐
-│Venue1│Venue2│Venue3│ → scroll
-└──────┴──────┴──────┘
-```
-
-### Step 4.2: Create DiscoveryPage Styles
-
-**File:** `TripleAMusic/src/pages/DiscoveryPage.module.scss`  
-**Operation:** `CREATE_FILE`
-
----
-
-## Phase 5: App Structure & Navigation Updates
-
-### Step 5.1: Update Muse App.tsx
-
-**File:** `TripleAMuse/src/App.tsx`  
 **Operation:** `REPLACE`
 
-- Wire in new HomePage as default route
-- Simplify navigation to: Home | Messages | Account
-- Remove verbose portal structure
-
-### Step 5.2: Update Musician App.tsx
-
-**File:** `TripleAMusician/src/App.tsx`  
-**Operation:** `REPLACE`
-
-- Wire in new DashboardPage for /dashboard
-- Update landing page to be simpler funnel
-- Simplify navigation
-
-### Step 5.3: Update Music App.tsx
-
-**File:** `TripleAMusic/src/App.tsx`  
-**Operation:** `REPLACE`
-
-- Wire in new DiscoveryPage as default route
-- Clean up the 3600+ line file into smaller page components
-- Update navigation structure
-
----
-
-## Phase 6: Visual Polish & Consistency
-
-### Step 6.1: Refine Global Styles
-
-**File:** `packages/shared/src/styles/global.scss`  
-**Operation:** `REPLACE`
-
-- Add more refined shadow system
-- Improve hover/active states
-- Better focus rings
-
-### Step 6.2: Add App-Specific Theming
-
-**File:** `packages/shared/src/layout/AppFrame.tsx`  
-**Operation:** `REPLACE`
-
-- Distinct accent colors per app:
-  - Muse: Purple accent (service marketplace vibe)
-  - Musician: Green accent (active/earnings vibe)
-  - Music: Blue accent (booking/trust vibe)
-- Gold reserved for primary actions across all apps
-
----
-
-## Implementation Order
-
-1. **Phase 1** (Steps 1.1-1.9): Shared components — foundation for all apps
-2. **Phase 2** (Steps 2.1-2.2): Muse transformation — Uber Eats style
-3. **Phase 3** (Steps 3.1-3.2): Musician transformation — Uber Driver style
-4. **Phase 4** (Steps 4.1-4.2): Music transformation — Uber marketplace style
-5. **Phase 5** (Steps 5.1-5.3): Wire everything together
-6. **Phase 6** (Steps 6.1-6.2): Final polish
-
----
-
-## Success Criteria
-
-- [ ] Each app is immediately distinguishable by purpose and visual style
-- [ ] Muse feels like Uber Eats: browse-first, category scrollers, deals/bundles
-- [ ] Musician feels like Uber Driver: status dashboard, earnings visible, quick actions
-- [ ] Music feels like Uber: search-first, booking flow, location cards
-- [ ] All pages have clear primary actions and visual hierarchy
-- [ ] No competing CTAs on any screen
-- [ ] Professional, flat design with restrained borders and shadows
-- [ ] Images are prominent where available (instruments, venues)
-- [ ] Navigation is clear and role-appropriate
-
----
-
-## Key UI Patterns Reference
-
-### Uber Eats Patterns (for Muse)
-
-- Large search bar at top
-- Horizontal category chips with icons
-- "Deals" section with badge overlays
-- Horizontal scrolling product rows
-- Clean action buttons per card
-
-### Uber Driver Patterns (for Musician)
-
-- Status indicator at top (green/yellow/gray)
-- Large earnings number prominently displayed
-- Accept/Decline buttons on request cards
-- "Go online" style toggle
-- Quick stats in a row
-
-### Uber Patterns (for Music)
-
-- "Where to?" style search input
-- Location cards with images
-- Price estimates visible
-- Clean booking flow
-- Rating/review visible on cards
-
-### Apple Store Patterns (all apps)
-
-- Premium product imagery
-- Minimal text, maximum visual
-- Restrained color palette
-- Consistent card sizing
-- Professional typography
-
----
-
-## Verification Commands
-
-```bash
-# Build all apps to verify no TypeScript errors
-cd /Users/alexwaldmann/Desktop/TripleAApps
-npm run build --workspaces
-
-# Start dev server to verify visually
-npm run dev --workspace=TripleAMuse
-npm run dev --workspace=TripleAMusician
-npm run dev --workspace=TripleAMusic
+**Anchor:**
+```scss
+.root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--page-pad);
+  display: flex;
+  justify-content: center;
+  background:
+    radial-gradient(
+      900px 520px at 18% -12%,
+      color-mix(in srgb, var(--app-glow) 20%, transparent),
+      transparent 70%
+    ),
+    var(--bg);
+}
 ```
+
+**Code:**
+```scss
+.root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--page-pad);
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+```
+
+**Verify:** `cd /Users/alexwaldmann/Desktop/TripleAApps && pnpm build`
+
+---
+
+### Step 2: Simplify card shadow to near-zero — `packages/shared/src/styles/global.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+  /* Subtle depth (no "lift" effects) */
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 18px rgba(0, 0, 0, 0.22);
+```
+
+**Code:**
+```scss
+  /* Minimal depth — flat UI, border-defined containers */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08);
+```
+
+**Verify:** Visual inspection — cards should not have heavy shadows
+
+---
+
+### Step 3: Remove gradient from hero section — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+/* Compact, card-first hero inspired by Apple/Uber: strong focus, minimal copy */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+  gap: 16px;
+  align-items: stretch;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 88%, var(--accent) 6%),
+    var(--surface)
+  );
+  border: 1px solid color-mix(in srgb, var(--border) 78%, var(--accent) 18%);
+  box-shadow: var(--shadow-1);
+}
+```
+
+**Code:**
+```scss
+/* Clean hero: flat surface, minimal styling, focus on content */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+  gap: 20px;
+  align-items: stretch;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+```
+
+**Verify:** Visual inspection — hero should be flat, not gradient
+
+---
+
+### Step 4: Simplify navigation to flat minimal style — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+.nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.navLink:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.navLinkActive {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: none;
+}
+```
+
+**Code:**
+```scss
+.nav {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.navLink:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.navLinkActive {
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 600;
+}
+```
+
+**Verify:** Visual inspection — navigation should be minimal, not pill-shaped
+
+---
+
+### Step 5: Flatten feature cards — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+.featureCard {
+  position: relative;
+  overflow: hidden;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+```
+
+**Code:**
+```scss
+.featureCard {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+```
+
+**Verify:** Visual inspection — feature cards should be clean rectangles
+
+---
+
+### Step 6: Remove accent tinting from chrome header — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+/* Top "app chrome" (brand + nav). Keeps the UI feeling like a real service. */
+.chrome {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: calc(var(--page-pad) * -1) calc(var(--page-pad) * -1) 16px;
+  padding: 14px var(--page-pad) 10px;
+  border-radius: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--bg) 92%, var(--surface));
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+```
+
+**Code:**
+```scss
+/* Top "app chrome" (brand + nav). Clean, minimal header. */
+.chrome {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: calc(var(--page-pad) * -1) calc(var(--page-pad) * -1) 20px;
+  padding: 16px var(--page-pad) 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+```
+
+**Verify:** Visual inspection — header should be flat, same as page background
+
+---
+
+### Step 7: Simplify brand dot to just accent color — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+.brandDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 92%, var(--primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+```
+
+**Code:**
+```scss
+.brandDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+```
+
+**Verify:** Visual inspection — brand dot should be simple gold circle
+
+---
+
+### Step 8: Clean up card base class — `packages/shared/src/styles/primitives.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.cardInteractive {
+  composes: card;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.cardInteractive:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+```
+
+**Code:**
+```scss
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.cardInteractive {
+  composes: card;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.cardInteractive:hover {
+  border-color: var(--border-strong);
+}
+```
+
+**Verify:** Visual inspection — cards should be flat, no shadow, no background change on hover
+
+---
+
+### Step 9: Remove category bar active glow — `packages/shared/src/components/CategoryBar.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+/* Active button customization: rely on Button.secondary for visual weight; add gold outline */
+.active {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+```
+
+**Code:**
+```scss
+/* Active button: solid background, no glow */
+.active {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+```
+
+**Verify:** Visual inspection — active category should be solid, not glowing
+
+---
+
+### Step 10: Simplify button hover states — `packages/shared/src/components/Button.module.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 92%, #000);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface);
+}
+```
+
+**Code:**
+```scss
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 88%, #000);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+```
+
+**Verify:** Visual inspection — button hovers should be subtle, not dramatic
+
+---
+
+### Step 11: Simplify Muse HomePage — clearer action hierarchy — `TripleAMuse/src/pages/HomePage.tsx`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```tsx
+        <section className={ui.hero}>
+          <div>
+            <p className={ui.heroKicker}>Triple A Music</p>
+            <h2 className={ui.heroTitle}>Find rentals, lessons, and support</h2>
+            <p className={ui.heroLead}>
+              Browse curated bundles, book a lesson, or request delivery and
+              on-site help.
+            </p>
+            <div className={ui.heroActions}>
+              <Button onClick={() => window.open("/open/music", "_self")}>
+                I'm hosting an event
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => window.open("/open/musician", "_self")}
+              >
+                I'm performing
+              </Button>
+              <Button variant="ghost">Rentals & support</Button>
+            </div>
+          </div>
+
+          <div className={ui.featureGrid}>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Host workspace</p>
+              <p className={ui.featureBody}>
+                Post an event, request musicians, and track confirmations.
+              </p>
+            </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Performer workspace</p>
+              <p className={ui.featureBody}>
+                Manage your gigs, requests, and payments.
+              </p>
+            </div>
+            <div className={ui.featureCard}>
+              <p className={ui.featureTitle}>Realtime support</p>
+              <p className={ui.featureBody}>
+                Ask for rentals, coaching, delivery, or on-site help.
+              </p>
+            </div>
+          </div>
+        </section>
+```
+
+**Code:**
+```tsx
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Get started</h2>
+          <div className={ui.row} style={{ gap: 12, flexWrap: "wrap" }}>
+            <Button onClick={() => window.open("/open/music", "_self")}>
+              Host an event
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => window.open("/open/musician", "_self")}
+            >
+              Join as performer
+            </Button>
+          </div>
+        </section>
+```
+
+**Verify:** `cd /Users/alexwaldmann/Desktop/TripleAApps && pnpm build`
+
+---
+
+### Step 12: Simplify Musician Dashboard hero — `TripleAMusician/src/pages/DashboardPage.tsx`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```tsx
+        <div className={styles.header}>
+          <div>
+            <p className={ui.heroKicker}>Triple A roster</p>
+            <h2 className={ui.heroTitle}>Welcome back.</h2>
+            <p className={ui.heroLead}>
+              Keep your availability clean, respond to requests, and stay ready.
+            </p>
+          </div>
+        </div>
+```
+
+**Code:**
+```tsx
+        <div className={styles.header}>
+          <div>
+            <h2 className={ui.sectionTitle}>Your week</h2>
+            <p className={ui.help}>Respond to requests and manage bookings.</p>
+          </div>
+        </div>
+```
+
+**Verify:** `cd /Users/alexwaldmann/Desktop/TripleAApps && pnpm build`
+
+---
+
+### Step 13: Reduce border radius globally — `packages/shared/src/styles/global.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+```
+
+**Code:**
+```scss
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+```
+
+**Verify:** Visual inspection — elements should feel tighter, more professional
+
+---
+
+### Step 14: Reduce surface transparency for cleaner look — `packages/shared/src/styles/global.scss`
+
+**Operation:** `REPLACE`
+
+**Anchor:**
+```scss
+  /* Surfaces are derived from black + white alpha for a clean "tux" look */
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.065);
+  --surface-3: rgba(255, 255, 255, 0.095);
+  --border: rgba(255, 255, 255, 0.11);
+  --border-strong: rgba(255, 255, 255, 0.18);
+```
+
+**Code:**
+```scss
+  /* Flat surfaces — subtle differentiation, not layered glass */
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.16);
+```
+
+**Verify:** Visual inspection — surfaces should be more subtle
+
+---
+
+## Summary of Changes
+
+| File | Change |
+|------|--------|
+| `AppFrame.module.scss` | Remove radial gradient glow background |
+| `global.scss` | Flatten shadow, reduce radii, simplify surfaces |
+| `primitives.module.scss` | Flatten hero, nav, chrome, cards, feature cards |
+| `CategoryBar.module.scss` | Remove active glow |
+| `Button.module.scss` | Subtle hover states |
+| `HomePage.tsx` (Muse) | Simplify hero to 2 clear CTAs |
+| `DashboardPage.tsx` (Musician) | Simplify header |
+
+## Design Philosophy Applied
+
+1. **One background color** — No gradients, no glows
+2. **Border-defined containers** — Cards use borders, not shadows
+3. **Minimal hover states** — Color change only, no lifts
+4. **Clear action hierarchy** — Primary gold CTA, secondary for alternatives
+5. **Scannable typography** — Section titles, help text, no hero kickers
+6. **Professional restraint** — Less is more
+
+---
+
+## Post-Implementation Notes
+
+After implementing these changes, the UI should feel:
+- **Flat** — No layered/glass effects
+- **Clean** — Consistent spacing, no visual noise
+- **Professional** — Like a real service app (Stripe, Linear, Notion)
+- **Guided** — Clear primary actions, obvious user flow
+
+If additional elements still feel "shiny", apply the same principles:
+1. Remove gradients → use solid colors
+2. Remove shadows → use borders
+3. Remove glows → use solid accent colors
+4. Reduce hover effects → simple color changes only

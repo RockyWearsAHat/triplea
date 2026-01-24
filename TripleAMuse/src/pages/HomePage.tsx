@@ -38,47 +38,18 @@ export function HomePage() {
         className={ui.stack}
         style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
       >
-        <section className={ui.hero}>
-          <div>
-            <p className={ui.heroKicker}>Triple A Music</p>
-            <h2 className={ui.heroTitle}>Find rentals, lessons, and support</h2>
-            <p className={ui.heroLead}>
-              Browse curated bundles, book a lesson, or request delivery and
-              on-site help.
-            </p>
-            <div className={ui.heroActions}>
-              <Button onClick={() => window.open("/open/music", "_self")}>
-                I’m hosting an event
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => window.open("/open/musician", "_self")}
-              >
-                I’m performing
-              </Button>
-              <Button variant="ghost">Rentals & support</Button>
-            </div>
-          </div>
-
-          <div className={ui.featureGrid}>
-            <div className={ui.featureCard}>
-              <p className={ui.featureTitle}>Host workspace</p>
-              <p className={ui.featureBody}>
-                Post an event, request musicians, and track confirmations.
-              </p>
-            </div>
-            <div className={ui.featureCard}>
-              <p className={ui.featureTitle}>Performer workspace</p>
-              <p className={ui.featureBody}>
-                Manage your gigs, requests, and payments.
-              </p>
-            </div>
-            <div className={ui.featureCard}>
-              <p className={ui.featureTitle}>Realtime support</p>
-              <p className={ui.featureBody}>
-                Ask for rentals, coaching, delivery, or on-site help.
-              </p>
-            </div>
+        <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Get started</h2>
+          <div className={ui.row} style={{ gap: 12, flexWrap: "wrap" }}>
+            <Button onClick={() => window.open("/open/music", "_self")}>
+              Host an event
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => window.open("/open/musician", "_self")}
+            >
+              Join as performer
+            </Button>
           </div>
         </section>
 

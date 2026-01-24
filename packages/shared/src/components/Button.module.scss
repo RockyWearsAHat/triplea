@@ -65,15 +65,13 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 92%, #000);
+  background: color-mix(in srgb, var(--primary) 88%, #000);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--surface-2);
   border-color: var(--border-strong);
 }
 
 .ghost:hover:not(:disabled) {
   color: var(--text);
-  background: var(--surface);
 }

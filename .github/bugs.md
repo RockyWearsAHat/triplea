@@ -1,20 +1,13 @@
-```markdown
 # Bugs
 
 Report issues here for `@Plan` to investigate.
 
-## Format
+---
 
-### [Issue Title]
+✅ **UI "shiny" styling issue** — Diagnosed and planned.
 
-**Symptoms:** What you observed
-**Expected:** What should happen
-**Reproduction:** Steps to reproduce
-**Files involved:** (if known)
-**Notes:** Any additional context
+→ See [.github/plan.md](plan.md) for the flat UI redesign plan (14 steps).
 
 ---
 
-(No bugs currently reported)
-
-```
+(No additional bugs currently reported)

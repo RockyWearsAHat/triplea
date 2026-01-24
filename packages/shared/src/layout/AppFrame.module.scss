@@ -4,13 +4,7 @@
   padding: var(--page-pad);
   display: flex;
   justify-content: center;
-  background:
-    radial-gradient(
-      900px 520px at 18% -12%,
-      color-mix(in srgb, var(--app-glow) 20%, transparent),
-      transparent 70%
-    ),
-    var(--bg);
+  background: var(--bg);
 }
 
 /* Per-app theming. These variables are consumed by shared primitives styles. */

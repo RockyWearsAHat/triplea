@@ -12,11 +12,8 @@ export function DashboardPage() {
       >
         <div className={styles.header}>
           <div>
-            <p className={ui.heroKicker}>Triple A roster</p>
-            <h2 className={ui.heroTitle}>Welcome back.</h2>
-            <p className={ui.heroLead}>
-              Keep your availability clean, respond to requests, and stay ready.
-            </p>
+            <h2 className={ui.sectionTitle}>Your week</h2>
+            <p className={ui.help}>Respond to requests and manage bookings.</p>
           </div>
         </div>
 
