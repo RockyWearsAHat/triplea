@@ -54,6 +54,21 @@ export function HomePage() {
         </section>
 
         <section className={ui.section}>
+          <h2 className={ui.sectionTitle}>Get started</h2>
+          <div className={ui.row} style={{ gap: 12, flexWrap: "wrap" }}>
+            <Button onClick={() => window.open("/open/music", "_self")}>
+              Host an event
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => window.open("/open/musician", "_self")}
+            >
+              Join as performer
+            </Button>
+          </div>
+        </section>
+
+        <section className={ui.section}>
           <h2 className={ui.sectionTitle}>Where are you headed?</h2>
           <div className={ui.featureGrid}>
             <div className={ui.featureCard}>
