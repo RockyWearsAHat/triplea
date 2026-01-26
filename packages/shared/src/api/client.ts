@@ -6,8 +6,10 @@ import type {
   Booking,
   ChatConversation,
   ChatMessage,
+  ConcertSearchParams,
   GigApplication,
   Gig,
+  GigWithDistance,
   ArtistRequest,
   Instrument,
   Location,
@@ -441,6 +443,32 @@ export class TripleAApiClient {
       method: "GET",
     });
     return data.gigs;
+  }
+
+  async listPublicConcerts(
+    params?: ConcertSearchParams,
+  ): Promise<GigWithDistance[]> {
+    const qs = params
+      ? `?${new URLSearchParams(
+          Object.entries(params as Record<string, any>)
+            .filter(([, v]) => v !== undefined && v !== null)
+            .map(([k, v]) => [k, String(v)]),
+        ).toString()}`
+      : "";
+
+    const data = await this.request<{ concerts: GigWithDistance[] }>(
+      `/public/concerts${qs}`,
+      { method: "GET" },
+    );
+    return data.concerts;
+  }
+
+  async listPopularConcerts(): Promise<Gig[]> {
+    const data = await this.request<{ concerts: Gig[] }>(
+      "/public/concerts/popular",
+      { method: "GET" },
+    );
+    return data.concerts;
   }
 
   async getPublicGig(id: string): Promise<Gig> {

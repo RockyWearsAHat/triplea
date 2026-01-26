@@ -158,3 +158,23 @@ export interface Perk {
   minRating?: number;
   minCompletedBookings?: number;
 }
+
+// Geolocation for marketplace
+export interface GeoCoordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface GigWithDistance extends Gig {
+  distanceMiles?: number;
+  coordinates?: GeoCoordinates;
+}
+
+export interface ConcertSearchParams {
+  lat?: number;
+  lng?: number;
+  radiusMiles?: number;
+  genres?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+}

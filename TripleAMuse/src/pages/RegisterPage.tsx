@@ -105,7 +105,7 @@ export function RegisterPage() {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => navigate("/account")}
+          onClick={() => navigate("/login")}
         >
           Back to sign in
         </Button>

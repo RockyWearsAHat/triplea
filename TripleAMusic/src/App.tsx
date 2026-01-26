@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Booking,
   Event,
@@ -29,6 +29,7 @@ import {
 import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
+import ConcertMarketplacePage from "./pages/ConcertMarketplacePage";
 
 import { ChatInbox } from "@shared";
 
@@ -36,49 +37,6 @@ interface DiscoveryResult {
   musician: MusicianProfile;
   priceEstimate: number;
   distanceMinutes: number;
-}
-
-function formatUsd(amount: number): string {
-  if (!Number.isFinite(amount)) return "$0";
-  return `$${amount.toFixed(0)}`;
-}
-
-type TicketOrderStatus = "confirmed" | "refunded" | "transferred";
-
-type TicketOrder = {
-  id: string;
-  gigId: string;
-  quantity: number;
-  unitPrice: number;
-  platformFee: number;
-  total: number;
-  currency: "USD";
-  purchasedAt: string;
-  status: TicketOrderStatus;
-  accessCode: string;
-};
-
-function randomId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function loadTicketOrders(): TicketOrder[] {
-  try {
-    const raw = localStorage.getItem("taa.music.ticketOrders");
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as TicketOrder[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveTicketOrders(next: TicketOrder[]): void {
-  try {
-    localStorage.setItem("taa.music.ticketOrders", JSON.stringify(next));
-  } catch {
-    // ignore
-  }
 }
 
 const events: Event[] = [
@@ -116,6 +74,8 @@ const bookings: Booking[] = [
     status: "requested",
   },
 ];
+
+const MUSICIAN_ORIGIN = "http://localhost:5175";
 
 function Chip({ label }: { label: string }) {
   return <span className={ui.chip}>{label}</span>;
@@ -171,7 +131,7 @@ function LoginPage() {
   const hasAnyRole = userRoles.length > 0;
 
   return (
-    <AppShell title="Sign in">
+    <AppShell title="Sign in to Triple A Music">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -219,8 +179,27 @@ function LoginPage() {
           variant="ghost"
           onClick={() => navigate("/register")}
         >
-          Create an account for bookings
+          Create an account
         </Button>
+
+        <div
+          style={{
+            marginTop: spacing.xl,
+            paddingTop: spacing.md,
+            borderTop: "1px solid var(--border)",
+            textAlign: "center",
+          }}
+        >
+          <p className={ui.help} style={{ marginBottom: spacing.sm }}>
+            Looking to perform?{" "}
+            <a
+              href={`${MUSICIAN_ORIGIN}/login`}
+              style={{ color: "var(--gold)", textDecoration: "underline" }}
+            >
+              Sign up or login to the musician portal here
+            </a>
+          </p>
+        </div>
       </form>
     </AppShell>
   );
@@ -229,6 +208,9 @@ function LoginPage() {
 function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const intent = searchParams.get("intent");
+  const isHostIntent = intent === "host";
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -240,8 +222,13 @@ function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await register({ name, email, password, roles: ["customer"] });
-      navigate("/");
+      const roles = isHostIntent ? ["customer", "host"] : ["customer"];
+      await register({ name, email, password, roles });
+      if (isHostIntent) {
+        navigate("/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError("Registration failed. Please try a different email.");
     } finally {
@@ -851,1395 +838,354 @@ function BrowsePage() {
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
   );
-
-  const [query, setQuery] = useState("");
-  const [city, setCity] = useState<string>("All");
-  const [when, setWhen] = useState<"all" | "next_7" | "next_30">("all");
-
-  const [gigTickets, setGigTickets] = useState<
-    Record<
-      string,
-      {
-        openForTickets: boolean;
-        mode: TicketMode;
-        price: number;
-        currency: "USD";
-      }
-    >
-  >(() => {
-    try {
-      const raw = localStorage.getItem("taa.music.gigTickets");
-      if (!raw) return {};
-      return JSON.parse(raw) as Record<
-        string,
-        {
-          openForTickets: boolean;
-          mode: TicketMode;
-          price: number;
-          currency: "USD";
-        }
-      >;
-    } catch {
-      return {};
-    }
-  });
-
-  function syncGigTicketsFromStorage() {
-    try {
-      const raw = localStorage.getItem("taa.music.gigTickets");
-      if (!raw) {
-        setGigTickets({});
-        return;
-      }
-      setGigTickets(
-        JSON.parse(raw) as Record<
-          string,
-          {
-            openForTickets: boolean;
-            mode: TicketMode;
-            price: number;
-            currency: "USD";
-          }
-        >,
-      );
-    } catch {
-      // ignore
-    }
-  }
-
-  useEffect(() => {
-    // Keep browse in sync when ticketing is toggled elsewhere.
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== "taa.music.gigTickets") return;
-      syncGigTicketsFromStorage();
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", syncGigTicketsFromStorage);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", syncGigTicketsFromStorage);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("taa.music.gigTickets", JSON.stringify(gigTickets));
-    } catch {
-      // ignore
-    }
-  }, [gigTickets]);
-
-  function getGigTicket(gigId: string) {
-    return (
-      gigTickets[gigId] ?? {
-        openForTickets: false,
-        mode: "general_admission" as const,
-        price: 25,
-        currency: "USD" as const,
-      }
-    );
-  }
-
-  const contentRef = React.useRef<HTMLDivElement | null>(null);
-
-  const [results, setResults] = useState<DiscoveryResult[] | null>(null);
+  // Removed unused state: query, city, when
+  const [gigs, setGigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [gigs, setGigs] = useState<Gig[]>([]);
-  const [gigsBusy, setGigsBusy] = useState(false);
-
-  const cityOptions = useMemo(() => {
-    const values = Array.from(
-      new Set(
-        gigs
-          .map((g) => g.location?.city)
-          .filter(
-            (v): v is string => typeof v === "string" && v.trim().length > 0,
-          ),
-      ),
-    ).sort((a, b) => a.localeCompare(b));
-    return ["All", ...values];
-  }, [gigs]);
-
-  const filteredGigs = useMemo(() => {
-    const q = query.trim().toLowerCase();
-
-    const now = new Date();
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0,
-    );
-    const maxDays = when === "next_7" ? 7 : when === "next_30" ? 30 : null;
-    const cutoff =
-      maxDays === null
-        ? null
-        : new Date(
-            todayStart.getFullYear(),
-            todayStart.getMonth(),
-            todayStart.getDate() + maxDays,
-            23,
-            59,
-            59,
-            999,
-          );
-
-    function matchesText(g: Gig): boolean {
-      if (!q) return true;
-      const haystack = [
-        g.title,
-        g.description ?? "",
-        g.location?.name ?? "",
-        g.location?.city ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    }
-
-    function matchesCity(g: Gig): boolean {
-      if (city === "All") return true;
-      return (g.location?.city ?? "") === city;
-    }
-
-    function matchesWhen(g: Gig): boolean {
-      if (!cutoff) return true;
-      const d = new Date(`${g.date}T00:00:00`);
-      if (Number.isNaN(d.getTime())) return true;
-      return d >= todayStart && d <= cutoff;
-    }
-
-    return gigs
-      .filter((g) => g.status !== "cancelled")
-      .filter(matchesText)
-      .filter(matchesCity)
-      .filter(matchesWhen)
-      .slice()
-      .sort((a, b) => {
-        const da = new Date(`${a.date}T00:00:00`).getTime();
-        const db = new Date(`${b.date}T00:00:00`).getTime();
-        if (Number.isNaN(da) || Number.isNaN(db)) return 0;
-        return da - db;
-      });
-  }, [gigs, query, city, when]);
-
-  function apiImageUrl(pathname?: string): string | undefined {
-    if (!pathname) return undefined;
-    if (/^https?:\/\//i.test(pathname)) return pathname;
-    return `http://localhost:4000${pathname}`;
-  }
-
-  useScrollReveal(contentRef, [results?.length ?? 0, loading]);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  useScrollReveal(contentRef, [gigs.length, loading]);
 
   useEffect(() => {
-    setError(null);
+    let cancelled = false;
     setLoading(true);
-    api
-      .musicDiscovery({})
-      .then((r) => setResults(r))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, [api]);
-
-  useEffect(() => {
-    api
-      .listPublicLocations()
-      .then((l) => setLocations(l))
-      .catch(() => {
-        // Best-effort; browse should still work without it.
-      });
-  }, [api]);
-
-  useEffect(() => {
-    setGigsBusy(true);
+    setError(null);
     api
       .listPublicGigs()
-      .then((g) => setGigs(g))
-      .catch(() => {
-        // Best-effort; concerts list should not block the page.
+      .then((data) => {
+        if (cancelled) return;
+        setGigs(data);
       })
-      .finally(() => setGigsBusy(false));
+      .catch(() => {
+        if (cancelled) return;
+        setError("Failed to load gigs.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [api]);
 
   return (
-    <AppShell
-      title="Concerts & events"
-      subtitle="Browse what’s coming up. Hosting? Post an event and book artists."
-    >
-      <div
-        ref={contentRef}
-        className={ui.stack}
-        style={{ "--stack-gap": `${spacing.lg}px` } as React.CSSProperties}
-      >
-        <section className={ui.hero} data-reveal>
-          <div>
-            <p className={ui.heroKicker}>Triple A Music</p>
-            <h2 className={ui.heroTitle}>Browse upcoming concerts.</h2>
-            <p className={ui.heroLead}>
-              A clean, public listing of what’s happening — with host tools
-              available when you’re ready to post and book.
-            </p>
+    <div ref={contentRef}>
+      {/* Hero - Full viewport, one bold message */}
+      <section className={ui.heroFull}>
+        <p className={ui.heroKicker}>Triple A Music</p>
+        <h1 className={ui.heroMassive}>Everything around the gig — handled.</h1>
+        <p className={ui.heroSubtitleLarge}>
+          Find concerts, book performers, or get on stage. One platform for live
+          music.
+        </p>
+        <div className={ui.heroActionsLarge}>
+          <Button
+            size="lg"
+            onClick={() =>
+              document
+                .getElementById("music-concerts")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Browse concerts
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            onClick={() => {
+              if (!user) {
+                navigate(`/login?next=${encodeURIComponent("/post-gig")}`);
+                return;
+              }
+              navigate("/post-gig");
+            }}
+          >
+            Post an event
+          </Button>
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={() =>
+              document
+                .getElementById("music-performers")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Browse performers
+          </Button>
+          {!user ? (
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => navigate("/login")}
+            >
+              Sign in
+            </Button>
+          ) : null}
+        </div>
+      </section>
 
-            <div className={ui.heroActions}>
-              <Button
-                onClick={() =>
-                  document
-                    .getElementById("music-concerts")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                Browse concerts
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (!user) {
-                    navigate(`/login?next=${encodeURIComponent("/post-gig")}`);
-                    return;
-                  }
-                  navigate("/post-gig");
+      {/* Feature highlights - clean section */}
+      <section className={ui.sectionFullCenter}>
+        <h2 className={ui.sectionTitleLarge}>Everything you need</h2>
+        <p className={ui.sectionLead}>
+          Focus on the music. We handle the rest.
+        </p>
+
+        <div className={ui.pathGrid} style={{ marginTop: 40 }}>
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Concerts</p>
+            <p className={ui.pathCardDesc}>
+              Discover and buy tickets for upcoming events in your city.
+            </p>
+          </div>
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Performers</p>
+            <p className={ui.pathCardDesc}>
+              Book musicians, browse profiles, and see ratings.
+            </p>
+          </div>
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Host tools</p>
+            <p className={ui.pathCardDesc}>
+              Post gigs, manage bookings, and message artists.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Results grid - concerts and performers */}
+      <section className={ui.sectionFull}>
+        <div id="music-concerts" />
+        <Section title="Upcoming concerts">
+          {loading ? (
+            <p className={ui.help}>Loading...</p>
+          ) : error ? (
+            <p className={ui.error}>{error}</p>
+          ) : gigs.length === 0 ? (
+            <p className={ui.help}>No concerts available yet.</p>
+          ) : (
+            gigs.map((gig) => (
+              <div
+                key={gig.id}
+                data-reveal
+                className={[ui.card, ui.cardPad].join(" ")}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: spacing.lg,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  marginBottom: spacing.md,
                 }}
               >
-                Post an event
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  document
-                    .getElementById("music-performers")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-              >
-                Browse performers
-              </Button>
-              {!user ? (
-                <Button variant="ghost" onClick={() => navigate("/login")}>
-                  Sign in
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className={ui.featureGrid}>
-            <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Real listings</p>
-              <p className={ui.featureBody}>
-                See upcoming events and what’s open right now.
-              </p>
-            </div>
-            <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Host tools</p>
-              <p className={ui.featureBody}>
-                Post an event, review applicants, and confirm bookings.
-              </p>
-            </div>
-            <div className={ui.featureCard} data-reveal>
-              <p className={ui.featureTitle}>Messaging</p>
-              <p className={ui.featureBody}>
-                Keep communication in one thread — customers, musicians, venues,
-                support.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <div id="music-concerts" />
-
-        <Section title="Upcoming concerts">
-          {gigsBusy ? <p className={ui.help}>Loading concerts…</p> : null}
-          {!gigsBusy && gigs.length === 0 ? (
-            <p className={ui.help}>No upcoming events yet.</p>
-          ) : (
-            <div
-              className={ui.stack}
-              style={{ "--stack-gap": "12px" } as React.CSSProperties}
-            >
-              <div
-                className={ui.scroller}
-                style={{ "--scroller-gap": "8px" } as React.CSSProperties}
-              >
-                <Button
-                  variant={when === "all" ? "secondary" : "ghost"}
-                  onClick={() => setWhen("all")}
-                >
-                  Any date
-                </Button>
-                <Button
-                  variant={when === "next_7" ? "secondary" : "ghost"}
-                  onClick={() => setWhen("next_7")}
-                >
-                  Next 7 days
-                </Button>
-                <Button
-                  variant={when === "next_30" ? "secondary" : "ghost"}
-                  onClick={() => setWhen("next_30")}
-                >
-                  Next 30 days
-                </Button>
-              </div>
-
-              <div className={ui.rowBetween} style={{ alignItems: "flex-end" }}>
-                <div
-                  className={ui.stack}
-                  style={
-                    { "--stack-gap": "6px", minWidth: 0 } as React.CSSProperties
-                  }
-                >
-                  <label className={ui.help} style={{ fontSize: 13 }}>
-                    Search
-                  </label>
-                  <input
-                    className={ui.input}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Artist, venue, city…"
-                  />
-                </div>
-
-                <div
-                  className={ui.stack}
-                  style={
-                    { "--stack-gap": "6px", width: 220 } as React.CSSProperties
-                  }
-                >
-                  <label className={ui.help} style={{ fontSize: 13 }}>
-                    City
-                  </label>
-                  <select
-                    className={ui.input}
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                <div style={{ minWidth: 220 }}>
+                  <h3 style={{ fontWeight: 600 }}>{gig.title}</h3>
+                  <p
+                    style={{
+                      marginTop: spacing.xs,
+                      fontSize: 14,
+                    }}
+                    className={ui.help}
                   >
-                    {cityOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                    {gig.date} · {gig.city}
+                  </p>
                 </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/gigs/${gig.id}`)}
+                >
+                  View details
+                </Button>
               </div>
-
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                Showing <strong>{filteredGigs.length}</strong> event
-                {filteredGigs.length === 1 ? "" : "s"}
-              </p>
-
-              <div
-                className={[ui.grid, ui.gridCards].join(" ")}
-                style={{ "--grid-gap": "16px" } as React.CSSProperties}
-              >
-                {filteredGigs.slice(0, 24).map((g) => {
-                  const t = getGigTicket(g.id);
-                  return (
-                    <div
-                      key={g.id}
-                      className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                      data-reveal
-                      style={{ "--stack-gap": "12px" } as React.CSSProperties}
-                    >
-                      <div className={[ui.media, ui.mediaWide].join(" ")}>
-                        {g.location?.imageUrl ? (
-                          <img
-                            src={apiImageUrl(g.location.imageUrl)}
-                            alt={g.location.name}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className={ui.mediaPlaceholder}>Event</div>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className={ui.cardTitle}>{g.title}</p>
-                        <p className={ui.cardText} style={{ marginTop: 6 }}>
-                          {g.date}
-                          {g.time ? ` · ${g.time}` : ""}
-                          {g.location?.name ? ` · ${g.location.name}` : ""}
-                          {g.location?.city ? ` · ${g.location.city}` : ""}
-                        </p>
-                      </div>
-
-                      <div className={ui.rowBetween}>
-                        <div className={ui.chipBar}>
-                          <span className={ui.chip}>{g.status}</span>
-                          <span className={ui.chip}>
-                            {t.openForTickets ? "Tickets" : "No tickets"}
-                          </span>
-                        </div>
-                        <p
-                          className={ui.help}
-                          style={{ margin: 0, fontSize: 13 }}
-                        >
-                          {t.openForTickets ? `From ${formatUsd(t.price)}` : ""}
-                        </p>
-                      </div>
-
-                      <div
-                        className={ui.row}
-                        style={{ "--row-gap": "10px" } as React.CSSProperties}
-                      >
-                        <Button
-                          variant="secondary"
-                          onClick={() =>
-                            navigate(`/gigs/${encodeURIComponent(g.id)}`)
-                          }
-                        >
-                          View
-                        </Button>
-                        <Button
-                          disabled={!t.openForTickets}
-                          onClick={() =>
-                            navigate(
-                              `/gigs/${encodeURIComponent(g.id)}/tickets`,
-                            )
-                          }
-                        >
-                          {t.openForTickets ? "Buy tickets" : "Tickets soon"}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            ))
           )}
         </Section>
-
-        <div id="music-performers" />
-
-        <Section title="Featured stages">
-          <div className={ui.scroller}>
-            {locations.slice(0, 10).map((loc) => (
-              <div
-                key={loc.id}
-                data-reveal
-                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                style={
-                  {
-                    "--stack-gap": "10px",
-                    minWidth: 260,
-                  } as React.CSSProperties
-                }
-              >
-                <div className={[ui.media, ui.mediaWide].join(" ")}>
-                  {loc.imageUrl ? (
-                    <img
-                      src={apiImageUrl(loc.imageUrl)}
-                      alt={loc.name}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className={ui.mediaPlaceholder}>Stage</div>
-                  )}
-                </div>
-                <p className={ui.cardTitle}>{loc.name}</p>
-                <p className={ui.cardText}>
-                  {[loc.city, loc.address].filter(Boolean).join(" · ") ||
-                    "Stage"}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Available performers">
-          {loading ? (
-            <p className={ui.help} style={{ fontSize: 14, margin: 0 }}>
-              Loading...
-            </p>
-          ) : error ? (
-            <p className={ui.error} style={{ margin: 0 }}>
-              {error}
-            </p>
-          ) : null}
-
-          <div
-            className={[ui.grid, ui.gridCards].join(" ")}
-            style={{ "--grid-gap": `${spacing.lg}px` } as React.CSSProperties}
-          >
-            {(results ?? []).map((r) => {
-              const detailsPath = `/musicians/${encodeURIComponent(
-                r.musician.id,
-              )}`;
-              return (
-                <div
-                  key={r.musician.id}
-                  data-reveal
-                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                  style={
-                    { "--stack-gap": `${spacing.sm}px` } as React.CSSProperties
-                  }
-                >
-                  <div className={ui.chipBar}>
-                    {r.musician.instruments.map((i) => (
-                      <Chip key={i} label={i} />
-                    ))}
-                    {r.musician.genres.map((g) => (
-                      <Chip key={g} label={g} />
-                    ))}
-                  </div>
-
-                  <p className={ui.cardTitle}>
-                    {r.musician.instruments.join(" / ")}
-                  </p>
-                  <p className={ui.cardText}>{r.musician.bio}</p>
-
-                  <div className={ui.rowBetween}>
-                    <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                      {r.musician.averageRating.toFixed(1)}★ (
-                      {r.musician.reviewCount})
-                    </p>
-                    <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                      ~${r.priceEstimate} · {r.distanceMinutes} min
-                    </p>
-                  </div>
-
-                  <div
-                    className={ui.row}
-                    style={
-                      { "--row-gap": `${spacing.sm}px` } as React.CSSProperties
-                    }
-                  >
-                    <Button
-                      variant="secondary"
-                      onClick={() => navigate(detailsPath)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        const target = `${detailsPath}?book=1`;
-                        if (!user) {
-                          navigate(`/login?next=${encodeURIComponent(target)}`);
-                          return;
-                        }
-                        navigate(target);
-                      }}
-                    >
-                      Book
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-
         <Section title="How booking works">
           <p className={ui.help} style={{ fontSize: 14, margin: 0 }}>
             Browse performers, view details, then sign in to request and manage
             bookings.
           </p>
         </Section>
-      </div>
-    </AppShell>
+      </section>
+    </div>
   );
 }
 
-function PublicGigDetailsPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
-
-  const [gig, setGig] = useState<Gig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [gigTickets, setGigTickets] = useState<
-    Record<
-      string,
-      {
-        openForTickets: boolean;
-        mode: TicketMode;
-        price: number;
-        currency: "USD";
-      }
+function MessagesPage() {
+  return (
+    <AppShell
+      title="Messages"
+      subtitle="Central inbox for conversations with musicians and venues."
     >
-  >(() => {
-    try {
-      const raw = localStorage.getItem("taa.music.gigTickets");
-      if (!raw) return {};
-      return JSON.parse(raw) as Record<
-        string,
-        {
-          openForTickets: boolean;
-          mode: TicketMode;
-          price: number;
-          currency: "USD";
-        }
-      >;
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("taa.music.gigTickets", JSON.stringify(gigTickets));
-    } catch {
-      // ignore
-    }
-  }, [gigTickets]);
-
-  function getGigTicket(gigId: string) {
-    return (
-      gigTickets[gigId] ?? {
-        openForTickets: false,
-        mode: "general_admission" as const,
-        price: 25,
-        currency: "USD" as const,
-      }
-    );
-  }
-
-  function apiImageUrl(pathname?: string): string | undefined {
-    if (!pathname) return undefined;
-    if (/^https?:\/\//i.test(pathname)) return pathname;
-    return `http://localhost:4000${pathname}`;
-  }
-
-  useEffect(() => {
-    if (!id) return;
-    setError(null);
-    setLoading(true);
-    api
-      .getPublicGig(id)
-      .then((g) => setGig(g))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, [api, id]);
-
-  if (loading) {
-    return (
-      <AppShell title="Event" subtitle="Loading…">
-        <p className={ui.help}>Loading…</p>
-      </AppShell>
-    );
-  }
-
-  if (error) {
-    return (
-      <AppShell title="Event" subtitle="Error">
-        <div
-          className={ui.stack}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <p className={ui.error} style={{ margin: 0 }}>
-            {error}
-          </p>
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            Back to concerts
-          </Button>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (!gig) {
-    return (
-      <AppShell title="Event" subtitle="Not found">
-        <div
-          className={ui.stack}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <p className={ui.help} style={{ margin: 0 }}>
-            This event isn’t available.
-          </p>
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            Back to concerts
-          </Button>
-        </div>
-      </AppShell>
-    );
-  }
-
-  const subtitleParts = [
-    gig.date,
-    gig.time ? gig.time : null,
-    gig.location?.name ? gig.location.name : null,
-  ].filter(Boolean);
-
-  const t = id ? getGigTicket(id) : null;
-
-  return (
-    <AppShell title={gig.title} subtitle={subtitleParts.join(" · ")}>
-      <div
-        className={ui.stack}
-        style={{ "--stack-gap": "16px" } as React.CSSProperties}
-      >
-        <div
-          className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <div className={[ui.media, ui.mediaWide].join(" ")}>
-            {gig.location?.imageUrl ? (
-              <img
-                src={apiImageUrl(gig.location.imageUrl)}
-                alt={gig.location?.name ?? "Event"}
-                loading="lazy"
-              />
-            ) : (
-              <div className={ui.mediaPlaceholder}>Event</div>
-            )}
-          </div>
-
-          <div className={ui.rowBetween}>
-            <span className={ui.chip}>{gig.status}</span>
-            {typeof gig.budget === "number" ? (
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                Host budget: ${gig.budget.toFixed(0)}
-              </p>
-            ) : null}
-          </div>
-
-          {gig.description ? (
-            <p className={ui.cardText}>{gig.description}</p>
-          ) : null}
-
-          <div className={ui.divider} />
-
-          <div
-            className={[ui.stack].join(" ")}
-            style={{ "--stack-gap": "10px" } as React.CSSProperties}
-          >
-            <div className={ui.rowBetween}>
-              <div>
-                <p className={ui.cardTitle}>Tickets</p>
-                <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                  Inventory is derived from venue capacity.
-                </p>
-              </div>
-              <span className={ui.chip}>
-                {t?.openForTickets ? "On sale" : "Not on sale"}
-              </span>
-            </div>
-
-            <div className={ui.rowBetween}>
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                Mode
-              </p>
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                {t?.mode === "assigned_seating"
-                  ? "Assigned seating"
-                  : "General admission"}
-              </p>
-            </div>
-
-            <div className={ui.rowBetween}>
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                Starting at
-              </p>
-              <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                {t?.openForTickets ? formatUsd(t?.price ?? 0) : "—"}
-              </p>
-            </div>
-
-            <div
-              className={ui.row}
-              style={{ "--row-gap": "10px" } as React.CSSProperties}
-            >
-              <Button
-                disabled={!t?.openForTickets}
-                onClick={() =>
-                  navigate(`/gigs/${encodeURIComponent(id ?? "")}/tickets`)
-                }
-              >
-                {t?.openForTickets ? "Buy tickets" : "Tickets soon"}
-              </Button>
-              {user?.role.includes("customer") && id ? (
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    setGigTickets((prev) => ({
-                      ...prev,
-                      [id]: { ...getGigTicket(id), openForTickets: true },
-                    }))
-                  }
-                >
-                  Enable ticketing
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div
-            className={ui.row}
-            style={{ "--row-gap": "10px" } as React.CSSProperties}
-          >
-            <Button variant="ghost" onClick={() => navigate("/")}>
-              Back
-            </Button>
-            <Button
-              onClick={() => {
-                if (!user) {
-                  navigate(`/login?next=${encodeURIComponent("/post-gig")}`);
-                  return;
-                }
-                navigate("/post-gig");
-              }}
-            >
-              Host an event
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ChatInbox />
     </AppShell>
   );
 }
 
-function PublicTicketsPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
-
-  const [gig, setGig] = useState<Gig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [qty, setQty] = useState<number>(2);
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
-  const [checkoutDone, setCheckoutDone] = useState<TicketOrder | null>(null);
-
-  const [gigTickets, setGigTickets] = useState<
-    Record<
-      string,
-      {
-        openForTickets: boolean;
-        mode: TicketMode;
-        price: number;
-        currency: "USD";
-      }
+function RatingsPage() {
+  return (
+    <AppShell
+      title="Ratings & reviews"
+      subtitle="History of how your performers and venues have been rated."
     >
-  >(() => {
-    try {
-      const raw = localStorage.getItem("taa.music.gigTickets");
-      if (!raw) return {};
-      return JSON.parse(raw) as Record<
-        string,
-        {
-          openForTickets: boolean;
-          mode: TicketMode;
-          price: number;
-          currency: "USD";
-        }
-      >;
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("taa.music.gigTickets", JSON.stringify(gigTickets));
-    } catch {
-      // ignore
-    }
-  }, [gigTickets]);
-
-  function getGigTicket(gigId: string) {
-    return (
-      gigTickets[gigId] ?? {
-        openForTickets: false,
-        mode: "general_admission" as const,
-        price: 25,
-        currency: "USD" as const,
-      }
-    );
-  }
-
-  useEffect(() => {
-    if (!id) return;
-    setError(null);
-    setLoading(true);
-    api
-      .getPublicGig(id)
-      .then((g) => setGig(g))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, [api, id]);
-
-  if (loading) {
-    return (
-      <AppShell title="Tickets" subtitle="Loading…">
-        <p className={ui.help}>Loading…</p>
-      </AppShell>
-    );
-  }
-
-  if (error || !gig || !id) {
-    return (
-      <AppShell title="Tickets" subtitle="Unavailable">
-        <div
-          className={ui.stack}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <p className={ui.help} style={{ margin: 0 }}>
-            {error ? error : "Tickets aren’t available for this event."}
-          </p>
-          <Button variant="secondary" onClick={() => navigate("/")}>
-            Back to concerts
-          </Button>
-        </div>
-      </AppShell>
-    );
-  }
-
-  const t = getGigTicket(id);
-  const subtotal = (t.price ?? 0) * Math.max(1, Math.min(10, qty));
-  const platformFee = Math.round(subtotal * 0.05);
-  const total = subtotal + platformFee;
-
-  async function checkout() {
-    if (!id) return;
-    if (!t.openForTickets) return;
-    setCheckoutBusy(true);
-    try {
-      const quantity = Math.max(1, Math.min(10, qty));
-      const order: TicketOrder = {
-        id: randomId("ord"),
-        gigId: id,
-        quantity,
-        unitPrice: t.price,
-        platformFee,
-        total,
-        currency: "USD",
-        purchasedAt: new Date().toISOString(),
-        status: "confirmed",
-        accessCode: randomId("taa").toUpperCase(),
-      };
-
-      const existing = loadTicketOrders();
-      saveTicketOrders([order, ...existing]);
-      setCheckoutDone(order);
-    } finally {
-      setCheckoutBusy(false);
-    }
-  }
-
-  return (
-    <AppShell title="Tickets" subtitle={gig.title}>
-      <div
-        className={ui.stack}
-        style={{ "--stack-gap": "16px" } as React.CSSProperties}
-      >
-        <div
-          className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <div className={ui.rowBetween}>
-            <div>
-              <p className={ui.cardTitle}>Purchase</p>
-              <p className={ui.cardText} style={{ marginTop: 6 }}>
-                {gig.date}
-                {gig.time ? ` · ${gig.time}` : ""}
-                {gig.location?.name ? ` · ${gig.location.name}` : ""}
-              </p>
-            </div>
-            <span className={ui.chip}>
-              {t.mode === "assigned_seating" ? "Assigned" : "GA"}
-            </span>
-          </div>
-
-          {!t.openForTickets ? (
-            <div className={ui.empty}>
-              Tickets aren’t on sale yet.
-              <div
-                className={ui.row}
-                style={
-                  { "--row-gap": "10px", marginTop: 12 } as React.CSSProperties
-                }
-              >
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate(`/gigs/${encodeURIComponent(id)}`)}
-                >
-                  Back to event
-                </Button>
-                {user?.role.includes("customer") ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      setGigTickets((prev) => ({
-                        ...prev,
-                        [id]: { ...getGigTicket(id), openForTickets: true },
-                      }))
-                    }
-                  >
-                    Enable ticketing
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className={ui.divider} />
-
-              <div className={ui.rowBetween}>
-                <div
-                  className={ui.stack}
-                  style={{ "--stack-gap": "4px" } as React.CSSProperties}
-                >
-                  <p style={{ fontWeight: 650, fontSize: 13 }}>Quantity</p>
-                  <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                    Capacity comes from the venue.
-                  </p>
-                </div>
-                <div
-                  className={ui.row}
-                  style={{ "--row-gap": "8px" } as React.CSSProperties}
-                >
-                  <Button
-                    variant="ghost"
-                    onClick={() => setQty((n) => Math.max(1, n - 1))}
-                  >
-                    −
-                  </Button>
-                  <input
-                    className={ui.input}
-                    style={{ width: 80, textAlign: "center" }}
-                    inputMode="numeric"
-                    value={qty}
-                    onChange={(e) => setQty(Number(e.target.value) || 1)}
-                  />
-                  <Button
-                    variant="ghost"
-                    onClick={() => setQty((n) => Math.min(10, n + 1))}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              {t.mode === "assigned_seating" ? (
-                <div className={ui.empty}>
-                  Seat map UI goes here (layout required).
-                </div>
-              ) : null}
-
-              <div className={ui.divider} />
-
-              <div
-                className={ui.stack}
-                style={{ "--stack-gap": "8px" } as React.CSSProperties}
-              >
-                <div className={ui.rowBetween}>
-                  <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                    Tickets ({Math.max(1, Math.min(10, qty))} ×{" "}
-                    {formatUsd(t.price)})
-                  </p>
-                  <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                    {formatUsd(subtotal)}
-                  </p>
-                </div>
-                <div className={ui.rowBetween}>
-                  <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                    Platform fee
-                  </p>
-                  <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                    {formatUsd(platformFee)}
-                  </p>
-                </div>
-                <div className={ui.rowBetween}>
-                  <p style={{ margin: 0, fontWeight: 650, fontSize: 13 }}>
-                    Total
-                  </p>
-                  <p style={{ margin: 0, fontWeight: 650, fontSize: 13 }}>
-                    {formatUsd(total)}
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className={ui.row}
-                style={{ "--row-gap": "10px" } as React.CSSProperties}
-              >
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate(`/gigs/${encodeURIComponent(id)}`)}
-                >
-                  Back to event
-                </Button>
-                {checkoutDone ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate("/my-tickets")}
-                  >
-                    View my tickets
-                  </Button>
-                ) : (
-                  <Button onClick={checkout} disabled={checkoutBusy}>
-                    {checkoutBusy ? "Processing…" : "Checkout"}
-                  </Button>
-                )}
-              </div>
-
-              {checkoutDone ? (
-                <div className={ui.empty}>
-                  Purchase confirmed. Your ticket is ready in My Tickets.
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      </div>
+      <p className={ui.help} style={{ fontSize: 14 }}>
+        This placeholder can evolve into a searchable log of all ratings you’ve
+        left and received, plus summaries for repeat collaborators.
+      </p>
     </AppShell>
   );
 }
 
-function MyTicketsPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
+type TicketMode = "general_admission" | "assigned_seating";
+
+type TicketSettings = {
+  openForTickets: boolean;
+  mode: TicketMode;
+};
+
+function TicketsPage() {
+  const [settings, setSettings] = useState<Record<string, TicketSettings>>(
+    () => {
+      try {
+        const raw = localStorage.getItem("taa.music.ticketSettings");
+        if (!raw) return {};
+        return JSON.parse(raw) as Record<string, TicketSettings>;
+      } catch {
+        return {};
+      }
+    },
   );
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const [orders, setOrders] = useState<TicketOrder[]>(() => loadTicketOrders());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [gigsById, setGigsById] = useState<Record<string, Gig | null>>({});
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
   useEffect(() => {
-    // Keep in sync across tabs/refreshes.
-    const interval = window.setInterval(() => {
-      setOrders(loadTicketOrders());
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, []);
+    try {
+      localStorage.setItem(
+        "taa.music.ticketSettings",
+        JSON.stringify(settings),
+      );
+    } catch {
+      // ignore (storage may be unavailable)
+    }
+  }, [settings]);
 
-  useEffect(() => {
-    const uniqueGigIds = Array.from(new Set(orders.map((o) => o.gigId)));
-    const missing = uniqueGigIds.filter((gid) => !(gid in gigsById));
-    if (missing.length === 0) return;
-
-    let cancelled = false;
-    Promise.all(
-      missing.map((gid) =>
-        api
-          .getPublicGig(gid)
-          .then((g) => ({ gid, g }))
-          .catch(() => ({ gid, g: null })),
-      ),
-    ).then((pairs) => {
-      if (cancelled) return;
-      setGigsById((prev) => {
-        const next = { ...prev };
-        for (const p of pairs) next[p.gid] = p.g;
-        return next;
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [api, orders, gigsById]);
-
-  const selected = selectedId
-    ? (orders.find((o) => o.id === selectedId) ?? null)
-    : null;
-
-  const now = new Date();
-  const visible = orders
-    .filter((o) => o.status === "confirmed")
-    .filter((o) => {
-      const g = gigsById[o.gigId];
-      if (!g) return tab === "upcoming";
-      const d = new Date(`${g.date}T00:00:00`);
-      if (Number.isNaN(d.getTime())) return tab === "upcoming";
-      return tab === "upcoming" ? d >= now : d < now;
-    });
-
-  if (!user) {
+  function get(eventId: string): TicketSettings {
     return (
-      <AppShell title="My tickets" subtitle="Sign in to view your purchases.">
-        <div
-          className={ui.stack}
-          style={{ "--stack-gap": "12px" } as React.CSSProperties}
-        >
-          <p className={ui.help} style={{ margin: 0 }}>
-            Your ticket wallet appears here after checkout.
-          </p>
-          <Button
-            variant="secondary"
-            onClick={() => navigate("/login?next=/my-tickets")}
-          >
-            Sign in
-          </Button>
-        </div>
-      </AppShell>
+      settings[eventId] ?? {
+        openForTickets: false,
+        mode: "general_admission",
+      }
     );
   }
 
+  function update(eventId: string, next: Partial<TicketSettings>) {
+    setSettings((prev) => ({
+      ...prev,
+      [eventId]: { ...get(eventId), ...next },
+    }));
+  }
+
   return (
-    <AppShell title="My tickets" subtitle="Your wallet for upcoming events.">
+    <AppShell
+      title="Tickets"
+      subtitle="Turn ticket sales on per event. Inventory derives from venue seat capacity."
+    >
       <div
-        className={ui.stack}
+        className={[ui.stack].join(" ")}
         style={{ "--stack-gap": "14px" } as React.CSSProperties}
       >
-        <div
-          className={ui.scroller}
-          style={{ "--scroller-gap": "8px" } as React.CSSProperties}
-        >
-          <Button
-            variant={tab === "upcoming" ? "secondary" : "ghost"}
-            onClick={() => setTab("upcoming")}
-          >
-            Upcoming
-          </Button>
-          <Button
-            variant={tab === "past" ? "secondary" : "ghost"}
-            onClick={() => setTab("past")}
-          >
-            Past
-          </Button>
+        <div className={ui.empty}>
+          Seat capacity is set by the venue/location listing. Ticket inventory
+          is derived from that capacity (not set by the performer). Assigned
+          seating is supported as a higher-complexity mode once layouts exist.
         </div>
 
-        {visible.length === 0 ? (
-          <div className={ui.empty}>
-            No tickets yet. Browse concerts and checkout when tickets are on
-            sale.
-          </div>
-        ) : (
-          <div
-            className={[ui.grid, ui.gridCards].join(" ")}
-            style={{ "--grid-gap": "16px" } as React.CSSProperties}
-          >
-            {visible.map((o) => {
-              const g = gigsById[o.gigId];
+        <Section title="Events">
+          <div className={[ui.grid, ui.gridCards].join(" ")}>
+            {events.map((e) => {
+              const s = get(e.id);
               return (
                 <div
-                  key={o.id}
+                  key={e.id}
                   className={[ui.card, ui.cardPad, ui.stack].join(" ")}
                   style={{ "--stack-gap": "12px" } as React.CSSProperties}
                 >
                   <div>
-                    <p className={ui.cardTitle}>{g?.title ?? "Event"}</p>
-                    <p className={ui.cardText} style={{ marginTop: 6 }}>
-                      {g?.date ?? ""}
-                      {g?.time ? ` · ${g.time}` : ""}
-                      {g?.location?.name ? ` · ${g.location.name}` : ""}
+                    <p className={ui.cardTitle}>{e.title}</p>
+                    <p className={ui.cardText}>
+                      {e.date} · {e.time} · {e.venue}
+                    </p>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div className={ui.rowBetween}>
+                    <div
+                      className={ui.stack}
+                      style={{ "--stack-gap": "4px" } as React.CSSProperties}
+                    >
+                      <p style={{ fontWeight: 650, fontSize: 13 }}>
+                        Open For Tickets
+                      </p>
+                      <p className={ui.help} style={{ fontSize: 13 }}>
+                        Enable attendee ticket sales for this event.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={s.openForTickets}
+                      onChange={(ev) =>
+                        update(e.id, { openForTickets: ev.target.checked })
+                      }
+                      aria-label={`Open tickets for ${e.title}`}
+                    />
+                  </div>
+
+                  <div
+                    className={ui.stack}
+                    style={{ "--stack-gap": "6px" } as React.CSSProperties}
+                  >
+                    <label style={{ fontSize: 13, fontWeight: 650 }}>
+                      Ticket mode
+                    </label>
+                    <select
+                      className={ui.input}
+                      value={s.mode}
+                      onChange={(ev) =>
+                        update(e.id, { mode: ev.target.value as TicketMode })
+                      }
+                      disabled={!s.openForTickets}
+                    >
+                      <option value="general_admission">
+                        General admission (at the door)
+                      </option>
+                      <option value="assigned_seating">
+                        Assigned seating (layout required)
+                      </option>
+                    </select>
+                    <p className={ui.help} style={{ fontSize: 13 }}>
+                      Capacity: set by venue · Tickets remaining: derived
                     </p>
                   </div>
 
                   <div className={ui.rowBetween}>
                     <span className={ui.chip}>
-                      {o.quantity} ticket{o.quantity === 1 ? "" : "s"}
+                      {s.openForTickets ? "Tickets live" : "Tickets off"}
                     </span>
-                    <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                      {formatUsd(o.total)}
-                    </p>
-                  </div>
-
-                  <div
-                    className={ui.row}
-                    style={{ "--row-gap": "10px" } as React.CSSProperties}
-                  >
-                    <Button
-                      variant="secondary"
-                      onClick={() => setSelectedId(o.id)}
-                    >
-                      View QR
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        navigate(`/gigs/${encodeURIComponent(o.gigId)}`)
-                      }
-                    >
-                      Event page
+                    <Button variant="secondary" disabled={!s.openForTickets}>
+                      View attendee link
                     </Button>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-
-        {selected ? (
-          <div
-            className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-            style={{ "--stack-gap": "12px" } as React.CSSProperties}
-          >
-            <div className={ui.rowBetween}>
-              <div>
-                <p className={ui.cardTitle}>Ticket access</p>
-                <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
-                  Access code:{" "}
-                  <strong style={{ color: "var(--text)" }}>
-                    {selected.accessCode}
-                  </strong>
-                </p>
-              </div>
-              <Button variant="ghost" onClick={() => setSelectedId(null)}>
-                Close
-              </Button>
-            </div>
-
-            <div
-              className={ui.row}
-              style={
-                {
-                  "--row-gap": "14px",
-                  alignItems: "flex-start",
-                } as React.CSSProperties
-              }
-            >
-              <div
-                className={[ui.media, ui.mediaSquare].join(" ")}
-                style={{ width: 220, height: 220 } as React.CSSProperties}
-              >
-                <div className={ui.mediaPlaceholder}>QR</div>
-              </div>
-
-              <div
-                className={ui.stack}
-                style={
-                  {
-                    "--stack-gap": "10px",
-                    minWidth: 0,
-                    flex: 1,
-                  } as React.CSSProperties
-                }
-              >
-                <div className={ui.empty}>
-                  Ticket wallet. QR rendering and gate validation will appear
-                  here.
-                </div>
-
-                <div
-                  className={ui.row}
-                  style={{ "--row-gap": "10px" } as React.CSSProperties}
-                >
-                  <Button variant="secondary" disabled>
-                    Transfer
-                  </Button>
-                  <Button variant="ghost" disabled>
-                    Request refund
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        </Section>
       </div>
     </AppShell>
   );
 }
+
+// Removed unused AccountPage
 
 function MusicianDetailsPage() {
   const { id } = useParams();
@@ -2604,7 +1550,7 @@ function MusicianDetailsPage() {
 
                           const resolvedBudget = budget ? Number(budget) : 500;
                           if (
-                            !Number.isFinite(resolvedBudget) ||
+                            !Number.isNaN(resolvedBudget) ||
                             resolvedBudget <= 0
                           ) {
                             setSubmitError("Please enter a valid budget.");
@@ -2682,7 +1628,6 @@ function EventsPage() {
                     {e.date} · {e.time} · {e.venue}
                   </p>
                 </div>
-
                 <div className={ui.rowBetween}>
                   <span className={ui.chip}>Booking</span>
                   <Button
@@ -2696,239 +1641,6 @@ function EventsPage() {
             ))}
           </div>
         </Section>
-      </div>
-    </AppShell>
-  );
-}
-
-function PostGigPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const isCustomer = !!user?.role.includes("customer");
-
-  const [locations, setLocations] = useState<
-    Array<{ id: string; name: string; city?: string }>
-  >([]);
-  const [locationsBusy, setLocationsBusy] = useState(false);
-  const [locationsError, setLocationsError] = useState<string | null>(null);
-
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [budget, setBudget] = useState<string>("");
-  const [locationId, setLocationId] = useState<string>("");
-  const [details, setDetails] = useState("");
-
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [submittedId, setSubmittedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLocationsError(null);
-    setLocationsBusy(true);
-    api
-      .listPublicLocations()
-      .then((locs) => {
-        const simplified = locs.map((l) => ({
-          id: l.id,
-          name: l.name,
-          city: l.city,
-        }));
-        setLocations(simplified);
-        if (!locationId && simplified[0]) setLocationId(simplified[0].id);
-      })
-      .catch((e) =>
-        setLocationsError(e instanceof Error ? e.message : String(e)),
-      )
-      .finally(() => setLocationsBusy(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
-
-  return (
-    <AppShell
-      title="Post a gig"
-      subtitle="Create an event listing so musicians can see it."
-    >
-      {!isCustomer ? (
-        <p className={ui.help} style={{ margin: 0, fontSize: 14 }}>
-          Posting gigs is available for customer accounts.
-        </p>
-      ) : null}
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.lg,
-          maxWidth: 720,
-        }}
-      >
-        {submittedId ? (
-          <div
-            className={[ui.card, ui.cardPad, ui.help].join(" ")}
-            style={{ fontSize: 14 }}
-          >
-            Gig posted. ID: {submittedId}
-            <div style={{ marginTop: spacing.sm }}>
-              <Button variant="secondary" onClick={() => navigate("/")}>
-                Back to browse
-              </Button>
-              <Button
-                style={{ marginLeft: spacing.sm }}
-                onClick={() => navigate(`/gigs/${submittedId}/applicants`)}
-              >
-                Review applicants
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={[ui.card, ui.cardPad].join(" ")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
-          >
-            {locationsError ? (
-              <p className={ui.error}>{locationsError}</p>
-            ) : null}
-            {error ? <p className={ui.error}>{error}</p> : null}
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: spacing.md,
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13 }}>Title</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Jazz trio for dinner, DJ for birthday…"
-                  disabled={!isCustomer}
-                  className={ui.input}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13 }}>Date</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  disabled={!isCustomer}
-                  className={ui.input}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13 }}>Start time (optional)</label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  disabled={!isCustomer}
-                  className={ui.input}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13 }}>Budget (USD, optional)</label>
-                <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  placeholder="600"
-                  disabled={!isCustomer}
-                  className={ui.input}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13 }}>Location</label>
-                <select
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  disabled={
-                    !isCustomer || locationsBusy || locations.length === 0
-                  }
-                  className={ui.input}
-                >
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                      {l.city ? ` · ${l.city}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 13 }}>Details (optional)</label>
-              <textarea
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                placeholder="Duration, genres, dress code, sound needs…"
-                disabled={!isCustomer}
-                className={ui.input}
-                style={{ minHeight: 120, resize: "vertical" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
-              <Button
-                disabled={!isCustomer || submitting}
-                onClick={async () => {
-                  try {
-                    setError(null);
-                    if (!title.trim() || !date) {
-                      setError("Title and date are required.");
-                      return;
-                    }
-
-                    setSubmitting(true);
-                    const created = await api.createGig({
-                      title: title.trim(),
-                      date,
-                      time: time || undefined,
-                      budget: budget ? Number(budget) : undefined,
-                      description: details.trim() || undefined,
-                      locationId: locationId || undefined,
-                    });
-                    setSubmittedId(created.id);
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : String(e));
-                  } finally {
-                    setSubmitting(false);
-                  }
-                }}
-              >
-                {submitting ? "Posting..." : "Post gig"}
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={submitting}
-                onClick={() => {
-                  setTitle("");
-                  setDate("");
-                  setTime("");
-                  setBudget("");
-                  setDetails("");
-                  setError(null);
-                }}
-              >
-                Clear
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </AppShell>
   );
@@ -3199,219 +1911,6 @@ function GigApplicantsPage() {
   );
 }
 
-function MessagesPage() {
-  return (
-    <AppShell
-      title="Messages"
-      subtitle="Central inbox for conversations with musicians and venues."
-    >
-      <ChatInbox />
-    </AppShell>
-  );
-}
-
-function RatingsPage() {
-  return (
-    <AppShell
-      title="Ratings & reviews"
-      subtitle="History of how your performers and venues have been rated."
-    >
-      <p className={ui.help} style={{ fontSize: 14 }}>
-        This placeholder can evolve into a searchable log of all ratings you’ve
-        left and received, plus summaries for repeat collaborators.
-      </p>
-    </AppShell>
-  );
-}
-
-type TicketMode = "general_admission" | "assigned_seating";
-
-type TicketSettings = {
-  openForTickets: boolean;
-  mode: TicketMode;
-};
-
-function TicketsPage() {
-  const [settings, setSettings] = useState<Record<string, TicketSettings>>(
-    () => {
-      try {
-        const raw = localStorage.getItem("taa.music.ticketSettings");
-        if (!raw) return {};
-        return JSON.parse(raw) as Record<string, TicketSettings>;
-      } catch {
-        return {};
-      }
-    },
-  );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "taa.music.ticketSettings",
-        JSON.stringify(settings),
-      );
-    } catch {
-      // ignore (storage may be unavailable)
-    }
-  }, [settings]);
-
-  function get(eventId: string): TicketSettings {
-    return (
-      settings[eventId] ?? {
-        openForTickets: false,
-        mode: "general_admission",
-      }
-    );
-  }
-
-  function update(eventId: string, next: Partial<TicketSettings>) {
-    setSettings((prev) => ({
-      ...prev,
-      [eventId]: { ...get(eventId), ...next },
-    }));
-  }
-
-  return (
-    <AppShell
-      title="Tickets"
-      subtitle="Turn ticket sales on per event. Inventory derives from venue seat capacity."
-    >
-      <div
-        className={[ui.stack].join(" ")}
-        style={{ "--stack-gap": "14px" } as React.CSSProperties}
-      >
-        <div className={ui.empty}>
-          Seat capacity is set by the venue/location listing. Ticket inventory
-          is derived from that capacity (not set by the performer). Assigned
-          seating is supported as a higher-complexity mode once layouts exist.
-        </div>
-
-        <Section title="Events">
-          <div className={[ui.grid, ui.gridCards].join(" ")}>
-            {events.map((e) => {
-              const s = get(e.id);
-              return (
-                <div
-                  key={e.id}
-                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                  style={{ "--stack-gap": "12px" } as React.CSSProperties}
-                >
-                  <div>
-                    <p className={ui.cardTitle}>{e.title}</p>
-                    <p className={ui.cardText}>
-                      {e.date} · {e.time} · {e.venue}
-                    </p>
-                  </div>
-
-                  <div className={ui.divider} />
-
-                  <div className={ui.rowBetween}>
-                    <div
-                      className={ui.stack}
-                      style={{ "--stack-gap": "4px" } as React.CSSProperties}
-                    >
-                      <p style={{ fontWeight: 650, fontSize: 13 }}>
-                        Open For Tickets
-                      </p>
-                      <p className={ui.help} style={{ fontSize: 13 }}>
-                        Enable attendee ticket sales for this event.
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={s.openForTickets}
-                      onChange={(ev) =>
-                        update(e.id, { openForTickets: ev.target.checked })
-                      }
-                      aria-label={`Open tickets for ${e.title}`}
-                    />
-                  </div>
-
-                  <div
-                    className={ui.stack}
-                    style={{ "--stack-gap": "6px" } as React.CSSProperties}
-                  >
-                    <label style={{ fontSize: 13, fontWeight: 650 }}>
-                      Ticket mode
-                    </label>
-                    <select
-                      className={ui.input}
-                      value={s.mode}
-                      onChange={(ev) =>
-                        update(e.id, { mode: ev.target.value as TicketMode })
-                      }
-                      disabled={!s.openForTickets}
-                    >
-                      <option value="general_admission">
-                        General admission (at the door)
-                      </option>
-                      <option value="assigned_seating">
-                        Assigned seating (layout required)
-                      </option>
-                    </select>
-                    <p className={ui.help} style={{ fontSize: 13 }}>
-                      Capacity: set by venue · Tickets remaining: derived
-                    </p>
-                  </div>
-
-                  <div className={ui.rowBetween}>
-                    <span className={ui.chip}>
-                      {s.openForTickets ? "Tickets live" : "Tickets off"}
-                    </span>
-                    <Button variant="secondary" disabled={!s.openForTickets}>
-                      View attendee link
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-      </div>
-    </AppShell>
-  );
-}
-
-function AccountPage() {
-  const { user, logout } = useAuth();
-
-  return (
-    <AppShell
-      title="Customer account"
-      subtitle="Your identity for bookings, events, and messaging."
-    >
-      {user ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            maxWidth: 420,
-          }}
-        >
-          <p>
-            Signed in as <strong>{user.name}</strong> ({user.email})
-          </p>
-          <p className={ui.help} style={{ fontSize: 14 }}>
-            Roles: {user.role.join(", ")}
-          </p>
-          <Button
-            variant="secondary"
-            onClick={logout}
-            style={{ alignSelf: "flex-start" }}
-          >
-            Sign out
-          </Button>
-        </div>
-      ) : (
-        <p className={ui.help} style={{ fontSize: 14 }}>
-          You are not signed in.
-        </p>
-      )}
-    </AppShell>
-  );
-}
-
 function App() {
   return (
     <AppFrame app="music">
@@ -3430,20 +1929,16 @@ function App() {
               <span className={ui.brandDot} aria-hidden />
               Triple A Music
             </h1>
-            <p className={ui.subtitle}>Concerts marketplace</p>
+            <p className={ui.subtitle}>Concert marketplace</p>
           </header>
           <NavBar />
         </div>
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
+            <Route path="/" element={<ConcertMarketplacePage />} />
+            <Route path="/browse" element={<BrowsePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/account" element={<AccountPage />} />
-            <Route path="/" element={<BrowsePage />} />
-            <Route path="/gigs/:id" element={<PublicGigDetailsPage />} />
-            <Route path="/browse" element={<BrowsePage />} />
-            <Route path="/gigs/:id/tickets" element={<PublicTicketsPage />} />
-            <Route path="/my-tickets" element={<MyTicketsPage />} />
             <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
             <Route
               path="/dashboard"
@@ -3488,6 +1983,7 @@ function App() {
                 </RequireRole>
               }
             />
+            {/*
             <Route
               path="/post-gig"
               element={
@@ -3496,6 +1992,7 @@ function App() {
                 </RequireRole>
               }
             />
+            */}
             <Route
               path="/my-gigs"
               element={

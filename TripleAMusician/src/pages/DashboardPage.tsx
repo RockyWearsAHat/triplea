@@ -1,17 +1,19 @@
-import { AppShell, spacing, Button } from "@shared";
+import { spacing, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./DashboardPage.module.scss";
 import StatusCard from "@shared/components/StatusCard";
 
 export function DashboardPage() {
   return (
-    <AppShell title="Your Week at a Glance" subtitle="">
+    <div className={ui.sectionFull}>
+      <h1 className={ui.sectionTitleLarge} style={{ marginBottom: 24 }}>
+        Your Week at a Glance
+      </h1>
       <div
         className={ui.stack}
         style={{ "--stack-gap": `${spacing.lg}px` } as React.CSSProperties}
       >
         <section>
-          <h2 className={ui.sectionTitleLarge}>Your Week at a Glance</h2>
           <div className={styles.statsRow}>
             <StatusCard
               title="Earnings"
@@ -65,7 +67,7 @@ export function DashboardPage() {
           </aside>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }
 

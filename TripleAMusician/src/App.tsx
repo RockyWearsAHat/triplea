@@ -33,6 +33,8 @@ function Section({
   );
 }
 
+const MUSIC_ORIGIN = "http://localhost:5174";
+
 function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +49,7 @@ function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
+      navigate("/dashboard");
     } catch (err) {
       setError("Login failed. Please check your details and try again.");
     } finally {
@@ -55,7 +58,7 @@ function LoginPage() {
   }
 
   return (
-    <AppShell title="Sign in">
+    <AppShell title="Sign in to Triple A Musician">
       <form
         onSubmit={handleSubmit}
         style={{
@@ -98,6 +101,25 @@ function LoginPage() {
         >
           Create a musician account
         </Button>
+
+        <div
+          style={{
+            marginTop: spacing.xl,
+            paddingTop: spacing.md,
+            borderTop: "1px solid var(--border)",
+            textAlign: "center",
+          }}
+        >
+          <p className={ui.help} style={{ marginBottom: spacing.sm }}>
+            Not a musician?{" "}
+            <a
+              href={MUSIC_ORIGIN}
+              style={{ color: "var(--gold)", textDecoration: "underline" }}
+            >
+              Browse and host concerts here
+            </a>
+          </p>
+        </div>
       </form>
     </AppShell>
   );
@@ -108,57 +130,75 @@ function MusicianLandingPage() {
   const navigate = useNavigate();
 
   return (
-    <AppShell
-      title="Welcome"
-      subtitle="Your performer home base: requests, schedule, and support."
-    >
-      <section className={ui.hero}>
-        <div>
-          <p className={ui.heroKicker}>Triple A Musician</p>
-          <h2 className={ui.heroTitle}>You’re in the family.</h2>
-          <p className={ui.heroLead}>
-            One clean dashboard for your requests, bookings, and perks — with a
-            real team behind it.
-          </p>
-
-          <div className={ui.heroActions}>
-            {user?.role.includes("musician") ? (
-              <Button onClick={() => navigate("/dashboard")}>
-                Open my dashboard
+    <div>
+      {/* Hero - Full viewport, one bold message */}
+      <section className={ui.heroFull}>
+        <p className={ui.heroKicker}>Triple A Musician</p>
+        <h1 className={ui.heroMassive}>You're in the family.</h1>
+        <p className={ui.heroSubtitleLarge}>
+          One clean dashboard for your requests, bookings, and perks — with a
+          real team behind it.
+        </p>
+        <div className={ui.heroActionsLarge}>
+          {user?.role.includes("musician") ? (
+            <Button size="lg" onClick={() => navigate("/dashboard")}>
+              Open my dashboard
+            </Button>
+          ) : (
+            <>
+              <Button size="lg" onClick={() => navigate("/register")}>
+                Join as a musician
               </Button>
-            ) : (
-              <>
-                <Button onClick={() => navigate("/register")}>
-                  Join as a musician
-                </Button>
-                <Button variant="secondary" onClick={() => navigate("/login")}>
-                  Sign in
-                </Button>
-              </>
-            )}
-          </div>
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => navigate("/login")}
+              >
+                Sign in
+              </Button>
+            </>
+          )}
         </div>
+      </section>
 
-        <div className={ui.featureGrid}>
-          <div className={ui.featureCard}>
-            <p className={ui.featureTitle}>Requests</p>
-            <p className={ui.featureBody}>
-              Clear offers, quick decisions, no chaos.
+      {/* Feature highlights - clean section */}
+      <section className={ui.sectionFullCenter}>
+        <h2 className={ui.sectionTitleLarge}>Everything you need</h2>
+        <p className={ui.sectionLead}>
+          Focus on performing. We handle the rest.
+        </p>
+
+        <div className={ui.pathGrid} style={{ marginTop: 40 }}>
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Requests</p>
+            <p className={ui.pathCardDesc}>
+              Clear offers, quick decisions, no chaos. Accept or decline with
+              one tap.
             </p>
           </div>
-          <div className={ui.featureCard}>
-            <p className={ui.featureTitle}>Schedule</p>
-            <p className={ui.featureBody}>Today, this week, and what’s next.</p>
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Schedule</p>
+            <p className={ui.pathCardDesc}>
+              Today, this week, and what's next — all in one place.
+            </p>
           </div>
-          <div className={ui.featureCard}>
-            <p className={ui.featureTitle}>Perks</p>
-            <p className={ui.featureBody}>
-              Build reputation and unlock real rewards.
+          <div className={ui.pathCard}>
+            <p className={ui.pathCardTitle}>Perks</p>
+            <p className={ui.pathCardDesc}>
+              Build reputation and unlock real rewards as you grow.
             </p>
           </div>
         </div>
       </section>
-    </AppShell>
+
+      {/* Mission footer */}
+      <section className={ui.missionSection}>
+        <p className={ui.missionText}>
+          Triple A Musician is your professional home base — built for
+          performers who want clarity, not chaos.
+        </p>
+      </section>
+    </div>
   );
 }
 

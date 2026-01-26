@@ -8,6 +8,7 @@ export * from "./auth/RequireAuth";
 export * from "./api/client";
 export * from "./chat/ChatInbox";
 export * from "./animation/useScrollReveal";
+export * from "./hooks/useGeolocation";
 export * from "./lib/cx";
 export * from "./components/FormField";
 export * from "./components/StatCard";

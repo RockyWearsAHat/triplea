@@ -12,6 +12,7 @@ export interface ILocation extends Document {
   city?: string;
   images: IStoredImage[];
   createdByUserId?: Types.ObjectId;
+  coordinates?: { lat: number; lng: number };
 }
 
 const StoredImageSchema = new Schema<IStoredImage>(
@@ -30,6 +31,10 @@ const LocationSchema = new Schema<ILocation>(
     city: { type: String },
     createdByUserId: { type: Schema.Types.ObjectId, ref: "User" },
     images: { type: [StoredImageSchema], default: [] },
+    coordinates: {
+      type: { lat: { type: Number }, lng: { type: Number } },
+      default: undefined,
+    },
   },
   { timestamps: true },
 );

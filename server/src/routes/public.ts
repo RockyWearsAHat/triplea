@@ -302,6 +302,152 @@ router.get("/gigs", async (_req: Request, res: Response) => {
   }
 });
 
+// Concerts endpoints for marketplace (with optional distance calc)
+router.get("/concerts", async (req: Request, res: Response) => {
+  try {
+    const lat = toNumber(req.query.lat);
+    const lng = toNumber(req.query.lng);
+    const radiusMiles = toNumber(req.query.radiusMiles);
+
+    const gigs = await Gig.find({ status: "open" })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .exec();
+
+    const locationIds = gigs
+      .map((g) => g.locationId)
+      .filter(Boolean)
+      .map((id) => String(id));
+
+    const locations = locationIds.length
+      ? await Location.find({ _id: { $in: locationIds } }).exec()
+      : [];
+
+    const locationById = new Map(locations.map((l) => [String(l.id), l]));
+
+    function haversineMiles(
+      aLat: number,
+      aLng: number,
+      bLat: number,
+      bLng: number,
+    ) {
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const R = 3958.8; // miles
+      const dLat = toRad(bLat - aLat);
+      const dLon = toRad(bLng - aLng);
+      const al =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(aLat)) *
+          Math.cos(toRad(bLat)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(al), Math.sqrt(1 - al));
+      return R * c;
+    }
+
+    const results = gigs
+      .map((g) => {
+        const loc = g.locationId
+          ? locationById.get(String(g.locationId))
+          : undefined;
+        let distanceMiles: number | undefined = undefined;
+        if (
+          lat !== undefined &&
+          lng !== undefined &&
+          loc &&
+          (loc as any).coordinates
+        ) {
+          const c = (loc as any).coordinates;
+          if (typeof c.lat === "number" && typeof c.lng === "number") {
+            distanceMiles = haversineMiles(lat, lng, c.lat, c.lng);
+          }
+        }
+
+        return {
+          id: g.id,
+          title: g.title,
+          description: g.description,
+          date: g.date,
+          time: g.time,
+          budget: g.budget,
+          status: g.status,
+          distanceMiles,
+          location: loc
+            ? {
+                id: loc.id,
+                name: loc.name,
+                address: loc.address,
+                city: loc.city,
+                imageUrl: (loc.images ?? []).length
+                  ? `/api/public/locations/${loc.id}/images/0`
+                  : undefined,
+              }
+            : null,
+        };
+      })
+      .filter((r) =>
+        radiusMiles ? (r.distanceMiles ?? Infinity) <= radiusMiles : true,
+      );
+
+    return res.json({ concerts: results });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("/public/concerts error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/concerts/popular", async (_req: Request, res: Response) => {
+  try {
+    // Simple popular algorithm: latest open gigs limited to 12
+    const gigs = await Gig.find({ status: "open" })
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .exec();
+
+    const locationIds = gigs
+      .map((g) => g.locationId)
+      .filter(Boolean)
+      .map((id) => String(id));
+
+    const locations = locationIds.length
+      ? await Location.find({ _id: { $in: locationIds } }).exec()
+      : [];
+
+    const locationById = new Map(locations.map((l) => [String(l.id), l]));
+
+    return res.json({
+      concerts: gigs.map((g) => {
+        const loc = g.locationId
+          ? locationById.get(String(g.locationId))
+          : undefined;
+        return {
+          id: g.id,
+          title: g.title,
+          date: g.date,
+          time: g.time,
+          budget: g.budget,
+          status: g.status,
+          location: loc
+            ? {
+                id: loc.id,
+                name: loc.name,
+                city: loc.city,
+                imageUrl: (loc.images ?? []).length
+                  ? `/api/public/locations/${loc.id}/images/0`
+                  : undefined,
+              }
+            : null,
+        };
+      }),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("/public/concerts/popular error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 router.get("/gigs/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };

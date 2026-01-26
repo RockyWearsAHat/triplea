@@ -11,6 +11,7 @@ import ui from "@shared/styles/primitives.module.scss";
 
 import { NavBar } from "./components/NavBar";
 import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
@@ -44,6 +45,7 @@ function App() {
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route
               path="/messages"
               element={

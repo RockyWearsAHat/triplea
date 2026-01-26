@@ -27,24 +27,14 @@ export function NavBar() {
       )}
 
       {!user ? (
-        <>
-          <NavLink
-            to="/login"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Login
-          </NavLink>
-          <NavLink
-            to="/register"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Register
-          </NavLink>
-        </>
+        <NavLink
+          to="/login"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          Login
+        </NavLink>
       ) : (
         <NavLink
           to="/account"
