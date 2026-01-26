@@ -14,6 +14,7 @@ import {
   Plus,
   Check,
   ShoppingCart,
+  ArrowRight,
 } from "lucide-react";
 
 export default function ConcertDetailPage() {
@@ -255,10 +256,21 @@ export default function ConcertDetailPage() {
             )}
 
             {inCart?.quantity === quantity ? (
-              <div className={styles.matchedNotice}>
-                <Check size={16} />
-                Cart is up to date
-              </div>
+              addedToCart ? (
+                <div className={styles.matchedNotice}>
+                  <Check size={16} />
+                  Cart updated
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.purchaseButton}
+                  onClick={() => navigate("/checkout")}
+                >
+                  Checkout
+                  <ArrowRight size={18} />
+                </button>
+              )
             ) : (
               <button
                 type="button"
