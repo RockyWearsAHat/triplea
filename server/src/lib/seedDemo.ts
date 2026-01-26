@@ -54,14 +54,49 @@ function instrumentFromFilename(filename: string): {
 function locationFromFilename(filename: string): {
   name: string;
   city: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
 } {
+  const f = filename.toLowerCase();
+
+  // Map seed images to real venue data
+  if (f.includes("seattle") || f.includes("stadium")) {
+    return {
+      name: "Lumen Field Event Center",
+      city: "Seattle",
+      address: "800 Occidental Ave S, Seattle, WA 98134",
+      coordinates: { lat: 47.5952, lng: -122.3316 },
+    };
+  }
+  if (f.includes("fitch") || f.includes("popup")) {
+    return {
+      name: "Fitch Popup Stage",
+      city: "Los Angeles",
+      address: "6801 Hollywood Blvd, Los Angeles, CA 90028",
+      coordinates: { lat: 34.1017, lng: -118.3406 },
+    };
+  }
+  if (f.includes("small")) {
+    return {
+      name: "The Mint LA",
+      city: "Los Angeles",
+      address: "6010 W Pico Blvd, Los Angeles, CA 90035",
+      coordinates: { lat: 34.0522, lng: -118.3664 },
+    };
+  }
+
+  // Fallback for unknown images
   const base = filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
   const name = base
     .split(" ")
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
-  const city = filename.toLowerCase().includes("seattle") ? "Seattle" : "";
-  return { name, city };
+  return {
+    name,
+    city: "Los Angeles",
+    address: "6801 Hollywood Blvd, Los Angeles, CA 90028",
+    coordinates: { lat: 34.1017, lng: -118.3406 },
+  };
 }
 
 export async function seedDemoDataIfEnabled(): Promise<void> {
@@ -212,6 +247,8 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
         return {
           name: meta.name,
           city: meta.city,
+          address: meta.address,
+          coordinates: meta.coordinates,
           images: [img],
         };
       });
@@ -224,6 +261,8 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
           await Location.create({
             name: meta.name,
             city: meta.city,
+            address: meta.address,
+            coordinates: meta.coordinates,
             images: [img],
           });
           continue;
@@ -259,6 +298,8 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
           await Location.create({
             name: meta.name,
             city: meta.city,
+            address: meta.address,
+            coordinates: meta.coordinates,
             createdByUserId: hostId,
             images: [img],
           });
@@ -291,13 +332,15 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
     }).exec();
 
     if (existingHostGigs < 2 && pickLocationId) {
-      const templates = [
+      // Job postings for musicians (not shown on public concert page)
+      const jobPostings = [
         {
           title: "Need a DJ for a small event",
           description: "Open-format DJ, 2 hours, bring basic controller.",
           date: "2026-02-01",
           time: "20:00",
           budget: 600,
+          gigType: "musician-wanted" as const,
         },
         {
           title: "Jazz trio for dinner service",
@@ -305,10 +348,11 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
           date: "2026-02-10",
           time: "18:30",
           budget: 900,
+          gigType: "musician-wanted" as const,
         },
       ];
 
-      for (const t of templates) {
+      for (const t of jobPostings) {
         const exists = await Gig.findOne({
           createdByUserId: hostId,
           title: t.title,
@@ -318,6 +362,99 @@ export async function seedDemoDataIfEnabled(): Promise<void> {
           ...t,
           locationId: pickLocationId,
           createdByUserId: hostId,
+          status: "open",
+        });
+      }
+    }
+  }
+
+  // Seed public concerts for the Music marketplace
+  {
+    const adminUserForConcerts =
+      adminUser ?? (await User.findOne({ roles: "admin" }).exec());
+    if (!adminUserForConcerts) return;
+
+    const concertHostId = new mongoose.Types.ObjectId(adminUserForConcerts.id);
+    const existingConcerts = await Gig.countDocuments({
+      gigType: "public-concert",
+    }).exec();
+
+    if (existingConcerts < 3) {
+      const allLocations = await Location.find({}).limit(10).exec();
+
+      const publicConcerts = [
+        {
+          title: "Friday Night Jazz",
+          description:
+            "Unwind with smooth jazz from the city's finest quartet. Full bar and appetizers available.",
+          date: "2026-02-07",
+          time: "19:30",
+          ticketPrice: 25,
+          openForTickets: true,
+        },
+        {
+          title: "Acoustic Sessions: Singer-Songwriter Showcase",
+          description:
+            "An intimate evening featuring three local singer-songwriters sharing original music.",
+          date: "2026-02-14",
+          time: "20:00",
+          ticketPrice: 15,
+          openForTickets: true,
+        },
+        {
+          title: "Latin Dance Night",
+          description:
+            "Live salsa band with dance floor. Beginner lesson at 7pm, band starts at 8pm.",
+          date: "2026-02-21",
+          time: "19:00",
+          ticketPrice: 20,
+          openForTickets: true,
+        },
+        {
+          title: "Classical Piano Recital",
+          description:
+            "Award-winning pianist performs Chopin, Debussy, and Rachmaninoff. Reserved seating.",
+          date: "2026-02-28",
+          time: "18:00",
+          ticketPrice: 35,
+          openForTickets: true,
+        },
+        {
+          title: "Blues & Brews",
+          description:
+            "Electric blues trio paired with local craft beer tasting. 21+ event.",
+          date: "2026-03-07",
+          time: "20:30",
+          ticketPrice: 30,
+          openForTickets: true,
+        },
+        {
+          title: "Sunday Brunch Concert",
+          description:
+            "Live acoustic duo while you enjoy brunch. Family-friendly, all ages welcome.",
+          date: "2026-03-08",
+          time: "11:00",
+          ticketPrice: 0,
+          openForTickets: false,
+        },
+      ];
+
+      for (let i = 0; i < publicConcerts.length; i++) {
+        const c = publicConcerts[i];
+        const exists = await Gig.findOne({
+          title: c.title,
+          gigType: "public-concert",
+        }).exec();
+        if (exists) continue;
+
+        const loc = allLocations[i % allLocations.length];
+        await Gig.create({
+          ...c,
+          gigType: "public-concert",
+          locationId: loc
+            ? new mongoose.Types.ObjectId(loc.id as string)
+            : undefined,
+          createdByUserId: concertHostId,
           status: "open",
         });
       }

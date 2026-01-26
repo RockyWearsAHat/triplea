@@ -303,14 +303,15 @@ router.get("/gigs", async (_req: Request, res: Response) => {
 });
 
 // Concerts endpoints for marketplace (with optional distance calc)
+// Only shows public concerts (not musician-wanted job postings)
 router.get("/concerts", async (req: Request, res: Response) => {
   try {
     const lat = toNumber(req.query.lat);
     const lng = toNumber(req.query.lng);
     const radiusMiles = toNumber(req.query.radiusMiles);
 
-    const gigs = await Gig.find({ status: "open" })
-      .sort({ createdAt: -1 })
+    const gigs = await Gig.find({ status: "open", gigType: "public-concert" })
+      .sort({ date: 1, time: 1 }) // Sort by date ascending (soonest first)
       .limit(200)
       .exec();
 
@@ -369,8 +370,9 @@ router.get("/concerts", async (req: Request, res: Response) => {
           description: g.description,
           date: g.date,
           time: g.time,
-          budget: g.budget,
           status: g.status,
+          ticketPrice: (g as any).ticketPrice,
+          openForTickets: (g as any).openForTickets,
           distanceMiles,
           location: loc
             ? {
@@ -385,9 +387,21 @@ router.get("/concerts", async (req: Request, res: Response) => {
             : null,
         };
       })
+      // Filter by radius only if specified, otherwise show all
       .filter((r) =>
         radiusMiles ? (r.distanceMiles ?? Infinity) <= radiusMiles : true,
-      );
+      )
+      // Sort by distance (closest first) when location is available
+      .sort((a, b) => {
+        // If both have distance, sort by distance
+        if (a.distanceMiles !== undefined && b.distanceMiles !== undefined) {
+          return a.distanceMiles - b.distanceMiles;
+        }
+        // Items with distance come first
+        if (a.distanceMiles !== undefined) return -1;
+        if (b.distanceMiles !== undefined) return 1;
+        return 0;
+      });
 
     return res.json({ concerts: results });
   } catch (err) {
@@ -399,9 +413,9 @@ router.get("/concerts", async (req: Request, res: Response) => {
 
 router.get("/concerts/popular", async (_req: Request, res: Response) => {
   try {
-    // Simple popular algorithm: latest open gigs limited to 12
-    const gigs = await Gig.find({ status: "open" })
-      .sort({ createdAt: -1 })
+    // Popular public concerts only (not musician-wanted postings)
+    const gigs = await Gig.find({ status: "open", gigType: "public-concert" })
+      .sort({ date: 1 }) // Soonest first
       .limit(12)
       .exec();
 
@@ -424,9 +438,11 @@ router.get("/concerts/popular", async (_req: Request, res: Response) => {
         return {
           id: g.id,
           title: g.title,
+          description: g.description,
           date: g.date,
           time: g.time,
-          budget: g.budget,
+          ticketPrice: (g as any).ticketPrice,
+          openForTickets: (g as any).openForTickets,
           status: g.status,
           location: loc
             ? {
@@ -467,12 +483,16 @@ router.get("/gigs/:id", async (req: Request, res: Response) => {
         time: gig.time,
         budget: gig.budget,
         status: gig.status,
+        gigType: gig.gigType,
+        openForTickets: (gig as any).openForTickets,
+        ticketPrice: (gig as any).ticketPrice,
         location: location
           ? {
               id: location.id,
               name: location.name,
               address: location.address,
               city: location.city,
+              coordinates: location.coordinates,
               imageUrl: (location.images ?? []).length
                 ? `/api/public/locations/${location.id}/images/0`
                 : undefined,

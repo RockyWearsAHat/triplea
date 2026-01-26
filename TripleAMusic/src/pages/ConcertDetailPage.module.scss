@@ -1,0 +1,389 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(16px, 4vw, 40px);
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: color 150ms ease;
+}
+
+.backButton:hover {
+  color: var(--text);
+}
+
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  text-align: center;
+  padding: 40px;
+}
+
+.layout {
+  display: grid;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+  }
+}
+
+.heroImage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.heroImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.heroFallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  color: var(--text-subtle);
+  z-index: 0;
+}
+
+.heroImage img + .heroFallback {
+  display: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .content {
+    display: contents;
+  }
+
+  .mainInfo {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .purchaseCard {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    position: sticky;
+    top: 20px;
+  }
+
+  .heroImage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+.mainInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.metaIcon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.description {
+  padding-top: 8px;
+}
+
+.sectionLabel {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.description p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Venue Map */
+.mapSection {
+  padding-top: 8px;
+}
+
+.mapContainer {
+  width: 100%;
+  height: 240px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.mapContainer iframe {
+  display: block;
+}
+
+.mapAddress {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+@media (min-width: 768px) {
+  .mapContainer {
+    height: 280px;
+  }
+}
+
+/* Purchase card */
+.purchaseCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.purchaseTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.priceDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.priceLabel {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.freeLabel {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--success, #16a34a);
+}
+
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.quantityLabel {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quantityControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quantityButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantityButton:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.quantityButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantityValue {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: center;
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.totalPrice {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.purchaseButton {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--primary);
+  color: var(--on-primary, #fff);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.purchaseButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.purchaseButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success state */
+.successState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 20px;
+}
+
+.successCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(32px, 6vw, 48px);
+  text-align: center;
+  max-width: 480px;
+}
+
+.successIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--success, #16a34a);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.successTitle {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.successMessage {
+  margin: 0 0 24px;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.ticketInfo {
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.ticketDate {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ticketTime {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.ticketVenue {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.successActions {
+  margin-top: 24px;
+}

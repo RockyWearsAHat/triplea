@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { GigWithDistance, ConcertSearchParams } from "@shared";
 import { TripleAApiClient, useGeolocation, useScrollReveal } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertMarketplacePage.module.scss";
 
 export default function ConcertMarketplacePage() {
+  const navigate = useNavigate();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
@@ -15,7 +17,7 @@ export default function ConcertMarketplacePage() {
   const [concerts, setConcerts] = useState<GigWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch concerts based on location (or popular if no location)
+  // Fetch concerts - always show all, sorted by distance if location available
   useEffect(() => {
     // Wait for geolocation to finish loading before fetching
     if (geo.loading) return;
@@ -25,18 +27,15 @@ export default function ConcertMarketplacePage() {
 
     const fetchConcerts = async () => {
       try {
-        let data: GigWithDistance[];
-        if (geo.coordinates) {
-          const params: ConcertSearchParams = {
-            lat: geo.coordinates.lat,
-            lng: geo.coordinates.lng,
-            radiusMiles: 50,
-          };
-          data = await api.listPublicConcerts(params);
-        } else {
-          // No location - show popular concerts
-          data = (await api.listPopularConcerts()) as GigWithDistance[];
-        }
+        // Always fetch concerts, passing location if available for distance sorting
+        const params: ConcertSearchParams | undefined = geo.coordinates
+          ? {
+              lat: geo.coordinates.lat,
+              lng: geo.coordinates.lng,
+              // No radiusMiles = show all concerts, just sorted by distance
+            }
+          : undefined;
+        const data = await api.listPublicConcerts(params);
         if (!cancelled) setConcerts(data);
       } catch {
         // Silently fail, show empty state
@@ -53,11 +52,7 @@ export default function ConcertMarketplacePage() {
 
   useScrollReveal(contentRef, [concerts.length, loading]);
 
-  const locationLabel = geo.coordinates
-    ? "Near you"
-    : geo.permissionDenied
-      ? "Popular concerts"
-      : "Concerts";
+  const locationLabel = geo.coordinates ? "Concerts near you" : "All concerts";
 
   return (
     <div ref={contentRef}>
@@ -76,7 +71,7 @@ export default function ConcertMarketplacePage() {
           <h2 className={ui.sectionTitleLarge}>{locationLabel}</h2>
           {geo.coordinates && (
             <p className={ui.sectionLead}>
-              Showing concerts within 50 miles of your location.
+              Sorted by distance from your location.
             </p>
           )}
         </div>
@@ -112,21 +107,34 @@ export default function ConcertMarketplacePage() {
                 </div>
                 <div className={styles.cardContent}>
                   <h3 className={styles.cardTitle}>{c.title}</h3>
-                  <p className={styles.cardDate}>
-                    {c.date}
-                    {c.time ? ` · ${c.time}` : ""}
+                  <div className={styles.cardMeta}>
+                    <p className={styles.cardDate}>
+                      {c.date}
+                      {c.time ? ` · ${c.time}` : ""}
+                    </p>
+                    <p className={styles.cardVenue}>
+                      {c.location?.name ?? "Venue TBA"}
+                    </p>
+                  </div>
+                  <p className={styles.cardDescription}>
+                    {c.description ?? "More details coming soon."}
                   </p>
-                  {c.description && (
-                    <p className={styles.cardDescription}>{c.description}</p>
-                  )}
                   <div className={styles.cardFooter}>
-                    {typeof c.distanceMiles === "number" && (
-                      <span className={styles.distanceBadge}>
-                        {c.distanceMiles.toFixed(1)} mi
-                      </span>
-                    )}
-                    <button className={styles.viewButton} type="button">
-                      View details
+                    <div className={styles.footerLeft}>
+                      {c.ticketPrice !== undefined && c.ticketPrice > 0 ? (
+                        <span className={styles.priceBadge}>
+                          ${c.ticketPrice}
+                        </span>
+                      ) : (
+                        <span className={styles.freeBadge}>Free</span>
+                      )}
+                    </div>
+                    <button
+                      className={styles.viewButton}
+                      type="button"
+                      onClick={() => navigate(`/concerts/${c.id}`)}
+                    >
+                      Get tickets
                     </button>
                   </div>
                 </div>

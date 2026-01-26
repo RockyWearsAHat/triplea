@@ -100,9 +100,11 @@ export interface Location {
   city: string;
   imageCount?: number;
   imageUrl?: string;
+  coordinates?: { lat: number; lng: number };
 }
 
 export type GigStatus = "open" | "cancelled" | "filled";
+export type GigType = "musician-wanted" | "public-concert";
 
 export interface Gig {
   id: string;
@@ -112,6 +114,11 @@ export interface Gig {
   time?: string;
   budget?: number;
   status: GigStatus;
+  gigType?: GigType;
+  /** For public concerts: is ticket selling enabled? */
+  openForTickets?: boolean;
+  /** For public concerts: ticket price in dollars */
+  ticketPrice?: number;
   location?: Location | null;
 }
 

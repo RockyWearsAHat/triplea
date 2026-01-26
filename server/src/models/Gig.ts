@@ -1,6 +1,7 @@
 import { Schema, model, type Document, Types } from "mongoose";
 
 export type GigStatus = "open" | "cancelled" | "filled";
+export type GigType = "musician-wanted" | "public-concert";
 
 export interface IGig extends Document {
   title: string;
@@ -11,6 +12,12 @@ export interface IGig extends Document {
   locationId?: Types.ObjectId;
   createdByUserId: Types.ObjectId;
   status: GigStatus;
+  /** "musician-wanted" = job posting for performers; "public-concert" = ticketed event for audiences */
+  gigType: GigType;
+  /** For public concerts: is ticket selling enabled? */
+  openForTickets?: boolean;
+  /** For public concerts: ticket price in dollars */
+  ticketPrice?: number;
 }
 
 const GigSchema = new Schema<IGig>(
@@ -31,8 +38,15 @@ const GigSchema = new Schema<IGig>(
       enum: ["open", "cancelled", "filled"],
       default: "open",
     },
+    gigType: {
+      type: String,
+      enum: ["musician-wanted", "public-concert"],
+      default: "musician-wanted",
+    },
+    openForTickets: { type: Boolean, default: false },
+    ticketPrice: { type: Number },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Gig = model<IGig>("Gig", GigSchema);

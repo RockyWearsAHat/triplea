@@ -30,6 +30,7 @@ import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
 import ConcertMarketplacePage from "./pages/ConcertMarketplacePage";
+import ConcertDetailPage from "./pages/ConcertDetailPage";
 
 import { ChatInbox } from "@shared";
 
@@ -1936,6 +1937,7 @@ function App() {
         <div style={{ flex: 1, minHeight: 0 }}>
           <Routes>
             <Route path="/" element={<ConcertMarketplacePage />} />
+            <Route path="/concerts/:id" element={<ConcertDetailPage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
