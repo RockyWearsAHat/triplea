@@ -23,24 +23,51 @@ export default function CartPage() {
   const navigate = useNavigate();
   const { items, itemCount, subtotal, updateQuantity, removeItem } = useCart();
 
-  // Fee calculation state
+  // Fee calculation state (only taxes need server call)
   const [fees, setFees] = useState<FeeCalculationResult | null>(null);
-  const [feesLoading, setFeesLoading] = useState(false);
+  const [taxLoading, setTaxLoading] = useState(false);
 
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
   );
 
-  // Fetch fees when cart changes
+  // Client-side fee calculation (instant, no loading)
+  // Triple A Fee: $1/ticket (flat) - this is the platform service fee
+  const PLATFORM_FEE_PER_TICKET = 100; // cents
+  const STRIPE_FEE_PERCENT = 0.029;
+  const STRIPE_FEE_FIXED = 30; // cents
+
+  const clientFees = useMemo(() => {
+    if (items.length === 0) return null;
+    const item = items[0];
+    if (item.ticketPrice === 0) return null;
+
+    const subtotalCents = Math.round(item.ticketPrice * 100 * item.quantity);
+    const serviceFee = PLATFORM_FEE_PER_TICKET * item.quantity;
+    const desiredAmount = subtotalCents + serviceFee;
+    const total = Math.ceil(
+      (desiredAmount + STRIPE_FEE_FIXED) / (1 - STRIPE_FEE_PERCENT),
+    );
+    const stripeFee = total - desiredAmount;
+
+    return {
+      subtotal: subtotalCents / 100,
+      serviceFee: serviceFee / 100,
+      stripeFee: stripeFee / 100,
+      total: total / 100,
+      serviceFeeDisplay: "$1",
+      feeChargeMode: "ticket" as const,
+    };
+  }, [items]);
+
+  // Fetch only tax from server (async)
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 || !clientFees) {
       setFees(null);
       return;
     }
 
-    // For now, calculate fees for first item (single-item cart assumption)
-    // TODO: Support multi-item fee calculation
     const item = items[0];
     if (item.ticketPrice === 0) {
       setFees(null);
@@ -48,7 +75,7 @@ export default function CartPage() {
     }
 
     let cancelled = false;
-    setFeesLoading(true);
+    setTaxLoading(true);
 
     const fetchFees = async () => {
       try {
@@ -66,7 +93,7 @@ export default function CartPage() {
         }
       } finally {
         if (!cancelled) {
-          setFeesLoading(false);
+          setTaxLoading(false);
         }
       }
     };
@@ -75,7 +102,7 @@ export default function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, items]);
+  }, [api, items, clientFees]);
 
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -103,10 +130,9 @@ export default function CartPage() {
     );
   }
 
-  // Determine display for service fee
-  const serviceFeeLabel = fees?.serviceFeeDisplay
-    ? `Triple A Fee (${fees.serviceFeeDisplay}${fees.feeChargeMode === "ticket" ? "/ticket" : ""})`
-    : "Triple A Fee";
+  // Service fee display info (from client calculation, instant)
+  const feeDisplay = clientFees?.serviceFeeDisplay ?? "$1";
+  const isPerTicket = clientFees?.feeChargeMode === "ticket";
 
   return (
     <div className={styles.container}>
@@ -232,15 +258,14 @@ export default function CartPage() {
               <span>Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
-            <div className={styles.summaryRow}>
-              <span>{serviceFeeLabel}</span>
-              <span>
-                {feesLoading
-                  ? "..."
-                  : fees
-                    ? `$${fees.serviceFee.toFixed(2)}`
-                    : "$0.00"}
-              </span>
+            <div className={styles.summaryRowStacked}>
+              <div className={styles.feeMain}>
+                <span>Triple A Fee</span>
+                <span>${clientFees?.serviceFee.toFixed(2) ?? "0.00"}</span>
+              </div>
+              {isPerTicket && (
+                <span className={styles.feeSubtext}>{feeDisplay}/ticket</span>
+              )}
             </div>
             <div className={styles.summaryRowWithInfo}>
               <span className={styles.feeLabel}>
@@ -250,45 +275,31 @@ export default function CartPage() {
                   <span className={styles.tooltip}>
                     <span className={styles.tooltipRow}>
                       <span>Payment processing</span>
-                      <span>
-                        {feesLoading
-                          ? "..."
-                          : fees
-                            ? `$${fees.stripeFee.toFixed(2)}`
-                            : "$0.00"}
-                      </span>
+                      <span>${clientFees?.stripeFee.toFixed(2) ?? "0.00"}</span>
                     </span>
                     <span className={styles.tooltipRow}>
                       <span>Tax</span>
-                      <span>
-                        {feesLoading
-                          ? "..."
-                          : fees
-                            ? `$${(fees.tax ?? 0).toFixed(2)}`
-                            : "$0.00"}
+                      <span
+                        className={taxLoading ? styles.taxLoading : undefined}
+                      >
+                        ${(fees?.tax ?? 0).toFixed(2)}
                       </span>
                     </span>
                   </span>
                 </button>
               </span>
-              <span>
-                {feesLoading
-                  ? "..."
-                  : fees
-                    ? `$${(fees.stripeFee + (fees.tax ?? 0)).toFixed(2)}`
-                    : "$0.00"}
+              <span className={taxLoading ? styles.taxLoading : undefined}>
+                ${((clientFees?.stripeFee ?? 0) + (fees?.tax ?? 0)).toFixed(2)}
               </span>
             </div>
           </div>
 
           <div className={styles.summaryTotal}>
             <span>Total</span>
-            <span className={styles.totalAmount}>
-              {feesLoading
-                ? "..."
-                : fees
-                  ? `$${(fees.totalWithTax ?? fees.total).toFixed(2)}`
-                  : `$${subtotal.toFixed(2)}`}
+            <span
+              className={`${styles.totalAmount} ${taxLoading ? styles.taxLoading : ""}`}
+            >
+              ${((clientFees?.total ?? subtotal) + (fees?.tax ?? 0)).toFixed(2)}
             </span>
           </div>
 
