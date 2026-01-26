@@ -7,7 +7,7 @@
 .backButton {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 8px 0;
   border: none;
   background: none;
@@ -135,8 +135,8 @@
 }
 
 .metaIcon {
-  font-size: 18px;
   flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .description {
@@ -193,29 +193,22 @@
 .purchaseCard {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 24px;
+  border-radius: var(--radius-md);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.purchaseTitle {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
+  gap: 16px;
 }
 
 .priceDisplay {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 
 .price {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--primary);
 }
 
 .priceLabel {
@@ -233,30 +226,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 14px 0;
   border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
 }
 
 .quantityLabel {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .quantityControls {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 2px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 2px;
 }
 
 .quantityButton {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 18px;
-  font-weight: 500;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 150ms ease;
   display: flex;
@@ -265,19 +260,19 @@
 }
 
 .quantityButton:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: var(--surface-2);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .quantityButton:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .quantityValue {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
-  min-width: 32px;
+  min-width: 36px;
   text-align: center;
 }
 
@@ -286,72 +281,72 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 15px;
-  padding: 12px 0;
+  font-size: 14px;
+  padding: 14px 0;
   border-top: 1px solid var(--border);
+  color: var(--text-secondary);
 }
 
 .subtotalPrice {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-}
-
-/* Cart actions */
-.cartActions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  color: var(--text);
 }
 
 .inCartNotice {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 12px;
-  background: rgba(229, 157, 13, 0.1);
-  border-radius: var(--radius-md);
-  color: var(--gold);
+  background: rgba(22, 163, 74, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--success, #16a34a);
   font-size: 14px;
   font-weight: 500;
-  text-align: center;
 }
 
-.secondaryButton {
+.matchedNotice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  padding: 12px 24px;
+  padding: 12px 20px;
   border-radius: var(--radius-md);
-  background: transparent;
   border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms ease;
-}
-
-.secondaryButton:hover {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .purchaseButton {
   width: 100%;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: var(--radius-md);
   border: none;
-  background: var(--primary);
-  color: var(--on-primary, #fff);
+  background: #e59d0d;
+  color: #000;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.purchaseButton:hover:not(:disabled) {
+.purchaseButton:hover {
   opacity: 0.9;
 }
 
-.purchaseButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.feeNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* Success state */

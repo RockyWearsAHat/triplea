@@ -2,6 +2,19 @@ import { NavLink } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import { useAuth } from "@shared";
 import { useCart } from "../context/CartContext";
+import {
+  Music,
+  LayoutDashboard,
+  CalendarDays,
+  ScanLine,
+  MessageSquare,
+  Ticket,
+  ShoppingCart,
+  LogIn,
+  User,
+} from "lucide-react";
+
+import styles from "./NavBar.module.scss";
 
 export function NavBar() {
   const { user } = useAuth();
@@ -15,7 +28,8 @@ export function NavBar() {
           [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
         }
       >
-        Concerts
+        <Music size={18} />
+        <span className={styles.navLabel}>Concerts</span>
       </NavLink>
 
       {user?.role.includes("customer") && (
@@ -26,7 +40,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Host
+            <LayoutDashboard size={18} />
+            <span className={styles.navLabel}>Host</span>
           </NavLink>
           <NavLink
             to="/events"
@@ -34,7 +49,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Events
+            <CalendarDays size={18} />
+            <span className={styles.navLabel}>Events</span>
           </NavLink>
           <NavLink
             to="/scan-tickets"
@@ -42,7 +58,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Scanner
+            <ScanLine size={18} />
+            <span className={styles.navLabel}>Scanner</span>
           </NavLink>
         </>
       )}
@@ -55,7 +72,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Messages
+            <MessageSquare size={18} />
+            <span className={styles.navLabel}>Messages</span>
           </NavLink>
           <NavLink
             to="/my-tickets"
@@ -63,7 +81,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            My tickets
+            <Ticket size={18} />
+            <span className={styles.navLabel}>My Tickets</span>
           </NavLink>
         </>
       )}
@@ -71,33 +90,14 @@ export function NavBar() {
       <NavLink
         to="/cart"
         className={({ isActive }) =>
-          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          [ui.navLink, styles.cartLink, isActive ? ui.navLinkActive : ""].join(
+            " ",
+          )
         }
-        style={{ position: "relative" }}
       >
-        Cart
-        {itemCount > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -6,
-              right: -10,
-              background: "var(--gold)",
-              color: "#000",
-              fontSize: 11,
-              fontWeight: 600,
-              minWidth: 18,
-              height: 18,
-              borderRadius: 9,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 4px",
-            }}
-          >
-            {itemCount}
-          </span>
-        )}
+        <ShoppingCart size={18} />
+        <span className={styles.navLabel}>Cart</span>
+        {itemCount > 0 && <span className={styles.cartBadge}>{itemCount}</span>}
       </NavLink>
 
       {!user ? (
@@ -107,7 +107,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Login
+          <LogIn size={18} />
+          <span className={styles.navLabel}>Login</span>
         </NavLink>
       ) : (
         <NavLink
@@ -116,7 +117,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Account
+          <User size={18} />
+          <span className={styles.navLabel}>Account</span>
         </NavLink>
       )}
     </nav>

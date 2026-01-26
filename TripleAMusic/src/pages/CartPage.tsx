@@ -3,6 +3,17 @@ import { Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./CartPage.module.scss";
 import { useCart } from "../context/CartContext";
+import {
+  ShoppingCart,
+  Calendar,
+  Clock,
+  MapPin,
+  Minus,
+  Plus,
+  Trash2,
+  ArrowRight,
+  ChevronLeft,
+} from "lucide-react";
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -21,7 +32,9 @@ export default function CartPage() {
     return (
       <div className={styles.container}>
         <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>🎫</span>
+          <div className={styles.emptyIcon}>
+            <ShoppingCart size={48} strokeWidth={1.5} />
+          </div>
           <h2>Your cart is empty</h2>
           <p className={ui.help}>
             Browse concerts and add tickets to your cart.
@@ -34,11 +47,16 @@ export default function CartPage() {
 
   return (
     <div className={styles.container}>
+      <button className={styles.backButton} onClick={() => navigate("/")}>
+        <ChevronLeft size={18} />
+        Continue shopping
+      </button>
+
       <div className={styles.header}>
-        <h1 className={styles.pageTitle}>Your Cart</h1>
-        <p className={styles.itemCount}>
+        <h1 className={styles.pageTitle}>Cart</h1>
+        <span className={styles.itemCount}>
           {itemCount} ticket{itemCount !== 1 ? "s" : ""}
-        </p>
+        </span>
       </div>
 
       <div className={styles.layout}>
@@ -59,16 +77,34 @@ export default function CartPage() {
                 <div className={styles.imageFallback}>🎵</div>
               </div>
 
-              <div className={styles.itemDetails}>
-                <h3 className={styles.itemTitle}>{item.gigTitle}</h3>
-                <div className={styles.itemMeta}>
-                  <span>📅 {formatDate(item.gigDate)}</span>
-                  {item.gigTime && <span>🕐 {item.gigTime}</span>}
-                  {item.locationName && <span>📍 {item.locationName}</span>}
+              <div className={styles.itemContent}>
+                <div className={styles.itemDetails}>
+                  <h3 className={styles.itemTitle}>{item.gigTitle}</h3>
+                  <div className={styles.itemMeta}>
+                    <span className={styles.metaItem}>
+                      <Calendar size={14} />
+                      {formatDate(item.gigDate)}
+                    </span>
+                    {item.gigTime && (
+                      <span className={styles.metaItem}>
+                        <Clock size={14} />
+                        {item.gigTime}
+                      </span>
+                    )}
+                    {item.locationName && (
+                      <span className={styles.metaItem}>
+                        <MapPin size={14} />
+                        {item.locationName}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className={styles.itemPrice}>
-                  ${item.ticketPrice.toFixed(2)} per ticket
-                </p>
+
+                <div className={styles.itemPricing}>
+                  <span className={styles.unitPrice}>
+                    ${item.ticketPrice.toFixed(2)} each
+                  </span>
+                </div>
               </div>
 
               <div className={styles.itemActions}>
@@ -79,8 +115,9 @@ export default function CartPage() {
                     onClick={() =>
                       updateQuantity(item.gigId, item.quantity - 1)
                     }
+                    aria-label="Decrease quantity"
                   >
-                    −
+                    <Minus size={14} />
                   </button>
                   <span className={styles.quantityValue}>{item.quantity}</span>
                   <button
@@ -90,19 +127,21 @@ export default function CartPage() {
                       updateQuantity(item.gigId, item.quantity + 1)
                     }
                     disabled={item.quantity >= 10}
+                    aria-label="Increase quantity"
                   >
-                    +
+                    <Plus size={14} />
                   </button>
                 </div>
-                <p className={styles.itemSubtotal}>
+                <span className={styles.itemSubtotal}>
                   ${(item.ticketPrice * item.quantity).toFixed(2)}
-                </p>
+                </span>
                 <button
                   type="button"
                   className={styles.removeButton}
                   onClick={() => removeItem(item.gigId)}
+                  aria-label="Remove item"
                 >
-                  Remove
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>
@@ -111,30 +150,22 @@ export default function CartPage() {
 
         {/* Order Summary Sidebar */}
         <div className={styles.orderSummary}>
-          <h2 className={styles.summaryTitle}>Order Summary</h2>
+          <h2 className={styles.summaryTitle}>Summary</h2>
 
-          <div className={styles.summaryRow}>
-            <span>Subtotal ({itemCount} tickets)</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-
-          <div className={styles.summaryRow}>
-            <span>Service fee (1%)</span>
-            <span className={styles.feePlaceholder}>
-              Calculated at checkout
-            </span>
-          </div>
-
-          <div className={styles.summaryRow}>
-            <span>Payment processing</span>
-            <span className={styles.feePlaceholder}>
-              Calculated at checkout
-            </span>
+          <div className={styles.summaryRows}>
+            <div className={styles.summaryRow}>
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Service fee</span>
+              <span className={styles.calculated}>At checkout</span>
+            </div>
           </div>
 
           <div className={styles.summaryTotal}>
-            <span>Estimated Total</span>
-            <span className={styles.totalAmount}>${subtotal.toFixed(2)}+</span>
+            <span>Estimated total</span>
+            <span>${subtotal.toFixed(2)}+</span>
           </div>
 
           <button
@@ -142,19 +173,12 @@ export default function CartPage() {
             className={styles.checkoutButton}
             onClick={() => navigate("/checkout")}
           >
-            Proceed to Checkout
-          </button>
-
-          <button
-            type="button"
-            className={styles.continueButton}
-            onClick={() => navigate("/")}
-          >
-            Continue Shopping
+            Checkout
+            <ArrowRight size={18} />
           </button>
 
           <p className={styles.disclaimer}>
-            Final fees will be calculated on the checkout page.
+            Final total calculated at checkout
           </p>
         </div>
       </div>

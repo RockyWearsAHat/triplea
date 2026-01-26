@@ -5,11 +5,21 @@ import { TripleAApiClient, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertDetailPage.module.scss";
 import { useCart } from "../context/CartContext";
+import {
+  ChevronLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  Minus,
+  Plus,
+  Check,
+  ShoppingCart,
+} from "lucide-react";
 
 export default function ConcertDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addItem, items } = useCart();
+  const { addItem, updateQuantity, items } = useCart();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
@@ -53,23 +63,24 @@ export default function ConcertDetailPage() {
   const handleAddToCart = () => {
     if (!concert) return;
 
-    addItem({
-      gigId: concert.id,
-      gigTitle: concert.title,
-      gigDate: concert.date,
-      gigTime: concert.time,
-      locationName: concert.location?.name,
-      locationId: concert.location?.id,
-      ticketPrice: concert.ticketPrice ?? 0,
-      quantity,
-    });
+    // If already in cart, update quantity; otherwise add new item
+    if (inCart) {
+      updateQuantity(concert.id, quantity);
+    } else {
+      addItem({
+        gigId: concert.id,
+        gigTitle: concert.title,
+        gigDate: concert.date,
+        gigTime: concert.time,
+        locationName: concert.location?.name,
+        locationId: concert.location?.id,
+        ticketPrice: concert.ticketPrice ?? 0,
+        quantity,
+      });
+    }
 
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
-  };
-
-  const handleGoToCart = () => {
-    navigate("/cart");
   };
 
   if (loading) {
@@ -107,7 +118,8 @@ export default function ConcertDetailPage() {
   return (
     <div className={styles.container}>
       <button className={styles.backButton} onClick={() => navigate(-1)}>
-        ← Back
+        <ChevronLeft size={18} />
+        Back
       </button>
 
       <div className={styles.layout}>
@@ -134,18 +146,18 @@ export default function ConcertDetailPage() {
 
             <div className={styles.meta}>
               <div className={styles.metaRow}>
-                <span className={styles.metaIcon}>📅</span>
+                <Calendar size={18} className={styles.metaIcon} />
                 <span>{formattedDate}</span>
               </div>
               {concert.time && (
                 <div className={styles.metaRow}>
-                  <span className={styles.metaIcon}>🕐</span>
+                  <Clock size={18} className={styles.metaIcon} />
                   <span>{concert.time}</span>
                 </div>
               )}
               {concert.location?.name && (
                 <div className={styles.metaRow}>
-                  <span className={styles.metaIcon}>📍</span>
+                  <MapPin size={18} className={styles.metaIcon} />
                   <span>{concert.location.name}</span>
                 </div>
               )}
@@ -187,29 +199,28 @@ export default function ConcertDetailPage() {
 
           {/* Ticket purchase card */}
           <div className={styles.purchaseCard}>
-            <h3 className={styles.purchaseTitle}>Get tickets</h3>
-
             <div className={styles.priceDisplay}>
               {isFree ? (
-                <span className={styles.freeLabel}>Free admission</span>
+                <span className={styles.freeLabel}>Free</span>
               ) : (
                 <>
                   <span className={styles.price}>${ticketPrice}</span>
-                  <span className={styles.priceLabel}>per ticket</span>
+                  <span className={styles.priceLabel}>/ ticket</span>
                 </>
               )}
             </div>
 
             <div className={styles.quantitySelector}>
-              <label className={styles.quantityLabel}>Quantity</label>
+              <span className={styles.quantityLabel}>Tickets</span>
               <div className={styles.quantityControls}>
                 <button
                   type="button"
                   className={styles.quantityButton}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
                 >
-                  −
+                  <Minus size={16} />
                 </button>
                 <span className={styles.quantityValue}>{quantity}</span>
                 <button
@@ -217,8 +228,9 @@ export default function ConcertDetailPage() {
                   className={styles.quantityButton}
                   onClick={() => setQuantity((q) => Math.min(10, q + 1))}
                   disabled={quantity >= 10}
+                  aria-label="Increase quantity"
                 >
-                  +
+                  <Plus size={16} />
                 </button>
               </div>
             </div>
@@ -232,26 +244,20 @@ export default function ConcertDetailPage() {
               </div>
             )}
 
-            {inCart ? (
-              <div className={styles.cartActions}>
-                <p className={styles.inCartNotice}>
-                  ✓ {inCart.quantity} ticket{inCart.quantity > 1 ? "s" : ""} in
+            {inCart && (
+              <div className={styles.inCartNotice}>
+                <Check size={16} />
+                <span>
+                  {inCart.quantity} ticket{inCart.quantity > 1 ? "s" : ""} in
                   cart
-                </p>
-                <button
-                  type="button"
-                  className={styles.purchaseButton}
-                  onClick={handleGoToCart}
-                >
-                  View Cart
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={handleAddToCart}
-                >
-                  Add {quantity} more
-                </button>
+                </span>
+              </div>
+            )}
+
+            {inCart?.quantity === quantity ? (
+              <div className={styles.matchedNotice}>
+                <Check size={16} />
+                Cart is up to date
               </div>
             ) : (
               <button
@@ -259,21 +265,29 @@ export default function ConcertDetailPage() {
                 className={styles.purchaseButton}
                 onClick={handleAddToCart}
               >
-                {addedToCart
-                  ? "✓ Added to cart!"
-                  : isFree
-                    ? "Add to cart"
-                    : `Add to cart · $${total.toFixed(2)}`}
+                {addedToCart ? (
+                  <>
+                    <Check size={18} />
+                    Updated!
+                  </>
+                ) : inCart ? (
+                  <>
+                    <ShoppingCart size={18} />
+                    Update to {quantity} ticket{quantity > 1 ? "s" : ""}
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart size={18} />
+                    {isFree
+                      ? "Add to cart"
+                      : `Add to cart · $${total.toFixed(2)}`}
+                  </>
+                )}
               </button>
             )}
 
-            <p
-              className={ui.help}
-              style={{ textAlign: "center", marginTop: 12 }}
-            >
-              {isFree
-                ? "No payment required for free events."
-                : "Fees calculated at checkout."}
+            <p className={styles.feeNote}>
+              {isFree ? "No payment required" : "Fees calculated at checkout"}
             </p>
           </div>
         </div>
