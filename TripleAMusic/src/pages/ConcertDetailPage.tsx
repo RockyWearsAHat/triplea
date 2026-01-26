@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Gig } from "@shared";
-import { TripleAApiClient, Button } from "@shared";
+import { TripleAApiClient, Button, useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertDetailPage.module.scss";
 
 export default function ConcertDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
@@ -20,7 +21,11 @@ export default function ConcertDetailPage() {
   // Ticket purchase state
   const [quantity, setQuantity] = useState(1);
   const [purchasing, setPurchasing] = useState(false);
-  const [purchaseComplete, setPurchaseComplete] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  // Form fields for guest checkout
+  const [holderName, setHolderName] = useState("");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -46,13 +51,48 @@ export default function ConcertDetailPage() {
     };
   }, [api, id]);
 
+  // Pre-fill form if user is logged in
+  useEffect(() => {
+    if (user) {
+      setHolderName(user.name);
+      setEmail(user.email);
+    }
+  }, [user]);
+
   const handlePurchase = async () => {
     if (!concert) return;
+
+    // Validate form
+    if (!holderName.trim()) {
+      setPurchaseError("Please enter your name");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setPurchaseError("Please enter a valid email address");
+      return;
+    }
+
     setPurchasing(true);
-    // Simulate purchase - in production this would call a real API
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setPurchasing(false);
-    setPurchaseComplete(true);
+    setPurchaseError(null);
+
+    try {
+      const result = await api.purchaseTickets({
+        gigId: concert.id,
+        quantity,
+        email: email.trim(),
+        holderName: holderName.trim(),
+      });
+
+      // Redirect to confirmation page
+      navigate(`/tickets/${result.ticket.confirmationCode}`);
+    } catch (err) {
+      setPurchaseError(
+        err instanceof Error
+          ? err.message
+          : "Purchase failed. Please try again.",
+      );
+      setPurchasing(false);
+    }
   };
 
   if (loading) {
@@ -86,38 +126,6 @@ export default function ConcertDetailPage() {
     month: "long",
     day: "numeric",
   });
-
-  if (purchaseComplete) {
-    return (
-      <div className={styles.successState}>
-        <div className={styles.successCard}>
-          <div className={styles.successIcon}>✓</div>
-          <h2 className={styles.successTitle}>
-            {isFree ? "You're on the list!" : "Purchase complete!"}
-          </h2>
-          <p className={styles.successMessage}>
-            {quantity} {quantity === 1 ? "ticket" : "tickets"} for{" "}
-            <strong>{concert.title}</strong>
-          </p>
-          <div className={styles.ticketInfo}>
-            <p className={styles.ticketDate}>{formattedDate}</p>
-            {concert.time && (
-              <p className={styles.ticketTime}>{concert.time}</p>
-            )}
-            {concert.location?.name && (
-              <p className={styles.ticketVenue}>{concert.location.name}</p>
-            )}
-          </div>
-          <p className={ui.help}>
-            A confirmation email has been sent to your account.
-          </p>
-          <div className={styles.successActions}>
-            <Button onClick={() => navigate("/")}>Find more events</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -245,11 +253,43 @@ export default function ConcertDetailPage() {
               </div>
             )}
 
+            {/* Checkout form */}
+            <div className={styles.checkoutForm}>
+              <div className={styles.formField}>
+                <label htmlFor="holderName">Your name</label>
+                <input
+                  id="holderName"
+                  type="text"
+                  value={holderName}
+                  onChange={(e) => setHolderName(e.target.value)}
+                  placeholder="Full name on ticket"
+                  disabled={purchasing}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label htmlFor="email">Email address</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Where to send your tickets"
+                  disabled={purchasing}
+                />
+              </div>
+            </div>
+
+            {purchaseError && (
+              <p className={ui.error} style={{ marginBottom: 12 }}>
+                {purchaseError}
+              </p>
+            )}
+
             <button
               type="button"
               className={styles.purchaseButton}
               onClick={handlePurchase}
-              disabled={purchasing}
+              disabled={purchasing || !holderName.trim() || !email.trim()}
             >
               {purchasing
                 ? "Processing…"
@@ -264,7 +304,7 @@ export default function ConcertDetailPage() {
             >
               {isFree
                 ? "No payment required. You'll receive a confirmation email."
-                : "Secure checkout powered by Triple A Music."}
+                : "Secure checkout powered by Stripe."}
             </p>
           </div>
         </div>

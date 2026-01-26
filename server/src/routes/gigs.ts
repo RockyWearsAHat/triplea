@@ -94,6 +94,9 @@ router.get(
           time: g.time,
           budget: g.budget,
           status: g.status,
+          gigType: g.gigType,
+          openForTickets: g.openForTickets,
+          ticketPrice: g.ticketPrice,
           locationId: g.locationId ? String(g.locationId) : null,
         })),
       });

@@ -98,7 +98,7 @@
     grid-row: 1 / span 2;
     align-self: start;
     position: sticky;
-    top: 20px;
+    top: 90px;
   }
 
   .heroImage {
@@ -291,6 +291,52 @@
 .totalPrice {
   font-size: 20px;
   font-weight: 700;
+}
+
+/* Checkout form */
+.checkoutForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  input {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color 150ms ease;
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .purchaseButton {

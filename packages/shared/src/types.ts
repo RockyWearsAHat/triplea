@@ -185,3 +185,60 @@ export interface ConcertSearchParams {
   dateFrom?: string;
   dateTo?: string;
 }
+
+// Ticket types
+export type TicketStatus = "valid" | "used" | "cancelled" | "expired";
+
+export interface Ticket {
+  id: string;
+  confirmationCode: string;
+  gigId?: string;
+  quantity: number;
+  pricePerTicket: number;
+  totalPaid: number;
+  status: TicketStatus;
+  holderName: string;
+  email?: string;
+  usedAt?: string | null;
+  createdAt: string;
+  gig?: {
+    id: string;
+    title: string;
+    date: string;
+    time?: string;
+  } | null;
+  location?: {
+    id: string;
+    name: string;
+    city?: string;
+    address?: string;
+  } | null;
+}
+
+export interface TicketPurchaseResult {
+  ticket: Ticket;
+}
+
+export interface TicketQrResult {
+  qrPayload: string;
+  expiresAt: string;
+  status: TicketStatus;
+}
+
+export interface TicketScanResult {
+  valid: boolean;
+  message?: string;
+  ticket?: {
+    id: string;
+    confirmationCode: string;
+    quantity: number;
+    holderName: string;
+    status: TicketStatus;
+  };
+  gig?: {
+    id: string;
+    title: string;
+    date: string;
+    time?: string;
+  } | null;
+}

@@ -33,6 +33,14 @@ export function NavBar() {
           >
             Events
           </NavLink>
+          <NavLink
+            to="/scan-tickets"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Scanner
+          </NavLink>
         </>
       )}
 

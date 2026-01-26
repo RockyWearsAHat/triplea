@@ -31,6 +31,9 @@ import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
 import ConcertMarketplacePage from "./pages/ConcertMarketplacePage";
 import ConcertDetailPage from "./pages/ConcertDetailPage";
+import TicketConfirmationPage from "./pages/TicketConfirmationPage";
+import MyTicketsPage from "./pages/MyTicketsPage";
+import TicketScannerPage from "./pages/TicketScannerPage";
 
 import { ChatInbox } from "@shared";
 
@@ -1938,6 +1941,7 @@ function App() {
           <Routes>
             <Route path="/" element={<ConcertMarketplacePage />} />
             <Route path="/concerts/:id" element={<ConcertDetailPage />} />
+            <Route path="/tickets/:code" element={<TicketConfirmationPage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -1964,6 +1968,22 @@ function App() {
               element={
                 <RequireRole role="customer">
                   <TicketsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/my-tickets"
+              element={
+                <RequireRole role="customer">
+                  <MyTicketsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/scan-tickets"
+              element={
+                <RequireRole role="customer">
+                  <TicketScannerPage />
                 </RequireRole>
               }
             />

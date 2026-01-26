@@ -18,6 +18,10 @@ import type {
   Permission,
   User,
   UserRole,
+  Ticket,
+  TicketPurchaseResult,
+  TicketQrResult,
+  TicketScanResult,
 } from "../types";
 
 export interface ApiClientConfig {
@@ -505,7 +509,9 @@ export class TripleAApiClient {
 
   async listMyGigs(): Promise<Gig[]> {
     const data = await this.request<{
-      gigs: Array<Omit<Gig, "location"> & { locationId?: string | null }>;
+      gigs: Array<
+        Omit<Gig, "location"> & { locationId?: string | null; gigType?: string }
+      >;
     }>("/gigs/mine", { method: "GET" });
 
     return data.gigs.map((g) => ({
@@ -516,6 +522,7 @@ export class TripleAApiClient {
       time: g.time,
       budget: g.budget,
       status: g.status,
+      gigType: g.gigType as Gig["gigType"],
       location: null,
     }));
   }
@@ -666,5 +673,97 @@ export class TripleAApiClient {
       body: JSON.stringify(params),
     });
     return data;
+  }
+
+  // --- Tickets ---
+
+  async purchaseTickets(params: {
+    gigId: string;
+    quantity: number;
+    email: string;
+    holderName: string;
+  }): Promise<TicketPurchaseResult> {
+    return await this.request<TicketPurchaseResult>("/tickets/purchase", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getTicketByConfirmationCode(code: string): Promise<{
+    ticket: Ticket;
+    gig: Ticket["gig"];
+    location: Ticket["location"];
+  }> {
+    return await this.request(`/tickets/confirm/${encodeURIComponent(code)}`, {
+      method: "GET",
+    });
+  }
+
+  async getTicketQrCode(
+    ticketId: string,
+    confirmationCode?: string,
+  ): Promise<TicketQrResult> {
+    return await this.request<TicketQrResult>(
+      `/tickets/${encodeURIComponent(ticketId)}/qr`,
+      {
+        method: "POST",
+        body: JSON.stringify({ confirmationCode }),
+      },
+    );
+  }
+
+  async getMyTickets(): Promise<{ tickets: Ticket[] }> {
+    return await this.request<{ tickets: Ticket[] }>("/tickets/mine", {
+      method: "GET",
+    });
+  }
+
+  async scanTicket(
+    qrPayload: string,
+    gigId?: string,
+  ): Promise<TicketScanResult> {
+    return await this.request<TicketScanResult>("/tickets/scan", {
+      method: "POST",
+      body: JSON.stringify({ qrPayload, gigId }),
+    });
+  }
+
+  async markTicketUsed(ticketId: string): Promise<{
+    success: boolean;
+    ticket: {
+      id: string;
+      confirmationCode: string;
+      status: string;
+      usedAt: string;
+    };
+  }> {
+    return await this.request(`/tickets/${encodeURIComponent(ticketId)}/use`, {
+      method: "POST",
+    });
+  }
+
+  async getGigTickets(gigId: string): Promise<{
+    tickets: Array<{
+      id: string;
+      confirmationCode: string;
+      quantity: number;
+      holderName: string;
+      email: string;
+      totalPaid: number;
+      status: string;
+      usedAt: string | null;
+      createdAt: string;
+    }>;
+    stats: {
+      total: number;
+      valid: number;
+      used: number;
+      cancelled: number;
+      revenue: number;
+    };
+  }> {
+    return await this.request(`/tickets/gig/${encodeURIComponent(gigId)}`, {
+      method: "GET",
+    });
   }
 }

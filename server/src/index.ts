@@ -18,6 +18,7 @@ import musiciansRoutes from "./routes/musicians";
 import locationsRoutes from "./routes/locations";
 import artistRequestsRoutes from "./routes/artistRequests";
 import instrumentsRoutes from "./routes/instruments";
+import ticketsRoutes from "./routes/tickets";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 
@@ -47,6 +48,7 @@ app.use("/api/musicians", musiciansRoutes);
 app.use("/api/locations", locationsRoutes);
 app.use("/api/artist-requests", artistRequestsRoutes);
 app.use("/api/instruments", instrumentsRoutes);
+app.use("/api/tickets", ticketsRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const MONGO_URI = process.env.MONGO_URI ?? "";
