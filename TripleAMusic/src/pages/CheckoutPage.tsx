@@ -235,6 +235,9 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         email: email.trim(),
         holderName: holderName.trim(),
+        // Include tier and seat info if available
+        tierId: item.tierId,
+        seatIds: item.seatIds,
       });
       setCheckoutSession(session);
       setFormSubmitted(true);

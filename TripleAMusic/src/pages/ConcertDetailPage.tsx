@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Gig } from "@shared";
-import { TripleAApiClient, Button } from "@shared";
+import type { Gig, TicketTier } from "@shared";
+import { TripleAApiClient, Button, SeatSelector } from "@shared";
+import type { SeatInfo, SectionInfo, TierInfo } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertDetailPage.module.scss";
-import { useCart } from "../context/CartContext";
+import { useCart, type CartItem } from "../context/CartContext";
 import {
   ChevronLeft,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Check,
   ShoppingCart,
   ArrowRight,
+  Armchair,
 } from "lucide-react";
 
 export default function ConcertDetailPage() {
@@ -34,8 +36,26 @@ export default function ConcertDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
 
+  // Seating state
+  const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([]);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [seatingData, setSeatingData] = useState<{
+    layout: {
+      seats: SeatInfo[];
+      sections: SectionInfo[];
+      stagePosition?: "top" | "bottom" | "left" | "right";
+    };
+    tiers: TierInfo[];
+  } | null>(null);
+  const [showSeatPicker, setShowSeatPicker] = useState(false);
+
   // Check if this concert is already in cart
   const inCart = items.find((item) => item.gigId === id);
+
+  // Is this a reserved seating event?
+  const isReservedSeating = concert?.seatingType === "reserved";
+  const hasTiers = concert?.hasTicketTiers && ticketTiers.length > 0;
 
   useEffect(() => {
     if (!id) return;
@@ -48,6 +68,48 @@ export default function ConcertDetailPage() {
       try {
         const data = await api.getPublicGig(id);
         if (!cancelled) setConcert(data);
+
+        // Fetch ticket tiers if available
+        if (data.hasTicketTiers) {
+          try {
+            const tiersData = await api.getGigTicketTiers(id);
+            if (!cancelled) {
+              setTicketTiers(tiersData.tiers as TicketTier[]);
+              // Pre-select first available tier
+              const firstAvailable = tiersData.tiers.find(
+                (t) => t.available && t.remaining > 0,
+              );
+              if (firstAvailable) {
+                setSelectedTier(firstAvailable.id);
+              }
+            }
+          } catch {
+            // Tiers not available
+          }
+        }
+
+        // Fetch seating data if reserved seating
+        if (data.seatingType === "reserved" && data.seatingLayoutId) {
+          try {
+            const seatsData = await api.getAvailableSeats(id);
+            if (!cancelled && seatsData.layout) {
+              setSeatingData({
+                layout: {
+                  seats: seatsData.layout.seats as SeatInfo[],
+                  sections: seatsData.layout.sections as SectionInfo[],
+                  stagePosition: seatsData.layout.stagePosition as
+                    | "top"
+                    | "bottom"
+                    | "left"
+                    | "right",
+                },
+                tiers: seatsData.tiers as TierInfo[],
+              });
+            }
+          } catch {
+            // Seating not available
+          }
+        }
       } catch (err) {
         if (!cancelled) setError("Concert not found");
       } finally {
@@ -61,12 +123,26 @@ export default function ConcertDetailPage() {
     };
   }, [api, id]);
 
+  // Get the effective ticket price
+  const getEffectivePrice = () => {
+    if (selectedTier && hasTiers) {
+      const tier = ticketTiers.find((t) => t.id === selectedTier);
+      return tier?.price ?? concert?.ticketPrice ?? 0;
+    }
+    return concert?.ticketPrice ?? 0;
+  };
+
   const handleAddToCart = () => {
     if (!concert) return;
 
+    const effectivePrice = getEffectivePrice();
+    const qty = isReservedSeating ? selectedSeats.length : quantity;
+
+    if (qty <= 0) return;
+
     // If already in cart, update quantity; otherwise add new item
     if (inCart) {
-      updateQuantity(concert.id, quantity);
+      updateQuantity(concert.id, qty);
     } else {
       addItem({
         gigId: concert.id,
@@ -75,9 +151,13 @@ export default function ConcertDetailPage() {
         gigTime: concert.time,
         locationName: concert.location?.name,
         locationId: concert.location?.id,
-        ticketPrice: concert.ticketPrice ?? 0,
-        quantity,
-      });
+        ticketPrice: effectivePrice,
+        quantity: qty,
+        // Include tier/seat info for checkout
+        tierId: selectedTier || undefined,
+        tierName: selectedTierInfo?.name,
+        seatIds: isReservedSeating ? selectedSeats : undefined,
+      } as CartItem);
     }
 
     setAddedToCart(true);
@@ -104,9 +184,16 @@ export default function ConcertDetailPage() {
     );
   }
 
-  const ticketPrice = concert.ticketPrice ?? 0;
+  const ticketPrice = getEffectivePrice();
   const isFree = ticketPrice === 0;
-  const total = ticketPrice * quantity;
+  const total =
+    ticketPrice * (isReservedSeating ? selectedSeats.length : quantity);
+  const effectiveQuantity = isReservedSeating ? selectedSeats.length : quantity;
+
+  // Get selected tier info
+  const selectedTierInfo = selectedTier
+    ? ticketTiers.find((t) => t.id === selectedTier)
+    : null;
 
   // Format date nicely
   const formattedDate = new Date(concert.date).toLocaleDateString("en-US", {
@@ -200,6 +287,48 @@ export default function ConcertDetailPage() {
 
           {/* Ticket purchase card */}
           <div className={styles.purchaseCard}>
+            {/* Tier Selection */}
+            {hasTiers && (
+              <div className={styles.tierSection}>
+                <h3 className={styles.sectionLabel}>Select ticket type</h3>
+                <div className={styles.tierList}>
+                  {ticketTiers.map((tier) => (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      className={`${styles.tierOption} ${selectedTier === tier.id ? styles.tierSelected : ""} ${!tier.available ? styles.tierSoldOut : ""}`}
+                      onClick={() => tier.available && setSelectedTier(tier.id)}
+                      disabled={!tier.available}
+                    >
+                      <div className={styles.tierInfo}>
+                        <span className={styles.tierName}>{tier.name}</span>
+                        {tier.description && (
+                          <span className={styles.tierDescription}>
+                            {tier.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.tierPriceCol}>
+                        <span className={styles.tierPrice}>${tier.price}</span>
+                        {!tier.available ? (
+                          <span className={styles.tierSoldOutLabel}>
+                            Sold out
+                          </span>
+                        ) : (
+                          tier.capacity !== null &&
+                          tier.capacity !== undefined && (
+                            <span className={styles.tierRemaining}>
+                              {tier.capacity - (tier.sold || 0)} left
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className={styles.priceDisplay}>
               {isFree ? (
                 <span className={styles.freeLabel}>Free</span>
@@ -207,38 +336,122 @@ export default function ConcertDetailPage() {
                 <>
                   <span className={styles.price}>${ticketPrice}</span>
                   <span className={styles.priceLabel}>/ ticket</span>
+                  {selectedTierInfo && (
+                    <span className={styles.tierTag}>
+                      {selectedTierInfo.name}
+                    </span>
+                  )}
                 </>
               )}
             </div>
 
-            <div className={styles.quantitySelector}>
-              <span className={styles.quantityLabel}>Tickets</span>
-              <div className={styles.quantityControls}>
-                <button
-                  type="button"
-                  className={styles.quantityButton}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                  aria-label="Decrease quantity"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className={styles.quantityValue}>{quantity}</span>
-                <button
-                  type="button"
-                  className={styles.quantityButton}
-                  onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                  disabled={quantity >= 10}
-                  aria-label="Increase quantity"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-            </div>
+            {/* Seat Selection for Reserved Seating */}
+            {isReservedSeating && seatingData ? (
+              <div className={styles.seatSelectionSection}>
+                <div className={styles.seatSelectionHeader}>
+                  <h3 className={styles.sectionLabel}>
+                    <Armchair size={18} />
+                    Select your seats
+                  </h3>
+                  {selectedSeats.length > 0 && (
+                    <span className={styles.selectedCount}>
+                      {selectedSeats.length} seat
+                      {selectedSeats.length > 1 ? "s" : ""} selected
+                    </span>
+                  )}
+                </div>
 
-            {!isFree && (
+                {showSeatPicker ? (
+                  <SeatSelector
+                    seats={seatingData.layout.seats}
+                    sections={seatingData.layout.sections}
+                    tiers={seatingData.tiers}
+                    selectedSeats={selectedSeats}
+                    onSelectSeat={(seatId) => {
+                      if (selectedSeats.includes(seatId)) {
+                        setSelectedSeats((prev) =>
+                          prev.filter((id) => id !== seatId),
+                        );
+                      } else if (selectedSeats.length < 10) {
+                        setSelectedSeats((prev) => [...prev, seatId]);
+                      }
+                    }}
+                    maxSelectable={10}
+                    stagePosition={seatingData.layout.stagePosition}
+                    className={styles.seatSelector}
+                  />
+                ) : (
+                  <Button
+                    onClick={() => setShowSeatPicker(true)}
+                    className={styles.chooseSeatButton}
+                  >
+                    <Armchair size={18} />
+                    Choose seats on map
+                  </Button>
+                )}
+
+                {selectedSeats.length > 0 && (
+                  <div className={styles.selectedSeatsList}>
+                    <span className={styles.selectedSeatsLabel}>Selected:</span>
+                    {selectedSeats.map((seatId) => {
+                      const seat = seatingData.layout.seats.find(
+                        (s) => s.id === seatId,
+                      );
+                      return (
+                        <span key={seatId} className={styles.selectedSeatChip}>
+                          {seat?.row}
+                          {seat?.number}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedSeats((prev) =>
+                                prev.filter((id) => id !== seatId),
+                              )
+                            }
+                            className={styles.removeSeatBtn}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Standard Quantity Selector for General Admission */
+              <div className={styles.quantitySelector}>
+                <span className={styles.quantityLabel}>Tickets</span>
+                <div className={styles.quantityControls}>
+                  <button
+                    type="button"
+                    className={styles.quantityButton}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className={styles.quantityValue}>{quantity}</span>
+                  <button
+                    type="button"
+                    className={styles.quantityButton}
+                    onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                    disabled={quantity >= 10}
+                    aria-label="Increase quantity"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isFree && effectiveQuantity > 0 && (
               <div className={styles.subtotalRow}>
-                <span>Subtotal</span>
+                <span>
+                  Subtotal ({effectiveQuantity} ticket
+                  {effectiveQuantity > 1 ? "s" : ""})
+                </span>
                 <span className={styles.subtotalPrice}>
                   ${total.toFixed(2)}
                 </span>
@@ -255,7 +468,13 @@ export default function ConcertDetailPage() {
               </div>
             )}
 
-            {inCart?.quantity === quantity ? (
+            {/* Disable add to cart if reserved seating and no seats selected */}
+            {isReservedSeating && selectedSeats.length === 0 ? (
+              <div className={styles.selectSeatsPrompt}>
+                <Armchair size={18} />
+                Select seats to continue
+              </div>
+            ) : inCart?.quantity === effectiveQuantity ? (
               addedToCart ? (
                 <div className={styles.matchedNotice}>
                   <Check size={16} />
@@ -285,7 +504,8 @@ export default function ConcertDetailPage() {
                 ) : inCart ? (
                   <>
                     <ShoppingCart size={18} />
-                    Update to {quantity} ticket{quantity > 1 ? "s" : ""}
+                    Update to {effectiveQuantity} ticket
+                    {effectiveQuantity > 1 ? "s" : ""}
                   </>
                 ) : (
                   <>

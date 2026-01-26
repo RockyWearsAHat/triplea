@@ -486,6 +486,12 @@ router.get("/gigs/:id", async (req: Request, res: Response) => {
         gigType: gig.gigType,
         openForTickets: (gig as any).openForTickets,
         ticketPrice: (gig as any).ticketPrice,
+        seatingType: (gig as any).seatingType,
+        seatCapacity: (gig as any).seatCapacity,
+        hasTicketTiers: (gig as any).hasTicketTiers,
+        seatingLayoutId: (gig as any).seatingLayoutId
+          ? String((gig as any).seatingLayoutId)
+          : undefined,
         location: location
           ? {
               id: location.id,
@@ -493,6 +499,7 @@ router.get("/gigs/:id", async (req: Request, res: Response) => {
               address: location.address,
               city: location.city,
               coordinates: location.coordinates,
+              seatCapacity: (location as any).seatCapacity,
               imageUrl: (location.images ?? []).length
                 ? `/api/public/locations/${location.id}/images/0`
                 : undefined,

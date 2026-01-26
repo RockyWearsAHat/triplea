@@ -421,3 +421,192 @@
 .successActions {
   margin-top: 24px;
 }
+
+/* Tier Selection */
+.tierSection {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tierList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tierOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+}
+
+.tierOption:hover:not(.tierSoldOut) {
+  border-color: var(--text-muted);
+}
+
+.tierSelected {
+  border-color: #e59d0d;
+  background: rgba(229, 157, 13, 0.05);
+}
+
+.tierSoldOut {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tierInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tierName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tierDescription {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tierPriceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.tierPrice {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tierRemaining {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tierSoldOutLabel {
+  font-size: 11px;
+  color: var(--error, #dc2626);
+  font-weight: 500;
+}
+
+.tierTag {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  margin-left: 8px;
+}
+
+/* Seat Selection Section */
+.seatSelectionSection {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.seatSelectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.seatSelectionHeader .sectionLabel {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selectedCount {
+  font-size: 13px;
+  color: #e59d0d;
+  font-weight: 600;
+}
+
+.chooseSeatButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.seatSelector {
+  margin-bottom: 16px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.selectedSeatsList {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.selectedSeatsLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.selectedSeatChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(229, 157, 13, 0.15);
+  border: 1px solid rgba(229, 157, 13, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: #e59d0d;
+}
+
+.removeSeatBtn {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 150ms ease;
+}
+
+.removeSeatBtn:hover {
+  opacity: 1;
+}
+
+.selectSeatsPrompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}

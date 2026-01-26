@@ -16,6 +16,10 @@ export interface CartItem {
   locationId?: string;
   ticketPrice: number;
   quantity: number;
+  // Seating & tier info for reserved seating / tiered events
+  tierId?: string;
+  tierName?: string;
+  seatIds?: string[];
 }
 
 interface CartContextValue {

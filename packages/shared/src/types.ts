@@ -101,10 +101,13 @@ export interface Location {
   imageCount?: number;
   imageUrl?: string;
   coordinates?: { lat: number; lng: number };
+  /** Maximum seat capacity set by the venue */
+  seatCapacity?: number;
 }
 
 export type GigStatus = "open" | "cancelled" | "filled";
 export type GigType = "musician-wanted" | "public-concert";
+export type SeatingType = "general_admission" | "reserved" | "mixed";
 
 export interface Gig {
   id: string;
@@ -120,6 +123,16 @@ export interface Gig {
   /** For public concerts: ticket price in dollars */
   ticketPrice?: number;
   location?: Location | null;
+  /** Type of seating arrangement */
+  seatingType?: SeatingType;
+  /** Seat capacity for this event */
+  seatCapacity?: number;
+  /** Whether the concert has multiple ticket tiers */
+  hasTicketTiers?: boolean;
+  /** Available ticket tiers for this event */
+  ticketTiers?: TicketTier[];
+  /** Seating layout ID for reserved seating */
+  seatingLayoutId?: string;
 }
 
 export type GigApplicationStatus = "pending" | "accepted" | "denied";
@@ -272,8 +285,91 @@ export interface CheckoutRequest {
   quantity: number;
   email: string;
   holderName: string;
+  /** Ticket tier ID if purchasing tiered tickets */
+  tierId?: string;
+  /** Selected seat IDs for reserved seating */
+  seatIds?: string[];
 }
 
 export interface FeeCalculationResult extends FeeBreakdown {
   isFree: boolean;
+}
+
+// Ticket Tier types
+export type TicketTierType =
+  | "general_admission"
+  | "reserved"
+  | "vip"
+  | "premium";
+
+export interface TicketTier {
+  id: string;
+  gigId: string;
+  name: string;
+  description?: string;
+  tierType: TicketTierType;
+  price: number;
+  capacity: number;
+  sold: number;
+  available: boolean;
+  sortOrder: number;
+  color?: string;
+  /** Calculated remaining tickets */
+  remaining?: number;
+}
+
+// Seating Layout types
+export interface Seat {
+  seatId: string;
+  row: string;
+  seatNumber: string;
+  section: string;
+  tierId?: string;
+  posX?: number;
+  posY?: number;
+  isAvailable: boolean;
+  accessibility?: string[];
+  /** Whether this specific seat is already sold */
+  isSold?: boolean;
+}
+
+export interface SeatingSection {
+  sectionId: string;
+  name: string;
+  color?: string;
+  defaultTierId?: string;
+  rows: string[];
+  seatsPerRow: number[];
+}
+
+export interface SeatingLayout {
+  id: string;
+  name: string;
+  locationId: string;
+  description?: string;
+  totalCapacity: number;
+  sections: SeatingSection[];
+  seats: Seat[];
+  stagePosition?: "top" | "bottom" | "left" | "right";
+}
+
+export interface SeatAssignment {
+  seatId: string;
+  section: string;
+  row: string;
+  seatNumber: string;
+}
+
+// Extended ticket type with seat assignments
+export interface TicketWithSeats extends Ticket {
+  tierId?: string;
+  tierName?: string;
+  seatAssignments?: SeatAssignment[];
+}
+
+// Available seats response
+export interface AvailableSeatsResponse {
+  layout: SeatingLayout;
+  soldSeatIds: string[];
+  tiers: TicketTier[];
 }

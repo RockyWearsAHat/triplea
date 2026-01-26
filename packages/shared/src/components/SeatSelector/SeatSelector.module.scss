@@ -1,0 +1,241 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+
+  &[data-position="top"] {
+    order: -1;
+    border-radius: 4px 4px 0 0;
+    border-bottom: 2px solid var(--color-gold);
+  }
+
+  &[data-position="bottom"] {
+    order: 999;
+    border-radius: 0 0 4px 4px;
+    border-top: 2px solid var(--color-gold);
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.legendSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px 0;
+  overflow-x: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 8px 0;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowLabel {
+  width: 24px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.seats {
+  display: flex;
+  gap: 4px;
+}
+
+.seat {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    opacity 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    transform: scale(1.1);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &[data-status="sold"] {
+    background: var(--color-surface-tertiary) !important;
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+  }
+
+  &[data-status="unavailable"] {
+    background: var(--color-surface-tertiary) !important;
+    cursor: not-allowed;
+  }
+
+  &[data-status="selected"] {
+    background: var(--color-gold) !important;
+    color: var(--color-text-on-gold, #000);
+    box-shadow:
+      0 0 0 2px var(--color-gold),
+      0 0 8px var(--color-gold);
+  }
+}
+
+.tooltip {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.tooltipPrice {
+  font-size: 12px;
+  margin: 4px 0 0 0;
+  color: var(--color-gold);
+}
+
+.tooltipSold {
+  font-size: 12px;
+  margin: 4px 0 0 0;
+  color: var(--color-error);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-surface-secondary);
+  border-radius: 6px;
+}
+
+.summaryCount {
+  font-size: 13px;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.selectedList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.summaryTotal {
+  font-size: 14px;
+  margin: 8px 0 0 0;
+  color: var(--color-text);
+
+  strong {
+    color: var(--color-gold);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .seat {
+    width: 24px;
+    height: 24px;
+    font-size: 9px;
+  }
+
+  .rowLabel {
+    width: 20px;
+    font-size: 10px;
+  }
+
+  .legend {
+    gap: 8px;
+  }
+
+  .legendItem {
+    font-size: 11px;
+  }
+
+  .legendSwatch {
+    width: 14px;
+    height: 14px;
+  }
+}

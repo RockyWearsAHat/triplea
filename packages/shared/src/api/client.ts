@@ -685,6 +685,8 @@ export class TripleAApiClient {
     quantity: number;
     email: string;
     holderName: string;
+    tierId?: string;
+    seatIds?: string[];
   }): Promise<TicketPurchaseResult> {
     return await this.request<TicketPurchaseResult>("/tickets/purchase", {
       method: "POST",
@@ -796,5 +798,259 @@ export class TripleAApiClient {
       method: "POST",
       body: JSON.stringify({ gigId, quantity }),
     });
+  }
+
+  // --- Seating & Tiers ---
+
+  async getGigTicketTiers(gigId: string): Promise<{
+    tiers: Array<{
+      id: string;
+      gigId: string;
+      name: string;
+      description?: string;
+      tierType: string;
+      price: number;
+      capacity: number;
+      sold: number;
+      remaining: number;
+      available: boolean;
+      sortOrder: number;
+      color?: string;
+    }>;
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/tiers`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async createTicketTier(
+    gigId: string,
+    params: {
+      name: string;
+      description?: string;
+      tierType?: string;
+      price: number;
+      capacity: number;
+      color?: string;
+      sortOrder?: number;
+    },
+  ): Promise<{
+    tier: {
+      id: string;
+      gigId: string;
+      name: string;
+      description?: string;
+      tierType: string;
+      price: number;
+      capacity: number;
+      sold: number;
+      remaining: number;
+      available: boolean;
+      sortOrder: number;
+      color?: string;
+    };
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/tiers`,
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  async updateTicketTier(
+    tierId: string,
+    updates: {
+      name?: string;
+      description?: string;
+      price?: number;
+      capacity?: number;
+      available?: boolean;
+      color?: string;
+      sortOrder?: number;
+    },
+  ): Promise<{
+    tier: {
+      id: string;
+      name: string;
+      price: number;
+      capacity: number;
+      sold: number;
+      remaining: number;
+      available: boolean;
+    };
+  }> {
+    return await this.request(`/seating/tiers/${encodeURIComponent(tierId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteTicketTier(tierId: string): Promise<{ success: boolean }> {
+    return await this.request(`/seating/tiers/${encodeURIComponent(tierId)}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getGigSeatingLayout(gigId: string): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+      stagePosition?: string;
+    } | null;
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/layout`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async getAvailableSeats(gigId: string): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        isSold?: boolean;
+      }>;
+      stagePosition?: string;
+    };
+    soldSeatIds: string[];
+    tiers: Array<{
+      id: string;
+      name: string;
+      price: number;
+      color?: string;
+      remaining: number;
+    }>;
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/available-seats`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async createSeatingLayout(
+    gigId: string,
+    params: {
+      name: string;
+      sections?: Array<{
+        name: string;
+        rows: number;
+        seatsPerRow: number;
+        tierId?: string;
+        color?: string;
+      }>;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      useSimpleLayout?: boolean;
+    },
+  ): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      totalCapacity: number;
+      sections: Array<{ sectionId: string; name: string }>;
+    };
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/layout`,
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  async updateGigSeatingConfig(
+    gigId: string,
+    config: {
+      seatingType?: "general_admission" | "reserved" | "mixed";
+      seatCapacity?: number;
+      ticketPrice?: number;
+    },
+  ): Promise<{
+    gig: {
+      id: string;
+      seatingType: string;
+      seatCapacity?: number;
+      ticketPrice?: number;
+      hasTicketTiers: boolean;
+      seatingLayoutId?: string;
+    };
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/config`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(config),
+      },
+    );
+  }
+
+  async updateLocationCapacity(
+    locationId: string,
+    seatCapacity: number,
+  ): Promise<{
+    location: {
+      id: string;
+      name: string;
+      seatCapacity: number;
+    };
+  }> {
+    return await this.request(
+      `/seating/locations/${encodeURIComponent(locationId)}/capacity`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ seatCapacity }),
+      },
+    );
   }
 }

@@ -3,6 +3,20 @@ import crypto from "crypto";
 
 export type TicketStatus = "valid" | "used" | "cancelled" | "expired";
 
+/**
+ * Individual seat assignment for a ticket
+ */
+export interface ISeatAssignment {
+  /** Seat ID from the seating layout */
+  seatId: string;
+  /** Section name */
+  section: string;
+  /** Row identifier */
+  row: string;
+  /** Seat number */
+  seatNumber: string;
+}
+
 export interface ITicket extends Document {
   /** The gig/concert this ticket is for */
   gigId: Types.ObjectId;
@@ -40,6 +54,12 @@ export interface ITicket extends Document {
   scannedByUserId: Types.ObjectId | null;
   /** Order/confirmation reference number */
   confirmationCode: string;
+  /** Ticket tier ID (for tiered pricing) */
+  tierId?: Types.ObjectId | null;
+  /** Tier name at time of purchase (for historical record) */
+  tierName?: string;
+  /** Assigned seats for reserved seating (one per ticket quantity) */
+  seatAssignments?: ISeatAssignment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +132,20 @@ const TicketSchema = new Schema<ITicket>(
       unique: true,
       index: true,
     },
+    tierId: {
+      type: Schema.Types.ObjectId,
+      ref: "TicketTier",
+      default: null,
+    },
+    tierName: { type: String },
+    seatAssignments: [
+      {
+        seatId: { type: String, required: true },
+        section: { type: String, required: true },
+        row: { type: String, required: true },
+        seatNumber: { type: String, required: true },
+      },
+    ],
   },
   { timestamps: true },
 );

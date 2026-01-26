@@ -1730,14 +1730,574 @@ function MyGigsPage() {
                   {g.date}
                   {g.time ? ` · ${g.time}` : ""} · Status: {g.status}
                 </p>
+                <p
+                  style={{
+                    marginTop: spacing.xs,
+                    fontSize: 13,
+                  }}
+                  className={ui.help}
+                >
+                  Seating:{" "}
+                  {g.seatingType === "reserved"
+                    ? "Reserved"
+                    : "General Admission"}
+                  {g.seatCapacity ? ` · ${g.seatCapacity} seats` : ""}
+                  {g.hasTicketTiers ? " · Tiered pricing" : ""}
+                </p>
               </div>
-              <Button onClick={() => navigate(`/gigs/${g.id}/applicants`)}>
-                Review applicants
-              </Button>
+              <div
+                style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}
+              >
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/gigs/${g.id}/seating`)}
+                >
+                  Configure seating
+                </Button>
+                <Button onClick={() => navigate(`/gigs/${g.id}/applicants`)}>
+                  Review applicants
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       )}
+    </AppShell>
+  );
+}
+
+/** Host seating configuration page */
+function GigSeatingConfigPage() {
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    [],
+  );
+  const { id } = useParams();
+  const gigId = id ?? "";
+  const navigate = useNavigate();
+
+  const [gig, setGig] = useState<Gig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Form state
+  const [seatingType, setSeatingType] = useState<
+    "general_admission" | "reserved"
+  >("general_admission");
+  const [seatCapacity, setSeatCapacity] = useState<number | "">("");
+  const [hasTicketTiers, setHasTicketTiers] = useState(false);
+
+  // Ticket tiers state
+  const [tiers, setTiers] = useState<
+    Array<{
+      id?: string;
+      name: string;
+      description: string;
+      tierType: "ga" | "vip" | "premium" | "reserved";
+      price: number;
+      capacity: number | null;
+    }>
+  >([]);
+  const [tierError, setTierError] = useState<string | null>(null);
+
+  // Load gig data
+  useEffect(() => {
+    if (!gigId) {
+      setError("Missing gig ID");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const fetchData = async () => {
+      try {
+        const gigData = await api.getPublicGig(gigId);
+        if (cancelled) return;
+        setGig(gigData);
+        setSeatingType(
+          (gigData.seatingType as "general_admission" | "reserved") ||
+            "general_admission",
+        );
+        setSeatCapacity(gigData.seatCapacity ?? "");
+        setHasTicketTiers(gigData.hasTicketTiers ?? false);
+
+        // Fetch tiers if gig has them
+        if (gigData.hasTicketTiers) {
+          try {
+            const tiersData = await api.getGigTicketTiers(gigId);
+            if (!cancelled && tiersData.tiers) {
+              setTiers(
+                tiersData.tiers.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  description: t.description || "",
+                  tierType: t.tierType as "ga" | "vip" | "premium" | "reserved",
+                  price: t.price,
+                  capacity: t.capacity,
+                })),
+              );
+            }
+          } catch {
+            // Tiers not available yet
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, gigId]);
+
+  // Save seating config
+  const handleSave = async () => {
+    if (!gigId) return;
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      await api.updateGigSeatingConfig(gigId, {
+        seatingType,
+        seatCapacity: seatCapacity === "" ? undefined : Number(seatCapacity),
+        hasTicketTiers,
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Add a new tier
+  const addTier = () => {
+    setTiers((prev) => [
+      ...prev,
+      {
+        name: "",
+        description: "",
+        tierType: "ga" as const,
+        price: 0,
+        capacity: null,
+      },
+    ]);
+  };
+
+  // Save a tier
+  const saveTier = async (index: number) => {
+    const tier = tiers[index];
+    if (!tier.name.trim()) {
+      setTierError("Tier name is required");
+      return;
+    }
+    setTierError(null);
+
+    try {
+      if (tier.id) {
+        // Update existing tier
+        await api.updateTicketTier(tier.id, {
+          name: tier.name,
+          description: tier.description,
+          tierType: tier.tierType,
+          price: tier.price,
+          capacity: tier.capacity,
+        });
+      } else {
+        // Create new tier
+        const result = await api.createTicketTier(gigId, {
+          name: tier.name,
+          description: tier.description,
+          tierType: tier.tierType,
+          price: tier.price,
+          capacity: tier.capacity,
+        });
+        // Update local state with the new ID
+        setTiers((prev) =>
+          prev.map((t, i) => (i === index ? { ...t, id: result.tier.id } : t)),
+        );
+      }
+    } catch (e) {
+      setTierError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Delete a tier
+  const deleteTier = async (index: number) => {
+    const tier = tiers[index];
+    if (tier.id) {
+      try {
+        await api.deleteTicketTier(tier.id);
+      } catch (e) {
+        setTierError(e instanceof Error ? e.message : String(e));
+        return;
+      }
+    }
+    setTiers((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  if (loading) {
+    return (
+      <AppShell title="Configure seating" subtitle="Loading...">
+        <p className={ui.help}>Loading gig details...</p>
+      </AppShell>
+    );
+  }
+
+  if (error || !gig) {
+    return (
+      <AppShell title="Configure seating" subtitle="Error">
+        <p className={ui.error}>{error || "Gig not found"}</p>
+        <Button variant="secondary" onClick={() => navigate("/my-gigs")}>
+          Back to my gigs
+        </Button>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell
+      title={`Configure: ${gig.title}`}
+      subtitle="Set seating type, capacity, and ticket tiers"
+    >
+      <div
+        className={ui.stack}
+        style={{ "--stack-gap": "24px", maxWidth: 600 } as React.CSSProperties}
+      >
+        {/* Seating Type */}
+        <Section title="Seating type">
+          <div style={{ display: "flex", gap: spacing.md, flexWrap: "wrap" }}>
+            <label
+              className={[ui.card, ui.cardPad].join(" ")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.sm,
+                cursor: "pointer",
+                border:
+                  seatingType === "general_admission"
+                    ? "2px solid #E59D0D"
+                    : undefined,
+                flex: 1,
+                minWidth: 200,
+              }}
+            >
+              <input
+                type="radio"
+                name="seatingType"
+                value="general_admission"
+                checked={seatingType === "general_admission"}
+                onChange={() => setSeatingType("general_admission")}
+              />
+              <div>
+                <p style={{ fontWeight: 600, margin: 0 }}>General Admission</p>
+                <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
+                  First-come, first-served. No reserved seats.
+                </p>
+              </div>
+            </label>
+            <label
+              className={[ui.card, ui.cardPad].join(" ")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.sm,
+                cursor: "pointer",
+                border:
+                  seatingType === "reserved" ? "2px solid #E59D0D" : undefined,
+                flex: 1,
+                minWidth: 200,
+              }}
+            >
+              <input
+                type="radio"
+                name="seatingType"
+                value="reserved"
+                checked={seatingType === "reserved"}
+                onChange={() => setSeatingType("reserved")}
+              />
+              <div>
+                <p style={{ fontWeight: 600, margin: 0 }}>Reserved Seating</p>
+                <p className={ui.help} style={{ margin: 0, fontSize: 13 }}>
+                  Customers select specific seats at checkout.
+                </p>
+              </div>
+            </label>
+          </div>
+        </Section>
+
+        {/* Seat Capacity */}
+        <Section title="Seat capacity">
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.sm,
+            }}
+          >
+            <input
+              type="number"
+              min={1}
+              value={seatCapacity}
+              onChange={(e) =>
+                setSeatCapacity(
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
+              }
+              placeholder="Enter total seats"
+              className={ui.input}
+              style={{ maxWidth: 200 }}
+            />
+            <p className={ui.help} style={{ fontSize: 13, margin: 0 }}>
+              Maximum number of tickets that can be sold. Leave empty for
+              unlimited.
+            </p>
+          </div>
+        </Section>
+
+        {/* Ticket Tiers */}
+        <Section title="Ticket tiers">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacing.sm,
+              marginBottom: spacing.md,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={hasTicketTiers}
+              onChange={(e) => setHasTicketTiers(e.target.checked)}
+            />
+            <span>Enable tiered pricing (GA, VIP, Premium, etc.)</span>
+          </label>
+
+          {hasTicketTiers && (
+            <div
+              className={ui.stack}
+              style={{ "--stack-gap": "12px" } as React.CSSProperties}
+            >
+              {tierError && <p className={ui.error}>{tierError}</p>}
+
+              {tiers.map((tier, index) => (
+                <div
+                  key={tier.id || index}
+                  className={[ui.card, ui.cardPad].join(" ")}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={tier.name}
+                      onChange={(e) =>
+                        setTiers((prev) =>
+                          prev.map((t, i) =>
+                            i === index ? { ...t, name: e.target.value } : t,
+                          ),
+                        )
+                      }
+                      placeholder="Tier name (e.g. VIP)"
+                      className={ui.input}
+                      style={{ flex: 1, minWidth: 120 }}
+                    />
+                    <select
+                      value={tier.tierType}
+                      onChange={(e) =>
+                        setTiers((prev) =>
+                          prev.map((t, i) =>
+                            i === index
+                              ? {
+                                  ...t,
+                                  tierType: e.target.value as
+                                    | "ga"
+                                    | "vip"
+                                    | "premium"
+                                    | "reserved",
+                                }
+                              : t,
+                          ),
+                        )
+                      }
+                      className={ui.input}
+                      style={{ width: 120 }}
+                    >
+                      <option value="ga">General</option>
+                      <option value="vip">VIP</option>
+                      <option value="premium">Premium</option>
+                      <option value="reserved">Reserved</option>
+                    </select>
+                  </div>
+                  <input
+                    type="text"
+                    value={tier.description}
+                    onChange={(e) =>
+                      setTiers((prev) =>
+                        prev.map((t, i) =>
+                          i === index
+                            ? { ...t, description: e.target.value }
+                            : t,
+                        ),
+                      )
+                    }
+                    placeholder="Description (optional)"
+                    className={ui.input}
+                  />
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <label
+                        style={{ fontSize: 12, color: "var(--text-muted)" }}
+                      >
+                        Price ($)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={tier.price}
+                        onChange={(e) =>
+                          setTiers((prev) =>
+                            prev.map((t, i) =>
+                              i === index
+                                ? { ...t, price: Number(e.target.value) }
+                                : t,
+                            ),
+                          )
+                        }
+                        className={ui.input}
+                        style={{ width: 100 }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <label
+                        style={{ fontSize: 12, color: "var(--text-muted)" }}
+                      >
+                        Capacity
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={tier.capacity ?? ""}
+                        onChange={(e) =>
+                          setTiers((prev) =>
+                            prev.map((t, i) =>
+                              i === index
+                                ? {
+                                    ...t,
+                                    capacity:
+                                      e.target.value === ""
+                                        ? null
+                                        : Number(e.target.value),
+                                  }
+                                : t,
+                            ),
+                          )
+                        }
+                        placeholder="Unlimited"
+                        className={ui.input}
+                        style={{ width: 100 }}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      marginTop: spacing.xs,
+                    }}
+                  >
+                    <Button size="sm" onClick={() => saveTier(index)}>
+                      {tier.id ? "Update" : "Save"} tier
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteTier(index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <Button variant="secondary" onClick={addTier}>
+                + Add tier
+              </Button>
+            </div>
+          )}
+        </Section>
+
+        {/* Save button */}
+        <div
+          style={{
+            display: "flex",
+            gap: spacing.md,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save configuration"}
+          </Button>
+          {saveSuccess && (
+            <span
+              style={{
+                color: "var(--success, #16a34a)",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              ✓ Saved!
+            </span>
+          )}
+          {saveError && <span className={ui.error}>{saveError}</span>}
+        </div>
+
+        <Button variant="ghost" onClick={() => navigate("/my-gigs")}>
+          ← Back to my gigs
+        </Button>
+      </div>
     </AppShell>
   );
 }
@@ -2037,6 +2597,14 @@ function App() {
                 element={
                   <RequireRole role="customer">
                     <GigApplicantsPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/gigs/:id/seating"
+                element={
+                  <RequireRole role="customer">
+                    <GigSeatingConfigPage />
                   </RequireRole>
                 }
               />

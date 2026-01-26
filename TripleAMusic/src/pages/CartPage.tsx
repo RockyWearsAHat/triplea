@@ -13,6 +13,8 @@ import {
   Trash2,
   ArrowRight,
   ChevronLeft,
+  Armchair,
+  Tag,
 } from "lucide-react";
 
 export default function CartPage() {
@@ -95,6 +97,18 @@ export default function CartPage() {
                       <span className={styles.metaItem}>
                         <MapPin size={14} />
                         {item.locationName}
+                      </span>
+                    )}
+                    {item.tierName && (
+                      <span className={styles.metaItem}>
+                        <Tag size={14} />
+                        {item.tierName}
+                      </span>
+                    )}
+                    {item.seatIds && item.seatIds.length > 0 && (
+                      <span className={styles.metaItem}>
+                        <Armchair size={14} />
+                        Seats: {item.seatIds.join(", ")}
                       </span>
                     )}
                   </div>

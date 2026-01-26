@@ -5,6 +5,8 @@ import { Ticket } from "../models/Ticket";
 import { Gig } from "../models/Gig";
 import { Location } from "../models/Location";
 import { User } from "../models/User";
+import { TicketTier } from "../models/TicketTier";
+import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
 
 const router: Router = express.Router();
@@ -13,12 +15,15 @@ const router: Router = express.Router();
 // POST /api/tickets/purchase
 router.post("/purchase", async (req: Request, res: Response) => {
   try {
-    const { gigId, quantity, email, holderName } = req.body as {
-      gigId: string;
-      quantity: number;
-      email: string;
-      holderName: string;
-    };
+    const { gigId, quantity, email, holderName, tierId, seatIds } =
+      req.body as {
+        gigId: string;
+        quantity: number;
+        email: string;
+        holderName: string;
+        tierId?: string;
+        seatIds?: string[];
+      };
 
     // Validate inputs
     if (!gigId || !email || !holderName) {
@@ -53,8 +58,89 @@ router.post("/purchase", async (req: Request, res: Response) => {
       ? new Types.ObjectId((req as any).userId)
       : null;
 
-    // Get ticket price (0 for free events)
-    const pricePerTicket = gig.ticketPrice ?? 0;
+    let pricePerTicket = gig.ticketPrice ?? 0;
+    let tier = null;
+    let tierName: string | undefined;
+
+    // Handle tiered pricing
+    if (tierId) {
+      tier = await TicketTier.findById(tierId).exec();
+      if (!tier) {
+        return res.status(404).json({ message: "Ticket tier not found" });
+      }
+      if (String(tier.gigId) !== gigId) {
+        return res
+          .status(400)
+          .json({ message: "Tier does not belong to this event" });
+      }
+      if (!tier.available) {
+        return res
+          .status(400)
+          .json({ message: "This ticket tier is not available" });
+      }
+      if (tier.sold + qty > tier.capacity) {
+        return res.status(400).json({
+          message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
+        });
+      }
+      pricePerTicket = tier.price;
+      tierName = tier.name;
+    }
+
+    // Handle reserved seating
+    let seatAssignments: Array<{
+      seatId: string;
+      section: string;
+      row: string;
+      seatNumber: string;
+    }> = [];
+
+    if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+      if (!seatIds || seatIds.length !== qty) {
+        return res.status(400).json({
+          message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
+        });
+      }
+
+      const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+      if (!layout) {
+        return res.status(500).json({ message: "Seating layout not found" });
+      }
+
+      // Verify all seats exist and are available
+      const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+
+      // Check for already sold seats
+      const existingTickets = await Ticket.find({
+        gigId: gig._id,
+        status: { $in: ["valid", "used"] },
+        "seatAssignments.seatId": { $in: seatIds },
+      }).exec();
+
+      if (existingTickets.length > 0) {
+        return res.status(400).json({
+          message: "One or more selected seats are no longer available",
+        });
+      }
+
+      for (const seatId of seatIds) {
+        const seat = seatMap.get(seatId);
+        if (!seat) {
+          return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+        }
+        if (!seat.isAvailable) {
+          return res.status(400).json({
+            message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+          });
+        }
+        seatAssignments.push({
+          seatId: seat.seatId,
+          section: seat.section,
+          row: seat.row,
+          seatNumber: seat.seatNumber,
+        });
+      }
+    }
 
     // Create the ticket
     const ticket = await (Ticket as any).createTicket({
@@ -65,6 +151,19 @@ router.post("/purchase", async (req: Request, res: Response) => {
       quantity: qty,
       pricePerTicket,
     });
+
+    // Add tier and seat information if applicable
+    if (tier) {
+      ticket.tierId = tier._id;
+      ticket.tierName = tierName;
+      // Increment sold count
+      tier.sold += qty;
+      await tier.save();
+    }
+    if (seatAssignments.length > 0) {
+      ticket.seatAssignments = seatAssignments;
+    }
+    await ticket.save();
 
     // Get location for email
     const location = gig.locationId
@@ -89,6 +188,9 @@ router.post("/purchase", async (req: Request, res: Response) => {
         status: ticket.status,
         holderName: ticket.holderName,
         email: ticket.email,
+        tierId: ticket.tierId ? String(ticket.tierId) : null,
+        tierName: ticket.tierName,
+        seatAssignments: ticket.seatAssignments,
         createdAt: ticket.createdAt,
       },
     });

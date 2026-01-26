@@ -13,6 +13,8 @@ export interface ILocation extends Document {
   images: IStoredImage[];
   createdByUserId?: Types.ObjectId;
   coordinates?: { lat: number; lng: number };
+  /** Maximum seat capacity set by the venue */
+  seatCapacity?: number;
 }
 
 const StoredImageSchema = new Schema<IStoredImage>(
@@ -35,6 +37,7 @@ const LocationSchema = new Schema<ILocation>(
       type: { lat: { type: Number }, lng: { type: Number } },
       default: undefined,
     },
+    seatCapacity: { type: Number, min: 0 },
   },
   { timestamps: true },
 );

@@ -5,6 +5,8 @@ import { Types } from "mongoose";
 import { Ticket } from "../models/Ticket";
 import { Gig } from "../models/Gig";
 import { Location } from "../models/Location";
+import { TicketTier } from "../models/TicketTier";
+import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
 
 const router: Router = express.Router();
@@ -57,12 +59,15 @@ export function calculateFees(subtotalCents: number): {
  */
 router.post("/create-checkout", async (req: Request, res: Response) => {
   try {
-    const { gigId, quantity, email, holderName } = req.body as {
-      gigId: string;
-      quantity: number;
-      email: string;
-      holderName: string;
-    };
+    const { gigId, quantity, email, holderName, tierId, seatIds } =
+      req.body as {
+        gigId: string;
+        quantity: number;
+        email: string;
+        holderName: string;
+        tierId?: string;
+        seatIds?: string[];
+      };
 
     // Validate inputs
     if (!gigId || !email || !holderName) {
@@ -96,7 +101,75 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         .json({ message: "Tickets are not available for this event" });
     }
 
-    const pricePerTicket = gig.ticketPrice ?? 0;
+    let pricePerTicket = gig.ticketPrice ?? 0;
+    let tier = null;
+    let tierName: string | undefined;
+
+    // Handle tiered pricing
+    if (tierId) {
+      tier = await TicketTier.findById(tierId).exec();
+      if (!tier) {
+        return res.status(404).json({ message: "Ticket tier not found" });
+      }
+      if (String(tier.gigId) !== gigId) {
+        return res
+          .status(400)
+          .json({ message: "Tier does not belong to this event" });
+      }
+      if (!tier.available) {
+        return res
+          .status(400)
+          .json({ message: "This ticket tier is not available" });
+      }
+      if (tier.sold + qty > tier.capacity) {
+        return res.status(400).json({
+          message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
+        });
+      }
+      pricePerTicket = tier.price;
+      tierName = tier.name;
+    }
+
+    // Validate reserved seating
+    if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+      if (!seatIds || seatIds.length !== qty) {
+        return res.status(400).json({
+          message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
+        });
+      }
+
+      const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+      if (!layout) {
+        return res.status(500).json({ message: "Seating layout not found" });
+      }
+
+      // Verify all seats exist
+      const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+      for (const seatId of seatIds) {
+        const seat = seatMap.get(seatId);
+        if (!seat) {
+          return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+        }
+        if (!seat.isAvailable) {
+          return res.status(400).json({
+            message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+          });
+        }
+      }
+
+      // Check for already sold seats
+      const existingTickets = await Ticket.find({
+        gigId: gig._id,
+        status: { $in: ["valid", "used"] },
+        "seatAssignments.seatId": { $in: seatIds },
+      }).exec();
+
+      if (existingTickets.length > 0) {
+        return res.status(400).json({
+          message: "One or more selected seats are no longer available",
+        });
+      }
+    }
 
     // For free events, skip Stripe
     if (pricePerTicket === 0) {
@@ -130,9 +203,12 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         subtotalCents: fees.subtotal.toString(),
         serviceFeeCents: fees.serviceFee.toString(),
         stripeFeeCents: fees.stripeFee.toString(),
+        tierId: tierId || "",
+        tierName: tierName || "",
+        seatIds: seatIds ? JSON.stringify(seatIds) : "",
       },
       receipt_email: email,
-      description: `${qty} ticket(s) to ${gig.title}${location?.name ? ` at ${location.name}` : ""}`,
+      description: `${qty} ticket(s) to ${gig.title}${tierName ? ` (${tierName})` : ""}${location?.name ? ` at ${location.name}` : ""}`,
     });
 
     return res.json({
@@ -149,11 +225,19 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         title: gig.title,
         date: gig.date,
         time: gig.time,
+        seatingType: gig.seatingType,
       },
       location: location
         ? {
             id: location.id,
             name: location.name,
+          }
+        : null,
+      tier: tier
+        ? {
+            id: tier.id,
+            name: tier.name,
+            price: tier.price,
           }
         : null,
     });
@@ -204,6 +288,9 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
           status: existingTicket.status,
           holderName: existingTicket.holderName,
           email: existingTicket.email,
+          tierId: existingTicket.tierId ? String(existingTicket.tierId) : null,
+          tierName: existingTicket.tierName,
+          seatAssignments: existingTicket.seatAssignments,
           createdAt: existingTicket.createdAt,
         },
       });
@@ -218,6 +305,9 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
       pricePerTicketCents,
       serviceFeeCents,
       stripeFeeCents,
+      tierId,
+      tierName,
+      seatIds: seatIdsJson,
     } = paymentIntent.metadata;
 
     const qty = Number(quantity) || 1;
@@ -225,11 +315,40 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
     const serviceFee = Number(serviceFeeCents) / 100;
     const stripeFee = Number(stripeFeeCents) / 100;
     const totalPaid = paymentIntent.amount / 100;
+    const seatIds = seatIdsJson ? JSON.parse(seatIdsJson) : [];
 
     // Get user if authenticated
     const userId = (req as any).userId
       ? new Types.ObjectId((req as any).userId)
       : null;
+
+    // Build seat assignments if applicable
+    let seatAssignments: Array<{
+      seatId: string;
+      section: string;
+      row: string;
+      seatNumber: string;
+    }> = [];
+
+    const gig = await Gig.findById(gigId).exec();
+
+    if (gig?.seatingLayoutId && seatIds.length > 0) {
+      const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+      if (layout) {
+        const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+        for (const seatId of seatIds) {
+          const seat = seatMap.get(seatId);
+          if (seat) {
+            seatAssignments.push({
+              seatId: seat.seatId,
+              section: seat.section,
+              row: seat.row,
+              seatNumber: seat.seatNumber,
+            });
+          }
+        }
+      }
+    }
 
     // Create the ticket with Stripe payment info
     const ticket = await (Ticket as any).createTicketWithPayment({
@@ -245,8 +364,23 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
       stripePaymentIntentId: paymentIntentId,
     });
 
-    // Get gig and location for email
-    const gig = await Gig.findById(gigId).exec();
+    // Add tier and seat information
+    if (tierId) {
+      ticket.tierId = new Types.ObjectId(tierId);
+      ticket.tierName = tierName;
+      // Update tier sold count
+      const tier = await TicketTier.findById(tierId).exec();
+      if (tier) {
+        tier.sold += qty;
+        await tier.save();
+      }
+    }
+    if (seatAssignments.length > 0) {
+      ticket.seatAssignments = seatAssignments;
+    }
+    await ticket.save();
+
+    // Get location for email
     const location = gig?.locationId
       ? await Location.findById(gig.locationId).exec()
       : null;
@@ -273,6 +407,9 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
         status: ticket.status,
         holderName: ticket.holderName,
         email: ticket.email,
+        tierId: ticket.tierId ? String(ticket.tierId) : null,
+        tierName: ticket.tierName,
+        seatAssignments: ticket.seatAssignments,
         createdAt: ticket.createdAt,
       },
     });
