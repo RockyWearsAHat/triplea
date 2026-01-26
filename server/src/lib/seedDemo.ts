@@ -59,43 +59,38 @@ function locationFromFilename(filename: string): {
 } {
   const f = filename.toLowerCase();
 
-  // Map seed images to real venue data
+  // Map seed images to real venue data that Google Maps can find
   if (f.includes("seattle") || f.includes("stadium")) {
     return {
-      name: "Lumen Field Event Center",
-      city: "Seattle",
-      address: "800 Occidental Ave S, Seattle, WA 98134",
-      coordinates: { lat: 47.5952, lng: -122.3316 },
+      name: "The Depot",
+      city: "Salt Lake City",
+      address: "13 N 400 W, Salt Lake City, UT 84101",
+      coordinates: { lat: 40.7683, lng: -111.9011 },
     };
   }
   if (f.includes("fitch") || f.includes("popup")) {
     return {
-      name: "Fitch Popup Stage",
-      city: "Los Angeles",
-      address: "6801 Hollywood Blvd, Los Angeles, CA 90028",
-      coordinates: { lat: 34.1017, lng: -118.3406 },
+      name: "Metro Music Hall",
+      city: "Salt Lake City",
+      address: "615 W 100 S, Salt Lake City, UT 84101",
+      coordinates: { lat: 40.7663, lng: -111.9023 },
     };
   }
   if (f.includes("small")) {
     return {
-      name: "The Mint LA",
-      city: "Los Angeles",
-      address: "6010 W Pico Blvd, Los Angeles, CA 90035",
-      coordinates: { lat: 34.0522, lng: -118.3664 },
+      name: "Urban Lounge",
+      city: "Salt Lake City",
+      address: "241 S 500 E, Salt Lake City, UT 84102",
+      coordinates: { lat: 40.7631, lng: -111.8759 },
     };
   }
 
-  // Fallback for unknown images
-  const base = filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-  const name = base
-    .split(" ")
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(" ");
+  // Fallback for unknown images - use a real venue
   return {
-    name,
-    city: "Los Angeles",
-    address: "6801 Hollywood Blvd, Los Angeles, CA 90028",
-    coordinates: { lat: 34.1017, lng: -118.3406 },
+    name: "The Complex",
+    city: "Salt Lake City",
+    address: "536 W 100 S, Salt Lake City, UT 84101",
+    coordinates: { lat: 40.7663, lng: -111.9008 },
   };
 }
 
