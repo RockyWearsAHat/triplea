@@ -242,3 +242,38 @@ export interface TicketScanResult {
     time?: string;
   } | null;
 }
+
+// Stripe / Payment types
+export interface FeeBreakdown {
+  subtotal: number;
+  serviceFee: number;
+  stripeFee: number;
+  total: number;
+}
+
+export interface CheckoutSession {
+  clientSecret: string;
+  paymentIntentId: string;
+  fees: FeeBreakdown;
+  gig: {
+    id: string;
+    title: string;
+    date: string;
+    time?: string;
+  };
+  location?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface CheckoutRequest {
+  gigId: string;
+  quantity: number;
+  email: string;
+  holderName: string;
+}
+
+export interface FeeCalculationResult extends FeeBreakdown {
+  isFree: boolean;
+}

@@ -18,6 +18,14 @@ export interface ITicket extends Document {
   pricePerTicket: number;
   /** Total amount paid */
   totalPaid: number;
+  /** 1% platform service fee */
+  serviceFee: number;
+  /** Stripe processing fee */
+  stripeFee: number;
+  /** Stripe Payment Intent ID */
+  stripePaymentIntentId: string | null;
+  /** Payment status */
+  paymentStatus: "pending" | "completed" | "failed" | "refunded";
   /** Ticket status */
   status: TicketStatus;
   /** Current QR code token - rotates periodically for security */
@@ -75,6 +83,14 @@ const TicketSchema = new Schema<ITicket>(
     quantity: { type: Number, required: true, min: 1 },
     pricePerTicket: { type: Number, required: true, min: 0 },
     totalPaid: { type: Number, required: true, min: 0 },
+    serviceFee: { type: Number, default: 0, min: 0 },
+    stripeFee: { type: Number, default: 0, min: 0 },
+    stripePaymentIntentId: { type: String, default: null, index: true },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "completed", "failed", "refunded"],
+      default: "completed",
+    },
     status: {
       type: String,
       enum: ["valid", "used", "cancelled", "expired"],
@@ -144,6 +160,49 @@ TicketSchema.statics.createTicket = async function (params: {
     quantity: params.quantity,
     pricePerTicket: params.pricePerTicket,
     totalPaid: params.pricePerTicket * params.quantity,
+    serviceFee: 0,
+    stripeFee: 0,
+    stripePaymentIntentId: null,
+    paymentStatus: "completed",
+    status: "valid",
+    qrToken,
+    qrTokenExpiresAt: new Date(Date.now() + 30 * 1000),
+    qrSecret,
+    confirmationCode,
+  });
+
+  return ticket.save();
+};
+
+// Static method for creating tickets with Stripe payment
+TicketSchema.statics.createTicketWithPayment = async function (params: {
+  gigId: Types.ObjectId;
+  userId: Types.ObjectId | null;
+  email: string;
+  holderName: string;
+  quantity: number;
+  pricePerTicket: number;
+  totalPaid: number;
+  serviceFee: number;
+  stripeFee: number;
+  stripePaymentIntentId: string;
+}) {
+  const qrToken = generateQrToken();
+  const qrSecret = generateQrSecret();
+  const confirmationCode = generateConfirmationCode();
+
+  const ticket = new this({
+    gigId: params.gigId,
+    userId: params.userId,
+    email: params.email,
+    holderName: params.holderName,
+    quantity: params.quantity,
+    pricePerTicket: params.pricePerTicket,
+    totalPaid: params.totalPaid,
+    serviceFee: params.serviceFee,
+    stripeFee: params.stripeFee,
+    stripePaymentIntentId: params.stripePaymentIntentId,
+    paymentStatus: "completed",
     status: "valid",
     qrToken,
     qrTokenExpiresAt: new Date(Date.now() + 30 * 1000),

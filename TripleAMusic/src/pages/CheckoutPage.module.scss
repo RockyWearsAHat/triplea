@@ -1,0 +1,330 @@
+.container {
+  min-height: 100vh;
+  padding: clamp(16px, 4vw, 40px);
+  background: var(--background);
+}
+
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorState h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.layout {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr 400px;
+    gap: 40px;
+  }
+}
+
+.pageTitle {
+  margin: 0 0 24px;
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+}
+
+/* Event Card */
+.eventCard {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.eventTitle {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.eventMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.eventMeta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ticket Info */
+.ticketInfo {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.ticketRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ticketRow:last-child {
+  border-bottom: none;
+}
+
+.ticketRow span:first-child {
+  color: var(--text-secondary);
+}
+
+.ticketRow span:last-child {
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fees Breakdown */
+.feesBreakdown {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.feesTitle {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.feeRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.feeRow:last-child {
+  border-bottom: none;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0 0;
+  margin-top: 8px;
+  border-top: 2px solid var(--border);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.totalAmount {
+  color: var(--gold);
+  font-size: 20px;
+}
+
+.disclaimer {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+.disclaimer strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Payment Section */
+.paymentSection {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border);
+  height: fit-content;
+}
+
+@media (min-width: 768px) {
+  .paymentSection {
+    position: sticky;
+    top: 90px;
+  }
+}
+
+.paymentTitle {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.paymentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.payButton {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--gold);
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+  margin-top: 8px;
+}
+
+.payButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.payButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.payButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  width: 100%;
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.securityNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.lockIcon {
+  font-size: 14px;
+}
+
+/* Customer Info Form */
+.formSubtitle {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.customerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formField label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.formField input {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--text);
+  font-size: 15px;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.formField input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(229, 157, 13, 0.15);
+}
+
+.formField input::placeholder {
+  color: var(--text-muted);
+}
+
+.formField input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Event tickets in checkout summary */
+.eventTickets {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}

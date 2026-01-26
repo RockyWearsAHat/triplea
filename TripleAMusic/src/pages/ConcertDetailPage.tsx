@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Gig } from "@shared";
-import { TripleAApiClient, Button, useAuth } from "@shared";
+import { TripleAApiClient, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertDetailPage.module.scss";
+import { useCart } from "../context/CartContext";
 
 export default function ConcertDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { addItem, items } = useCart();
   const api = useMemo(
     () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
     [],
@@ -18,14 +19,12 @@ export default function ConcertDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Ticket purchase state
+  // Ticket selection state
   const [quantity, setQuantity] = useState(1);
-  const [purchasing, setPurchasing] = useState(false);
-  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [addedToCart, setAddedToCart] = useState(false);
 
-  // Form fields for guest checkout
-  const [holderName, setHolderName] = useState("");
-  const [email, setEmail] = useState("");
+  // Check if this concert is already in cart
+  const inCart = items.find((item) => item.gigId === id);
 
   useEffect(() => {
     if (!id) return;
@@ -51,48 +50,26 @@ export default function ConcertDetailPage() {
     };
   }, [api, id]);
 
-  // Pre-fill form if user is logged in
-  useEffect(() => {
-    if (user) {
-      setHolderName(user.name);
-      setEmail(user.email);
-    }
-  }, [user]);
-
-  const handlePurchase = async () => {
+  const handleAddToCart = () => {
     if (!concert) return;
 
-    // Validate form
-    if (!holderName.trim()) {
-      setPurchaseError("Please enter your name");
-      return;
-    }
-    if (!email.trim() || !email.includes("@")) {
-      setPurchaseError("Please enter a valid email address");
-      return;
-    }
+    addItem({
+      gigId: concert.id,
+      gigTitle: concert.title,
+      gigDate: concert.date,
+      gigTime: concert.time,
+      locationName: concert.location?.name,
+      locationId: concert.location?.id,
+      ticketPrice: concert.ticketPrice ?? 0,
+      quantity,
+    });
 
-    setPurchasing(true);
-    setPurchaseError(null);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
 
-    try {
-      const result = await api.purchaseTickets({
-        gigId: concert.id,
-        quantity,
-        email: email.trim(),
-        holderName: holderName.trim(),
-      });
-
-      // Redirect to confirmation page
-      navigate(`/tickets/${result.ticket.confirmationCode}`);
-    } catch (err) {
-      setPurchaseError(
-        err instanceof Error
-          ? err.message
-          : "Purchase failed. Please try again.",
-      );
-      setPurchasing(false);
-    }
+  const handleGoToCart = () => {
+    navigate("/cart");
   };
 
   if (loading) {
@@ -247,64 +224,56 @@ export default function ConcertDetailPage() {
             </div>
 
             {!isFree && (
-              <div className={styles.totalRow}>
-                <span>Total</span>
-                <span className={styles.totalPrice}>${total.toFixed(2)}</span>
+              <div className={styles.subtotalRow}>
+                <span>Subtotal</span>
+                <span className={styles.subtotalPrice}>
+                  ${total.toFixed(2)}
+                </span>
               </div>
             )}
 
-            {/* Checkout form */}
-            <div className={styles.checkoutForm}>
-              <div className={styles.formField}>
-                <label htmlFor="holderName">Your name</label>
-                <input
-                  id="holderName"
-                  type="text"
-                  value={holderName}
-                  onChange={(e) => setHolderName(e.target.value)}
-                  placeholder="Full name on ticket"
-                  disabled={purchasing}
-                />
+            {inCart ? (
+              <div className={styles.cartActions}>
+                <p className={styles.inCartNotice}>
+                  ✓ {inCart.quantity} ticket{inCart.quantity > 1 ? "s" : ""} in
+                  cart
+                </p>
+                <button
+                  type="button"
+                  className={styles.purchaseButton}
+                  onClick={handleGoToCart}
+                >
+                  View Cart
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={handleAddToCart}
+                >
+                  Add {quantity} more
+                </button>
               </div>
-              <div className={styles.formField}>
-                <label htmlFor="email">Email address</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Where to send your tickets"
-                  disabled={purchasing}
-                />
-              </div>
-            </div>
-
-            {purchaseError && (
-              <p className={ui.error} style={{ marginBottom: 12 }}>
-                {purchaseError}
-              </p>
+            ) : (
+              <button
+                type="button"
+                className={styles.purchaseButton}
+                onClick={handleAddToCart}
+              >
+                {addedToCart
+                  ? "✓ Added to cart!"
+                  : isFree
+                    ? "Add to cart"
+                    : `Add to cart · $${total.toFixed(2)}`}
+              </button>
             )}
-
-            <button
-              type="button"
-              className={styles.purchaseButton}
-              onClick={handlePurchase}
-              disabled={purchasing || !holderName.trim() || !email.trim()}
-            >
-              {purchasing
-                ? "Processing…"
-                : isFree
-                  ? "Reserve tickets"
-                  : `Purchase for $${total.toFixed(2)}`}
-            </button>
 
             <p
               className={ui.help}
               style={{ textAlign: "center", marginTop: 12 }}
             >
               {isFree
-                ? "No payment required. You'll receive a confirmation email."
-                : "Secure checkout powered by Stripe."}
+                ? "No payment required for free events."
+                : "Fees calculated at checkout."}
             </p>
           </div>
         </div>

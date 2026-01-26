@@ -34,6 +34,9 @@ import ConcertDetailPage from "./pages/ConcertDetailPage";
 import TicketConfirmationPage from "./pages/TicketConfirmationPage";
 import MyTicketsPage from "./pages/MyTicketsPage";
 import TicketScannerPage from "./pages/TicketScannerPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import CartPage from "./pages/CartPage";
+import { CartProvider } from "./context/CartContext";
 
 import { ChatInbox } from "@shared";
 
@@ -1917,124 +1920,131 @@ function GigApplicantsPage() {
 
 function App() {
   return (
-    <AppFrame app="music">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        <div className={ui.chrome}>
-          <header className={ui.header}>
-            <h1 className={[ui.title, ui.brandTitle].join(" ")}>
-              <span className={ui.brandDot} aria-hidden />
-              Triple A Music
-            </h1>
-            <p className={ui.subtitle}>Concert marketplace</p>
-          </header>
-          <NavBar />
-        </div>
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <Routes>
-            <Route path="/" element={<ConcertMarketplacePage />} />
-            <Route path="/concerts/:id" element={<ConcertDetailPage />} />
-            <Route path="/tickets/:code" element={<TicketConfirmationPage />} />
-            <Route path="/browse" element={<BrowsePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <RequireRole role="customer">
-                  <CustomerDashboardPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/events"
-              element={
-                <RequireRole role="customer">
-                  <EventsPage />
-                </RequireRole>
-              }
-            />
+    <CartProvider>
+      <AppFrame app="music">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          <div className={ui.chrome}>
+            <header className={ui.header}>
+              <h1 className={[ui.title, ui.brandTitle].join(" ")}>
+                <span className={ui.brandDot} aria-hidden />
+                Triple A Music
+              </h1>
+              <p className={ui.subtitle}>Concert marketplace</p>
+            </header>
+            <NavBar />
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <Routes>
+              <Route path="/" element={<ConcertMarketplacePage />} />
+              <Route path="/concerts/:id" element={<ConcertDetailPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route
+                path="/tickets/:code"
+                element={<TicketConfirmationPage />}
+              />
+              <Route path="/browse" element={<BrowsePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireRole role="customer">
+                    <CustomerDashboardPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/events"
+                element={
+                  <RequireRole role="customer">
+                    <EventsPage />
+                  </RequireRole>
+                }
+              />
 
-            <Route
-              path="/tickets"
-              element={
-                <RequireRole role="customer">
-                  <TicketsPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/my-tickets"
-              element={
-                <RequireRole role="customer">
-                  <MyTicketsPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/scan-tickets"
-              element={
-                <RequireRole role="customer">
-                  <TicketScannerPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/messages"
-              element={
-                <RequireAnyRole
-                  roles={["customer", "musician", "rental_provider", "admin"]}
-                >
-                  <MessagesPage />
-                </RequireAnyRole>
-              }
-            />
-            <Route
-              path="/ratings"
-              element={
-                <RequireRole role="customer">
-                  <RatingsPage />
-                </RequireRole>
-              }
-            />
-            {/*
-            <Route
-              path="/post-gig"
-              element={
-                <RequireRole role="customer">
-                  <PostGigPage />
-                </RequireRole>
-              }
-            />
-            */}
-            <Route
-              path="/my-gigs"
-              element={
-                <RequireRole role="customer">
-                  <MyGigsPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/gigs/:id/applicants"
-              element={
-                <RequireRole role="customer">
-                  <GigApplicantsPage />
-                </RequireRole>
-              }
-            />
-          </Routes>
+              <Route
+                path="/tickets"
+                element={
+                  <RequireRole role="customer">
+                    <TicketsPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/my-tickets"
+                element={
+                  <RequireRole role="customer">
+                    <MyTicketsPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/scan-tickets"
+                element={
+                  <RequireRole role="customer">
+                    <TicketScannerPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/messages"
+                element={
+                  <RequireAnyRole
+                    roles={["customer", "musician", "rental_provider", "admin"]}
+                  >
+                    <MessagesPage />
+                  </RequireAnyRole>
+                }
+              />
+              <Route
+                path="/ratings"
+                element={
+                  <RequireRole role="customer">
+                    <RatingsPage />
+                  </RequireRole>
+                }
+              />
+              {/*
+              <Route
+                path="/post-gig"
+                element={
+                  <RequireRole role="customer">
+                    <PostGigPage />
+                  </RequireRole>
+                }
+              />
+              */}
+              <Route
+                path="/my-gigs"
+                element={
+                  <RequireRole role="customer">
+                    <MyGigsPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/gigs/:id/applicants"
+                element={
+                  <RequireRole role="customer">
+                    <GigApplicantsPage />
+                  </RequireRole>
+                }
+              />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </AppFrame>
+      </AppFrame>
+    </CartProvider>
   );
 }
 

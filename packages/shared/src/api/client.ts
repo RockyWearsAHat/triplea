@@ -22,6 +22,9 @@ import type {
   TicketPurchaseResult,
   TicketQrResult,
   TicketScanResult,
+  CheckoutSession,
+  CheckoutRequest,
+  FeeCalculationResult,
 } from "../types";
 
 export interface ApiClientConfig {
@@ -764,6 +767,34 @@ export class TripleAApiClient {
   }> {
     return await this.request(`/tickets/gig/${encodeURIComponent(gigId)}`, {
       method: "GET",
+    });
+  }
+
+  // --- Stripe / Payments ---
+
+  async createCheckoutSession(
+    params: CheckoutRequest,
+  ): Promise<CheckoutSession> {
+    return await this.request<CheckoutSession>("/stripe/create-checkout", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async confirmPayment(paymentIntentId: string): Promise<TicketPurchaseResult> {
+    return await this.request<TicketPurchaseResult>("/stripe/confirm-payment", {
+      method: "POST",
+      body: JSON.stringify({ paymentIntentId }),
+    });
+  }
+
+  async calculateFees(
+    gigId: string,
+    quantity: number,
+  ): Promise<FeeCalculationResult> {
+    return await this.request<FeeCalculationResult>("/stripe/calculate-fees", {
+      method: "POST",
+      body: JSON.stringify({ gigId, quantity }),
     });
   }
 }
