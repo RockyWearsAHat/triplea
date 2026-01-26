@@ -201,7 +201,7 @@ function LoginPage() {
             Looking to perform?{" "}
             <a
               href={`${MUSICIAN_ORIGIN}/login`}
-              style={{ color: "var(--gold)", textDecoration: "underline" }}
+              style={{ color: "var(--primary)", textDecoration: "underline" }}
             >
               Sign up or login to the musician portal here
             </a>

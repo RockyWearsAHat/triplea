@@ -793,10 +793,11 @@ export class TripleAApiClient {
   async calculateFees(
     gigId: string,
     quantity: number,
+    tierId?: string,
   ): Promise<FeeCalculationResult> {
     return await this.request<FeeCalculationResult>("/stripe/calculate-fees", {
       method: "POST",
-      body: JSON.stringify({ gigId, quantity }),
+      body: JSON.stringify({ gigId, quantity, tierId }),
     });
   }
 

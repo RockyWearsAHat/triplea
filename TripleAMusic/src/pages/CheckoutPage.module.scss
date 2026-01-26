@@ -1,7 +1,7 @@
 .container {
   min-height: 100vh;
   padding: clamp(16px, 4vw, 40px);
-  background: var(--background);
+  background: var(--bg);
 }
 
 .loadingState,
@@ -19,7 +19,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid var(--border);
-  border-top-color: var(--gold);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -157,7 +157,7 @@
 }
 
 .totalAmount {
-  color: var(--gold);
+  color: var(--primary);
   font-size: 20px;
 }
 
@@ -206,8 +206,8 @@
   padding: 14px 24px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--gold);
-  color: #000;
+  background: var(--primary);
+  color: var(--primary-contrast);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -298,7 +298,7 @@
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--background);
+  background: var(--bg);
   color: var(--text);
   font-size: 15px;
   transition:
@@ -308,7 +308,7 @@
 
 .formField input:focus {
   outline: none;
-  border-color: var(--gold);
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(229, 157, 13, 0.15);
 }
 

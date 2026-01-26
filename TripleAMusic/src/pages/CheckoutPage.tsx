@@ -110,7 +110,7 @@ function CheckoutForm({
       >
         {processing
           ? "Processing…"
-          : `Pay $${checkoutSession.fees.total.toFixed(2)}`}
+          : `Pay $${(checkoutSession.fees.totalWithTax ?? checkoutSession.fees.total).toFixed(2)}`}
       </button>
 
       <button
@@ -186,7 +186,11 @@ export default function CheckoutPage() {
 
     const fetchFees = async () => {
       try {
-        const result = await api.calculateFees(item.gigId, item.quantity);
+        const result = await api.calculateFees(
+          item.gigId,
+          item.quantity,
+          item.tierId,
+        );
         if (!cancelled) {
           setFees(result);
         }
@@ -327,7 +331,12 @@ export default function CheckoutPage() {
               </div>
 
               <div className={styles.feeRow}>
-                <span>Service fee (1%)</span>
+                <span>
+                  Service fee
+                  {sessionFees.serviceFeeDisplay
+                    ? ` (${sessionFees.serviceFeeDisplay})`
+                    : ""}
+                </span>
                 <span>${sessionFees.serviceFee.toFixed(2)}</span>
               </div>
 
@@ -336,10 +345,15 @@ export default function CheckoutPage() {
                 <span>${sessionFees.stripeFee.toFixed(2)}</span>
               </div>
 
+              <div className={styles.feeRow}>
+                <span>Tax</span>
+                <span>${(sessionFees.tax ?? 0).toFixed(2)}</span>
+              </div>
+
               <div className={styles.totalRow}>
                 <span>Total</span>
                 <span className={styles.totalAmount}>
-                  ${sessionFees.total.toFixed(2)}
+                  ${(sessionFees.totalWithTax ?? sessionFees.total).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -427,10 +441,24 @@ export default function CheckoutPage() {
             {!isFree && (
               <>
                 <div className={styles.feeRow}>
-                  <span>Service fee (1%)</span>
+                  <span>
+                    Service fee
+                    {fees?.serviceFeeDisplay
+                      ? ` (${fees.serviceFeeDisplay})`
+                      : ""}
+                  </span>
                   <span>
                     {fees && !feesLoading
                       ? `$${fees.serviceFee.toFixed(2)}`
+                      : "..."}
+                  </span>
+                </div>
+
+                <div className={styles.feeRow}>
+                  <span>Tax</span>
+                  <span>
+                    {fees && !feesLoading
+                      ? `$${(fees.tax ?? 0).toFixed(2)}`
                       : "..."}
                   </span>
                 </div>
@@ -450,7 +478,7 @@ export default function CheckoutPage() {
               <span>Total</span>
               <span className={styles.totalAmount}>
                 {fees && !feesLoading
-                  ? `$${fees.total.toFixed(2)}`
+                  ? `$${(fees.totalWithTax ?? fees.total).toFixed(2)}`
                   : feesLoading
                     ? "..."
                     : `$${subtotal.toFixed(2)}`}
@@ -505,7 +533,7 @@ export default function CheckoutPage() {
                 : isFree
                   ? "Complete Order"
                   : fees
-                    ? `Continue to Payment · $${fees.total.toFixed(2)}`
+                    ? `Continue to Payment · $${(fees.totalWithTax ?? fees.total).toFixed(2)}`
                     : "Continue to Payment"}
             </button>
 

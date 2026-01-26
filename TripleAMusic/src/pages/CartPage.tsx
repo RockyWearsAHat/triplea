@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@shared";
+import type { FeeCalculationResult } from "@shared";
+import { Button, TripleAApiClient } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./CartPage.module.scss";
 import { useCart } from "../context/CartContext";
@@ -20,6 +22,60 @@ import {
 export default function CartPage() {
   const navigate = useNavigate();
   const { items, itemCount, subtotal, updateQuantity, removeItem } = useCart();
+
+  // Fee calculation state
+  const [fees, setFees] = useState<FeeCalculationResult | null>(null);
+  const [feesLoading, setFeesLoading] = useState(false);
+
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
+    [],
+  );
+
+  // Fetch fees when cart changes
+  useEffect(() => {
+    if (items.length === 0) {
+      setFees(null);
+      return;
+    }
+
+    // For now, calculate fees for first item (single-item cart assumption)
+    // TODO: Support multi-item fee calculation
+    const item = items[0];
+    if (item.ticketPrice === 0) {
+      setFees(null);
+      return;
+    }
+
+    let cancelled = false;
+    setFeesLoading(true);
+
+    const fetchFees = async () => {
+      try {
+        const result = await api.calculateFees(
+          item.gigId,
+          item.quantity,
+          item.tierId,
+        );
+        if (!cancelled) {
+          setFees(result);
+        }
+      } catch {
+        if (!cancelled) {
+          setFees(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setFeesLoading(false);
+        }
+      }
+    };
+
+    fetchFees();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, items]);
 
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -46,6 +102,11 @@ export default function CartPage() {
       </div>
     );
   }
+
+  // Determine display for service fee
+  const serviceFeeLabel = fees?.serviceFeeDisplay
+    ? `Service fee (${fees.serviceFeeDisplay})`
+    : "Service fee";
 
   return (
     <div className={styles.container}>
@@ -172,14 +233,46 @@ export default function CartPage() {
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
-              <span>Service fee</span>
-              <span className={styles.calculated}>At checkout</span>
+              <span>{serviceFeeLabel}</span>
+              <span>
+                {feesLoading
+                  ? "..."
+                  : fees
+                    ? `$${fees.serviceFee.toFixed(2)}`
+                    : "$0.00"}
+              </span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Tax</span>
+              <span>
+                {feesLoading
+                  ? "..."
+                  : fees
+                    ? `$${(fees.tax ?? 0).toFixed(2)}`
+                    : "$0.00"}
+              </span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Payment processing</span>
+              <span>
+                {feesLoading
+                  ? "..."
+                  : fees
+                    ? `$${fees.stripeFee.toFixed(2)}`
+                    : "$0.00"}
+              </span>
             </div>
           </div>
 
           <div className={styles.summaryTotal}>
-            <span>Estimated total</span>
-            <span>${subtotal.toFixed(2)}+</span>
+            <span>Total</span>
+            <span className={styles.totalAmount}>
+              {feesLoading
+                ? "..."
+                : fees
+                  ? `$${(fees.totalWithTax ?? fees.total).toFixed(2)}`
+                  : `$${subtotal.toFixed(2)}`}
+            </span>
           </div>
 
           <button
@@ -192,7 +285,7 @@ export default function CartPage() {
           </button>
 
           <p className={styles.disclaimer}>
-            Final total calculated at checkout
+            Tax is estimated from the event location.
           </p>
         </div>
       </div>

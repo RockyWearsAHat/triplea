@@ -33,9 +33,10 @@
 .cardImage {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: var(--surface-2);
+  background: var(--bg);
   overflow: hidden;
   flex-shrink: 0;
+  isolation: isolate;
 }
 
 .cardImage img {

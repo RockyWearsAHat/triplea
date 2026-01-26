@@ -14,10 +14,183 @@ const router: Router = express.Router();
 // Initialize Stripe with API key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
-// Fee configuration
-const PLATFORM_FEE_PERCENT = 0.01; // 1% service fee
-const STRIPE_FEE_PERCENT = 0.029; // 2.9%
-const STRIPE_FEE_FIXED = 30; // 30 cents in cents
+/**
+ * Parse a fee value from environment variable.
+ * Supports:
+ *   - Percentage: "1%", "1.5%", "2.9%" → returns { type: 'percent', value: 0.01 }
+ *   - Flat amount: "0.50", "1", "2.00" → returns { type: 'flat', value: 50 } (in cents)
+ */
+function parseFeeConfig(
+  envValue: string | undefined,
+  defaultPercent: number,
+): { type: "percent" | "flat"; value: number; display: string } {
+  if (!envValue || envValue.trim() === "") {
+    return {
+      type: "percent",
+      value: defaultPercent,
+      display: `${(defaultPercent * 100).toFixed(2).replace(/\.?0+$/, "")}%`,
+    };
+  }
+
+  let trimmed = envValue.trim();
+
+  // Check if it's a percentage (ends with %)
+  if (trimmed.endsWith("%")) {
+    const numStr = trimmed.slice(0, -1).trim();
+    const percent = parseFloat(numStr);
+    if (isNaN(percent) || percent < 0 || percent > 100) {
+      // Invalid, use default
+      return {
+        type: "percent",
+        value: defaultPercent,
+        display: `${(defaultPercent * 100).toFixed(2).replace(/\.?0+$/, "")}%`,
+      };
+    }
+    // Round to 2 decimal places and convert to decimal
+    const rounded = Math.round(percent * 100) / 10000;
+    return {
+      type: "percent",
+      value: rounded,
+      display: `${percent.toFixed(2).replace(/\.?0+$/, "")}%`,
+    };
+  }
+
+  // Handle flat amount in dollars - strip leading $ if present
+  if (trimmed.startsWith("$")) {
+    trimmed = trimmed.slice(1).trim();
+  }
+
+  const dollarAmount = parseFloat(trimmed);
+  if (isNaN(dollarAmount) || dollarAmount < 0) {
+    // Invalid, use default
+    return {
+      type: "percent",
+      value: defaultPercent,
+      display: `${(defaultPercent * 100).toFixed(2).replace(/\.?0+$/, "")}%`,
+    };
+  }
+  // Convert to cents
+  const cents = Math.round(dollarAmount * 100);
+  return {
+    type: "flat",
+    value: cents,
+    display: `$${dollarAmount.toFixed(2).replace(/\.?0+$/, "")}`,
+  };
+}
+
+function parseUSAddressForStripe(
+  address: string | undefined,
+  fallbackCity?: string,
+): {
+  line1: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country: string;
+} | null {
+  if (!address || !address.trim()) return null;
+
+  // Expected seed format: "13 N 400 W, Salt Lake City, UT 84101"
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const line1 = parts[0] || "Event Venue";
+  const city = parts[1] || fallbackCity;
+  const tail = parts.slice(2).join(" ");
+  const match = tail.match(/\b([A-Z]{2})\s+(\d{5})(?:-\d{4})?\b/);
+
+  return {
+    line1,
+    city: city || undefined,
+    state: match?.[1],
+    postal_code: match?.[2],
+    country: "US",
+  };
+}
+
+async function estimateTaxCents(params: {
+  currency: string;
+  address: {
+    line1: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country: string;
+  };
+  lineItems: Array<{ amountCents: number; reference: string }>;
+}): Promise<number> {
+  // Check if Stripe Tax is enabled via environment variable
+  const taxEnabled = process.env.STRIPE_TAX_ENABLED === "true";
+  if (!taxEnabled) {
+    return 0;
+  }
+
+  // Stripe Tax requires a reasonably complete address.
+  if (!params.address.state || !params.address.postal_code) {
+    return 0;
+  }
+
+  try {
+    const calculation = await (stripe as any).tax.calculations.create({
+      currency: params.currency,
+      customer_details: {
+        address: params.address,
+        address_source: "shipping",
+      },
+      line_items: params.lineItems.map((li) => ({
+        amount: li.amountCents,
+        reference: li.reference,
+        tax_behavior: "exclusive",
+      })),
+    });
+
+    const taxAmount =
+      Number(
+        (calculation as any).tax_amount_exclusive ??
+          (calculation as any).tax_amount ??
+          (calculation as any).amount_tax ??
+          0,
+      ) || 0;
+
+    return Math.max(0, Math.round(taxAmount));
+  } catch (err) {
+    // Log the error for debugging, but don't fail the checkout
+    // eslint-disable-next-line no-console
+    console.warn(
+      "Stripe Tax calculation failed:",
+      err instanceof Error ? err.message : err,
+    );
+    return 0;
+  }
+}
+
+// Fee configuration from environment
+const platformFeeConfig = parseFeeConfig(
+  process.env.PLATFORM_SERVICE_FEE,
+  0.01,
+); // Default 1%
+const stripeFeePercentConfig = parseFeeConfig(
+  process.env.STRIPE_FEE_PERCENT,
+  0.029,
+); // Default 2.9%
+const stripeFeeFixedConfig = parseFeeConfig(
+  process.env.STRIPE_FEE_FIXED,
+  0.003,
+); // Default $0.30 → 0.003 as decimal placeholder
+
+// Stripe's fixed fee in cents (default 30 cents)
+const STRIPE_FEE_FIXED =
+  stripeFeeFixedConfig.type === "flat"
+    ? stripeFeeFixedConfig.value
+    : Math.round(stripeFeeFixedConfig.value * 10000); // If somehow percent, treat as cents
+
+// Stripe's percentage fee as decimal
+const STRIPE_FEE_PERCENT =
+  stripeFeePercentConfig.type === "percent"
+    ? stripeFeePercentConfig.value
+    : 0.029;
 
 /**
  * Calculate all fees for an order
@@ -29,9 +202,16 @@ export function calculateFees(subtotalCents: number): {
   serviceFee: number;
   stripeFee: number;
   total: number;
+  serviceFeeDisplay: string;
 } {
-  // Service fee: 1% of subtotal
-  const serviceFee = Math.round(subtotalCents * PLATFORM_FEE_PERCENT);
+  // Service fee calculation based on config type
+  let serviceFee: number;
+  if (platformFeeConfig.type === "percent") {
+    serviceFee = Math.round(subtotalCents * platformFeeConfig.value);
+  } else {
+    // Flat fee in cents
+    serviceFee = platformFeeConfig.value;
+  }
 
   // Calculate what the total needs to be so that after Stripe takes their cut,
   // we receive the desired amount (subtotal + serviceFee)
@@ -50,6 +230,7 @@ export function calculateFees(subtotalCents: number): {
     serviceFee,
     stripeFee,
     total,
+    serviceFeeDisplay: platformFeeConfig.display,
   };
 }
 
@@ -182,14 +363,34 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
     const subtotalCents = Math.round(pricePerTicket * 100 * qty);
     const fees = calculateFees(subtotalCents);
 
-    // Get location name for description
+    // Get location info for description and tax calculation
     const location = gig.locationId
       ? await Location.findById(gig.locationId).exec()
       : null;
 
-    // Create a PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: fees.total,
+    const locationAddress = parseUSAddressForStripe(
+      location?.address,
+      location?.city,
+    );
+
+    const taxCents = locationAddress
+      ? await estimateTaxCents({
+          currency: "usd",
+          address: locationAddress,
+          lineItems: [
+            { amountCents: subtotalCents, reference: "tickets" },
+            { amountCents: fees.serviceFee, reference: "service_fee" },
+          ],
+        })
+      : 0;
+
+    // Create a PaymentIntent with automatic tax calculation if enabled
+    // Note: For Stripe Tax to work with PaymentIntents, you need to use
+    // stripe.tax.calculations.create() first, then apply the tax amount.
+    // For simplicity, we're using the calculated fees approach.
+    // To enable full Stripe Tax with automatic remittance, use Checkout Sessions instead.
+    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
+      amount: fees.total + taxCents,
       currency: "usd",
       automatic_payment_methods: {
         enabled: true,
@@ -206,10 +407,15 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         tierId: tierId || "",
         tierName: tierName || "",
         seatIds: seatIds ? JSON.stringify(seatIds) : "",
+        locationAddress: locationAddress ? JSON.stringify(locationAddress) : "",
+        taxCents: taxCents.toString(),
       },
       receipt_email: email,
       description: `${qty} ticket(s) to ${gig.title}${tierName ? ` (${tierName})` : ""}${location?.name ? ` at ${location.name}` : ""}`,
-    });
+    };
+
+    const paymentIntent =
+      await stripe.paymentIntents.create(paymentIntentParams);
 
     return res.json({
       clientSecret: paymentIntent.client_secret,
@@ -219,6 +425,9 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         serviceFee: fees.serviceFee / 100,
         stripeFee: fees.stripeFee / 100,
         total: fees.total / 100,
+        serviceFeeDisplay: fees.serviceFeeDisplay,
+        tax: taxCents / 100,
+        totalWithTax: (fees.total + taxCents) / 100,
       },
       gig: {
         id: gig.id,
@@ -426,9 +635,10 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
  */
 router.post("/calculate-fees", async (req: Request, res: Response) => {
   try {
-    const { gigId, quantity } = req.body as {
+    const { gigId, quantity, tierId } = req.body as {
       gigId: string;
       quantity: number;
+      tierId?: string;
     };
 
     if (!gigId) {
@@ -443,7 +653,15 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Concert not found" });
     }
 
-    const pricePerTicket = gig.ticketPrice ?? 0;
+    let pricePerTicket = gig.ticketPrice ?? 0;
+
+    // If tiered pricing is in use, use tier price for accurate fees
+    if (tierId) {
+      const tier = await TicketTier.findById(tierId).exec();
+      if (tier && String(tier.gigId) === gigId && tier.available) {
+        pricePerTicket = tier.price;
+      }
+    }
 
     // For free events, no fees
     if (pricePerTicket === 0) {
@@ -453,6 +671,7 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
         stripeFee: 0,
         total: 0,
         isFree: true,
+        serviceFeeDisplay: platformFeeConfig.display,
       });
     }
 
@@ -460,12 +679,34 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
     const subtotalCents = Math.round(pricePerTicket * 100 * qty);
     const fees = calculateFees(subtotalCents);
 
+    const location = gig.locationId
+      ? await Location.findById(gig.locationId).exec()
+      : null;
+    const locationAddress = parseUSAddressForStripe(
+      location?.address,
+      location?.city,
+    );
+
+    const taxCents = locationAddress
+      ? await estimateTaxCents({
+          currency: "usd",
+          address: locationAddress,
+          lineItems: [
+            { amountCents: subtotalCents, reference: "tickets" },
+            { amountCents: fees.serviceFee, reference: "service_fee" },
+          ],
+        })
+      : 0;
+
     return res.json({
       subtotal: fees.subtotal / 100,
       serviceFee: fees.serviceFee / 100,
       stripeFee: fees.stripeFee / 100,
       total: fees.total / 100,
       isFree: false,
+      serviceFeeDisplay: fees.serviceFeeDisplay,
+      tax: taxCents / 100,
+      totalWithTax: (fees.total + taxCents) / 100,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -524,5 +765,133 @@ router.post(
     return res.json({ received: true });
   },
 );
+
+/**
+ * Create a Stripe Checkout Session with automatic tax
+ * This uses Stripe's hosted checkout page with built-in tax calculation
+ * POST /api/stripe/create-checkout-session
+ */
+router.post("/create-checkout-session", async (req: Request, res: Response) => {
+  try {
+    const { gigId, quantity, email, holderName, tierId, seatIds } =
+      req.body as {
+        gigId: string;
+        quantity: number;
+        email: string;
+        holderName: string;
+        tierId?: string;
+        seatIds?: string[];
+      };
+
+    // Validate inputs
+    if (!gigId || !email || !holderName) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const qty = Number(quantity) || 1;
+    if (qty < 1 || qty > 10) {
+      return res
+        .status(400)
+        .json({ message: "Quantity must be between 1 and 10" });
+    }
+
+    // Find the gig/concert
+    const gig = await Gig.findById(gigId).exec();
+    if (!gig) {
+      return res.status(404).json({ message: "Concert not found" });
+    }
+
+    if (!gig.openForTickets) {
+      return res
+        .status(400)
+        .json({ message: "Tickets are not available for this event" });
+    }
+
+    let pricePerTicket = gig.ticketPrice ?? 0;
+    let tierName: string | undefined;
+
+    // Handle tiered pricing
+    if (tierId) {
+      const tier = await TicketTier.findById(tierId).exec();
+      if (tier && String(tier.gigId) === gigId && tier.available) {
+        pricePerTicket = tier.price;
+        tierName = tier.name;
+      }
+    }
+
+    // For free events, skip Stripe
+    if (pricePerTicket === 0) {
+      return res.status(400).json({
+        message: "Free events do not require payment checkout",
+      });
+    }
+
+    // Get location info
+    const location = gig.locationId
+      ? await Location.findById(gig.locationId).exec()
+      : null;
+
+    // Calculate service fee
+    const subtotalCents = Math.round(pricePerTicket * 100 * qty);
+    const fees = calculateFees(subtotalCents);
+
+    // Create Stripe Checkout Session with automatic tax
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: email,
+      // Enable automatic tax calculation and remittance
+      automatic_tax: {
+        enabled: true,
+      },
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${gig.title}${tierName ? ` (${tierName})` : ""}`,
+              description: `${qty} ticket(s)${location?.name ? ` at ${location.name}` : ""}`,
+            },
+            unit_amount: Math.round(pricePerTicket * 100),
+            tax_behavior: "exclusive", // Tax will be added on top
+          },
+          quantity: qty,
+        },
+        // Service fee as a separate line item
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Service Fee",
+              description: `Platform service fee (${fees.serviceFeeDisplay})`,
+            },
+            unit_amount: Math.round(fees.serviceFee),
+            tax_behavior: "exclusive",
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        gigId,
+        quantity: qty.toString(),
+        email,
+        holderName,
+        tierId: tierId || "",
+        tierName: tierName || "",
+        seatIds: seatIds ? JSON.stringify(seatIds) : "",
+      },
+      success_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/cart`,
+    });
+
+    return res.json({
+      sessionId: session.id,
+      url: session.url,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("POST /stripe/create-checkout-session error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 export default router;
