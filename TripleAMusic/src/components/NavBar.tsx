@@ -95,9 +95,11 @@ export function NavBar() {
           )
         }
       >
-        <ShoppingCart size={18} />
+        <span className={styles.cartIconWrapper}>
+          <ShoppingCart size={18} />
+          {itemCount > 0 && <span className={styles.cartBadge} />}
+        </span>
         <span className={styles.navLabel}>Cart</span>
-        {itemCount > 0 && <span className={styles.cartBadge}>{itemCount}</span>}
       </NavLink>
 
       {!user ? (

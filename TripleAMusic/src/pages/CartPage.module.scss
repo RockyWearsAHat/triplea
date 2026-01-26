@@ -317,7 +317,7 @@
 }
 
 .feeLabel {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
 }
@@ -337,6 +337,7 @@
   border: 1px solid var(--border);
   padding: 0;
   position: relative;
+  transform: translateY(1px);
   transition:
     background 0.15s,
     border-color 0.15s;
