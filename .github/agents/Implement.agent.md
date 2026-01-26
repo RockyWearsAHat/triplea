@@ -1,7 +1,7 @@
 ---
 name: implement
 description: "Execute plans from plan.md with documentation-first TDD discipline."
-model: Raptor mini (Preview) (copilot)
+model: GPT-4.1 (copilot)
 tools:
   - edit/editFiles
   - search/codebase

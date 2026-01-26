@@ -1,66 +1,66 @@
-import { AppShell, spacing } from "@shared";
+import { AppShell, spacing, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./DashboardPage.module.scss";
 import StatusCard from "@shared/components/StatusCard";
 
 export function DashboardPage() {
   return (
-    <AppShell title="Dashboard" subtitle="Your week at a glance">
+    <AppShell title="Your Week at a Glance" subtitle="">
       <div
         className={ui.stack}
-        style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
+        style={{ "--stack-gap": `${spacing.lg}px` } as React.CSSProperties}
       >
-        <div className={styles.header}>
-          <div>
-            <h2 className={ui.sectionTitle}>Your week</h2>
-            <p className={ui.help}>Respond to requests and manage bookings.</p>
+        <section>
+          <h2 className={ui.sectionTitleLarge}>Your Week at a Glance</h2>
+          <div className={styles.statsRow}>
+            <StatusCard
+              title="Earnings"
+              subtitle="This week"
+              metric="$450"
+              status="active"
+            />
+            <StatusCard
+              title="Rating"
+              subtitle="Avg. performance"
+              metric="4.8★"
+              status="idle"
+            />
+            <StatusCard
+              title="Requests"
+              subtitle="Pending"
+              metric={3}
+              status="busy"
+            />
           </div>
-        </div>
-
-        <div className={styles.stats}>
-          <StatusCard
-            title="Earnings"
-            subtitle="This week"
-            metric="$450"
-            status="active"
-          />
-          <StatusCard
-            title="Rating"
-            subtitle="Avg. performance"
-            metric="4.8★"
-            status="idle"
-          />
-          <StatusCard
-            title="Requests"
-            subtitle="Pending"
-            metric={3}
-            status="busy"
-          />
-        </div>
+        </section>
 
         <div className={styles.grid}>
-          <div>
-            <section className={ui.section}>
+          <main className={styles.main}>
+            <section className={styles.contentSection}>
               <h3 className={ui.sectionTitle}>Incoming requests</h3>
               <p className={ui.help}>
                 Respond to requests quickly to keep work flowing.
               </p>
             </section>
 
-            <section className={ui.section}>
-              <h3 className={ui.sectionTitle}>Bookings</h3>
-              <p className={ui.help}>
-                Upcoming and recent bookings appear here.
-              </p>
+            <section className={styles.contentSection}>
+              <h3 className={ui.sectionTitle}>Upcoming gigs</h3>
+              <p className={ui.help}>Your next confirmed gigs and details.</p>
             </section>
-          </div>
+          </main>
 
-          <aside>
-            <section className={ui.section}>
-              <h3 className={ui.sectionTitle}>Profile</h3>
-              <p className={ui.help}>
-                Edit your profile, rates, and direct request settings.
-              </p>
+          <aside className={styles.sidebar}>
+            <section>
+              <h3 className={ui.sectionTitle}>Quick actions</h3>
+              <div className={styles.quickActions}>
+                <Button style={{ width: "100%" }}>Edit profile</Button>
+                <Button variant="secondary" style={{ width: "100%" }}>
+                  Update availability
+                </Button>
+                <Button variant="ghost" style={{ width: "100%" }}>
+                  Request rental
+                </Button>
+              </div>
             </section>
           </aside>
         </div>
@@ -68,4 +68,5 @@ export function DashboardPage() {
     </AppShell>
   );
 }
+
 export default DashboardPage;

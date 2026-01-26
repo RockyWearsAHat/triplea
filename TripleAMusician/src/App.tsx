@@ -12,15 +12,10 @@ import {
   RequireRole,
   ChatInbox,
 } from "@shared";
-import {
-  NavLink,
-  Route,
-  Routes,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { Route, Routes, useNavigate, useParams } from "react-router-dom";
 import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
+import { NavBar } from "./components/NavBar";
 import { DashboardPage } from "./pages/DashboardPage";
 
 function Section({
@@ -694,109 +689,6 @@ function ProfilePage() {
         )}
       </div>
     </AppShell>
-  );
-}
-
-function NavBar() {
-  const { user } = useAuth();
-  return (
-    <nav className={ui.nav}>
-      <NavLink
-        to="/"
-        className={({ isActive }) =>
-          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-        }
-      >
-        Overview
-      </NavLink>
-
-      {user?.role.includes("musician") && (
-        <>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Dashboard
-          </NavLink>
-          <NavLink
-            to="/bookings"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Bookings
-          </NavLink>
-          <NavLink
-            to="/perks"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Perks
-          </NavLink>
-          <NavLink
-            to="/gigs"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Gigs
-          </NavLink>
-
-          <NavLink
-            to="/rentals"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Rentals
-          </NavLink>
-        </>
-      )}
-
-      {user && (
-        <NavLink
-          to="/messages"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          Messages
-        </NavLink>
-      )}
-
-      {!user ? (
-        <>
-          <NavLink
-            to="/login"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Login
-          </NavLink>
-          <NavLink
-            to="/register"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Register
-          </NavLink>
-        </>
-      ) : (
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          Account
-        </NavLink>
-      )}
-    </nav>
   );
 }
 

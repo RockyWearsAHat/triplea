@@ -19,7 +19,6 @@ import {
   useAuth,
 } from "@shared";
 import {
-  NavLink,
   Route,
   Routes,
   useNavigate,
@@ -29,6 +28,7 @@ import {
 } from "react-router-dom";
 import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
+import { NavBar } from "./components/NavBar";
 
 import { ChatInbox } from "@shared";
 
@@ -3369,130 +3369,6 @@ function TicketsPage() {
         </Section>
       </div>
     </AppShell>
-  );
-}
-
-function NavBar() {
-  const { user } = useAuth();
-  return (
-    <nav className={ui.nav}>
-      <NavLink
-        to="/"
-        className={({ isActive }) =>
-          [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-        }
-      >
-        Concerts
-      </NavLink>
-
-      {user?.role.includes("customer") && (
-        <>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Host
-          </NavLink>
-          <NavLink
-            to="/events"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Ops
-          </NavLink>
-
-          <NavLink
-            to="/tickets"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Ticketing
-          </NavLink>
-          <NavLink
-            to="/ratings"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Ratings
-          </NavLink>
-
-          <NavLink
-            to="/my-gigs"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            My events
-          </NavLink>
-
-          <NavLink
-            to="/post-gig"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Post event
-          </NavLink>
-        </>
-      )}
-
-      {user && (
-        <NavLink
-          to="/messages"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          Messages
-        </NavLink>
-      )}
-
-      {user && (
-        <NavLink
-          to="/my-tickets"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          My tickets
-        </NavLink>
-      )}
-
-      {!user ? (
-        <>
-          <NavLink
-            to="/login"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Login
-          </NavLink>
-          <NavLink
-            to="/register"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            Register
-          </NavLink>
-        </>
-      ) : (
-        <NavLink
-          to="/account"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          Account
-        </NavLink>
-      )}
-    </nav>
   );
 }
 

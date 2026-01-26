@@ -12,18 +12,49 @@ export function NavBar() {
           [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
         }
       >
-        Home
+        Concerts
       </NavLink>
 
-      {user?.role.includes("admin") && (
-        <NavLink
-          to="/admin"
-          className={({ isActive }) =>
-            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-          }
-        >
-          Admin
-        </NavLink>
+      {user?.role.includes("customer") && (
+        <>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Host
+          </NavLink>
+          <NavLink
+            to="/events"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Events
+          </NavLink>
+        </>
+      )}
+
+      {user && (
+        <>
+          <NavLink
+            to="/messages"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Messages
+          </NavLink>
+          <NavLink
+            to="/my-tickets"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            My tickets
+          </NavLink>
+        </>
       )}
 
       {!user ? (
@@ -58,3 +89,5 @@ export function NavBar() {
     </nav>
   );
 }
+
+export default NavBar;

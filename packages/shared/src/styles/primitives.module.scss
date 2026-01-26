@@ -502,6 +502,166 @@
   gap: 24px;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Apple-inspired Section Components
+   Full-width sections with generous spacing, bold typography, clear hierarchy
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Full-width section with generous vertical padding */
+.sectionFull {
+  width: 100%;
+  padding: clamp(48px, 8vh, 96px) var(--page-pad);
+}
+
+.sectionFullCenter {
+  composes: sectionFull;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Hero section - full viewport height, centered content */
+.heroFull {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(32px, 6vh, 64px) var(--page-pad);
+}
+
+/* Massive hero title - the one thing you see first */
+.heroMassive {
+  margin: 0;
+  font-size: clamp(48px, 8vw, 80px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+}
+
+/* Secondary hero subtitle */
+.heroSubtitleLarge {
+  margin: 16px 0 0;
+  font-size: clamp(18px, 2.5vw, 24px);
+  color: var(--text-muted);
+  max-width: 40ch;
+}
+
+/* Section title - bold, large, commanding */
+.sectionTitleLarge {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Section lead text */
+.sectionLead {
+  margin: 12px 0 0;
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--text-muted);
+  max-width: 50ch;
+}
+
+/* Large action buttons for hero sections */
+.heroActionsLarge {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+  justify-content: center;
+}
+
+/* Path cards - large clickable destinations */
+.pathGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.pathCard {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(28px, 4vw, 40px);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+  text-align: left;
+}
+
+.pathCard:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.pathCardTitle {
+  margin: 0;
+  font-size: clamp(22px, 2.5vw, 28px);
+  font-weight: 650;
+}
+
+.pathCardDesc {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.pathCardAction {
+  margin-top: auto;
+  padding-top: 20px;
+  color: var(--primary);
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pathCardAction::after {
+  content: "→";
+  transition: transform 150ms ease;
+}
+
+.pathCard:hover .pathCardAction::after {
+  transform: translateX(4px);
+}
+
+/* Product card row - grid layout */
+.productRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* Mission/footer section */
+.missionSection {
+  padding: clamp(40px, 6vh, 80px) var(--page-pad);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: clamp(40px, 6vh, 80px);
+}
+
+.missionText {
+  margin: 0 auto;
+  max-width: 600px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
 /* Margin utilities */
 .mtSm {
   margin-top: 8px;

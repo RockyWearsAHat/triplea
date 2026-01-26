@@ -1,4 +1,51 @@
-.header { display:flex; gap:16px; align-items:center; justify-content:space-between }
-.stats { display:flex; gap:12px; flex-wrap:wrap }
-.grid { display:grid; gap:16px; grid-template-columns: 1fr 320px }
-@media (max-width: 800px) { .grid { grid-template-columns: 1fr } }
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: 1fr 300px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.contentSection {
+  padding: clamp(20px, 3vw, 28px);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.sidebar {
+  padding: clamp(20px, 3vw, 28px);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.quickActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}

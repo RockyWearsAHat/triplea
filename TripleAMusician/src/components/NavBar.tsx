@@ -15,14 +15,43 @@ export function NavBar() {
         Home
       </NavLink>
 
-      {user?.role.includes("admin") && (
+      {user?.role.includes("musician") && (
+        <>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/gigs"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Find gigs
+          </NavLink>
+          <NavLink
+            to="/rentals"
+            className={({ isActive }) =>
+              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+            }
+          >
+            Rentals
+          </NavLink>
+        </>
+      )}
+
+      {user && (
         <NavLink
-          to="/admin"
+          to="/messages"
           className={({ isActive }) =>
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Admin
+          Messages
         </NavLink>
       )}
 
@@ -47,7 +76,7 @@ export function NavBar() {
         </>
       ) : (
         <NavLink
-          to="/account"
+          to="/profile"
           className={({ isActive }) =>
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
@@ -58,3 +87,5 @@ export function NavBar() {
     </nav>
   );
 }
+
+export default NavBar;

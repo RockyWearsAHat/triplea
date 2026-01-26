@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { MusicianProfile } from "@shared";
-import { AppShell, spacing, TripleAApiClient, useScrollReveal } from "@shared";
+import { spacing, TripleAApiClient, useScrollReveal } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { SearchBar } from "@shared";
 import CategoryBar from "@shared/components/CategoryBar";
@@ -55,62 +55,57 @@ export function DiscoveryPage() {
   useScrollReveal(contentRef, [results.length, loading, query, selectedGenre]);
 
   return (
-    <AppShell title="Find musicians" subtitle="Search and book performers">
-      <div
-        className={ui.stack}
-        style={{ "--stack-gap": `${spacing.md}px` } as React.CSSProperties}
-        ref={contentRef}
-      >
-        <section className={ui.section}>
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.sm,
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <SearchBar
-              placeholder="Search musicians, genres, cities…"
-              onSearch={(q) => setQuery(q)}
+    <div
+      ref={contentRef}
+      className={ui.stack}
+      style={{ "--stack-gap": `${spacing.lg}px` } as React.CSSProperties}
+    >
+      <section className={ui.heroFull}>
+        <p className={ui.heroKicker}>For hosts</p>
+        <h1 className={ui.heroMassive}>Find musicians</h1>
+        <p className={ui.heroSubtitleLarge}>
+          Search, discover, and request performers for your next event.
+        </p>
+
+        <div className={ui.heroActionsLarge}>
+          <SearchBar
+            placeholder="Search musicians, genres, cities…"
+            onSearch={(q) => setQuery(q)}
+          />
+        </div>
+      </section>
+
+      <section className={ui.sectionFull}>
+        <div style={{ maxWidth: 940, margin: "0 auto" }}>
+          <CategoryBar
+            categories={genres.map((g) => ({ id: g, label: g }))}
+            active={selectedGenre}
+            onSelect={(id) => setSelectedGenre(id === "All" ? "All" : id)}
+          />
+        </div>
+      </section>
+
+      <section className={ui.sectionFull}>
+        {loading && <p className={ui.help}>Loading…</p>}
+        {error && <p className={ui.error}>{error}</p>}
+
+        <div className={ui.productRow}>
+          {filtered.map((r) => (
+            <ProductCard
+              key={r.musician.id}
+              title={r.musician.id}
+              subtitle={(r.musician.instruments || []).join(" / ")}
+              price={r.priceEstimate}
+              onPrimary={() => window.alert(`Requesting ${r.musician.id}`)}
             />
-          </div>
+          ))}
+        </div>
 
-          <div style={{ marginTop: spacing.sm }}>
-            <CategoryBar
-              categories={genres.map((g) => ({ id: g, label: g }))}
-              active={selectedGenre}
-              onSelect={(id) => setSelectedGenre(id === "All" ? "All" : id)}
-            />
-          </div>
-
-          {loading && <p className={ui.help}>Loading…</p>}
-          {error && <p className={ui.error}>{error}</p>}
-
-          <div
-            style={{
-              display: "grid",
-              gap: spacing.md,
-              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            }}
-          >
-            {filtered.map((r) => (
-              <ProductCard
-                key={r.musician.id}
-                title={r.musician.id}
-                subtitle={(r.musician.instruments || []).join(" / ")}
-                price={r.priceEstimate}
-                onPrimary={() => window.alert(`Requesting ${r.musician.id}`)}
-              />
-            ))}
-          </div>
-
-          {!loading && !error && filtered.length === 0 && (
-            <p className={ui.help}>No musicians found.</p>
-          )}
-        </section>
-      </div>
-    </AppShell>
+        {!loading && !error && filtered.length === 0 && (
+          <p className={ui.help}>No musicians found.</p>
+        )}
+      </section>
+    </div>
   );
 }
 
