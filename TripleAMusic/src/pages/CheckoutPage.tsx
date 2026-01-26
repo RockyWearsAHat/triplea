@@ -332,22 +332,34 @@ export default function CheckoutPage() {
 
               <div className={styles.feeRow}>
                 <span>
-                  Service fee
+                  Triple A Fee
                   {sessionFees.serviceFeeDisplay
-                    ? ` (${sessionFees.serviceFeeDisplay})`
+                    ? ` (${sessionFees.serviceFeeDisplay}${sessionFees.feeChargeMode === "ticket" ? "/ticket" : ""})`
                     : ""}
                 </span>
                 <span>${sessionFees.serviceFee.toFixed(2)}</span>
               </div>
 
-              <div className={styles.feeRow}>
-                <span>Payment processing</span>
-                <span>${sessionFees.stripeFee.toFixed(2)}</span>
-              </div>
-
-              <div className={styles.feeRow}>
-                <span>Tax</span>
-                <span>${(sessionFees.tax ?? 0).toFixed(2)}</span>
+              <div className={styles.feeRowWithInfo}>
+                <span className={styles.feeLabel}>
+                  Taxes &amp; Fees
+                  <button type="button" className={styles.infoButton}>
+                    i
+                    <span className={styles.tooltip}>
+                      <span className={styles.tooltipRow}>
+                        <span>Payment processing</span>
+                        <span>${sessionFees.stripeFee.toFixed(2)}</span>
+                      </span>
+                      <span className={styles.tooltipRow}>
+                        <span>Tax</span>
+                        <span>${(sessionFees.tax ?? 0).toFixed(2)}</span>
+                      </span>
+                    </span>
+                  </button>
+                </span>
+                <span>
+                  ${(sessionFees.stripeFee + (sessionFees.tax ?? 0)).toFixed(2)}
+                </span>
               </div>
 
               <div className={styles.totalRow}>
@@ -442,9 +454,9 @@ export default function CheckoutPage() {
               <>
                 <div className={styles.feeRow}>
                   <span>
-                    Service fee
+                    Triple A Fee
                     {fees?.serviceFeeDisplay
-                      ? ` (${fees.serviceFeeDisplay})`
+                      ? ` (${fees.serviceFeeDisplay}${fees.feeChargeMode === "ticket" ? "/ticket" : ""})`
                       : ""}
                   </span>
                   <span>
@@ -454,20 +466,34 @@ export default function CheckoutPage() {
                   </span>
                 </div>
 
-                <div className={styles.feeRow}>
-                  <span>Tax</span>
-                  <span>
-                    {fees && !feesLoading
-                      ? `$${(fees.tax ?? 0).toFixed(2)}`
-                      : "..."}
+                <div className={styles.feeRowWithInfo}>
+                  <span className={styles.feeLabel}>
+                    Taxes &amp; Fees
+                    <button type="button" className={styles.infoButton}>
+                      i
+                      <span className={styles.tooltip}>
+                        <span className={styles.tooltipRow}>
+                          <span>Payment processing</span>
+                          <span>
+                            {fees && !feesLoading
+                              ? `$${fees.stripeFee.toFixed(2)}`
+                              : "..."}
+                          </span>
+                        </span>
+                        <span className={styles.tooltipRow}>
+                          <span>Tax</span>
+                          <span>
+                            {fees && !feesLoading
+                              ? `$${(fees.tax ?? 0).toFixed(2)}`
+                              : "..."}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
                   </span>
-                </div>
-
-                <div className={styles.feeRow}>
-                  <span>Payment processing</span>
                   <span>
                     {fees && !feesLoading
-                      ? `$${fees.stripeFee.toFixed(2)}`
+                      ? `$${(fees.stripeFee + (fees.tax ?? 0)).toFixed(2)}`
                       : "..."}
                   </span>
                 </div>

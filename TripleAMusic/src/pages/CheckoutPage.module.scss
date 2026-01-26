@@ -146,6 +146,115 @@
   border-bottom: none;
 }
 
+/* Fee row with info button */
+.feeRowWithInfo {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.feeLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.infoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-2, #2a2a2a);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: help;
+  border: 1px solid var(--border);
+  padding: 0;
+  position: relative;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.infoButton:hover {
+  background: var(--surface-2, #2a2a2a);
+  border-color: var(--text-muted);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid #333;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s,
+    visibility 0.15s;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #333;
+}
+
+.tooltip::before {
+  content: "";
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1a1a1a;
+  z-index: 1;
+}
+
+.infoButton:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 0;
+  color: #9ca3af;
+}
+
+.tooltipRow span:last-child {
+  color: #fff;
+  font-weight: 500;
+}
+
+.tooltipRow:not(:last-child) {
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
 .totalRow {
   display: flex;
   justify-content: space-between;

@@ -262,8 +262,10 @@ export interface FeeBreakdown {
   serviceFee: number;
   stripeFee: number;
   total: number;
-  /** Display string for service fee (e.g., "1%" or "0.50") */
+  /** Display string for service fee (e.g., "1%" or "$1") */
   serviceFeeDisplay?: string;
+  /** Fee charge mode: "transaction" (once) or "ticket" (per ticket) */
+  feeChargeMode?: "transaction" | "ticket";
   /** Estimated tax based on event location (may be 0 if unavailable) */
   tax?: number;
   /** Total including estimated tax */

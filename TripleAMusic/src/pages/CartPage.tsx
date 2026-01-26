@@ -105,8 +105,8 @@ export default function CartPage() {
 
   // Determine display for service fee
   const serviceFeeLabel = fees?.serviceFeeDisplay
-    ? `Service fee (${fees.serviceFeeDisplay})`
-    : "Service fee";
+    ? `Triple A Fee (${fees.serviceFeeDisplay}${fees.feeChargeMode === "ticket" ? "/ticket" : ""})`
+    : "Triple A Fee";
 
   return (
     <div className={styles.container}>
@@ -242,23 +242,40 @@ export default function CartPage() {
                     : "$0.00"}
               </span>
             </div>
-            <div className={styles.summaryRow}>
-              <span>Tax</span>
-              <span>
-                {feesLoading
-                  ? "..."
-                  : fees
-                    ? `$${(fees.tax ?? 0).toFixed(2)}`
-                    : "$0.00"}
+            <div className={styles.summaryRowWithInfo}>
+              <span className={styles.feeLabel}>
+                Taxes &amp; Fees
+                <button type="button" className={styles.infoButton}>
+                  i
+                  <span className={styles.tooltip}>
+                    <span className={styles.tooltipRow}>
+                      <span>Payment processing</span>
+                      <span>
+                        {feesLoading
+                          ? "..."
+                          : fees
+                            ? `$${fees.stripeFee.toFixed(2)}`
+                            : "$0.00"}
+                      </span>
+                    </span>
+                    <span className={styles.tooltipRow}>
+                      <span>Tax</span>
+                      <span>
+                        {feesLoading
+                          ? "..."
+                          : fees
+                            ? `$${(fees.tax ?? 0).toFixed(2)}`
+                            : "$0.00"}
+                      </span>
+                    </span>
+                  </span>
+                </button>
               </span>
-            </div>
-            <div className={styles.summaryRow}>
-              <span>Payment processing</span>
               <span>
                 {feesLoading
                   ? "..."
                   : fees
-                    ? `$${fees.stripeFee.toFixed(2)}`
+                    ? `$${(fees.stripeFee + (fees.tax ?? 0)).toFixed(2)}`
                     : "$0.00"}
               </span>
             </div>

@@ -192,25 +192,38 @@ const STRIPE_FEE_PERCENT =
     ? stripeFeePercentConfig.value
     : 0.029;
 
+// Fee charge mode: "transaction" (once per checkout) or "ticket" (per ticket)
+const FEE_CHARGE_ON: "transaction" | "ticket" =
+  process.env.FEE_CHARGE_ON === "ticket" ? "ticket" : "transaction";
+
 /**
  * Calculate all fees for an order
  * @param subtotalCents - Base price in cents
+ * @param quantity - Number of tickets (used for per-ticket fee calculation)
  * @returns Fee breakdown in cents
  */
-export function calculateFees(subtotalCents: number): {
+export function calculateFees(
+  subtotalCents: number,
+  quantity: number = 1,
+): {
   subtotal: number;
   serviceFee: number;
   stripeFee: number;
   total: number;
   serviceFeeDisplay: string;
+  feeChargeMode: "transaction" | "ticket";
 } {
-  // Service fee calculation based on config type
+  // Service fee calculation based on config type and charge mode
   let serviceFee: number;
   if (platformFeeConfig.type === "percent") {
+    // Percentage fees are always calculated on subtotal (naturally scales with quantity)
     serviceFee = Math.round(subtotalCents * platformFeeConfig.value);
   } else {
-    // Flat fee in cents
-    serviceFee = platformFeeConfig.value;
+    // Flat fee - apply per ticket or per transaction based on config
+    serviceFee =
+      FEE_CHARGE_ON === "ticket"
+        ? platformFeeConfig.value * quantity
+        : platformFeeConfig.value;
   }
 
   // Calculate what the total needs to be so that after Stripe takes their cut,
@@ -231,6 +244,7 @@ export function calculateFees(subtotalCents: number): {
     stripeFee,
     total,
     serviceFeeDisplay: platformFeeConfig.display,
+    feeChargeMode: FEE_CHARGE_ON,
   };
 }
 
@@ -361,7 +375,7 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
 
     // Calculate amounts in cents
     const subtotalCents = Math.round(pricePerTicket * 100 * qty);
-    const fees = calculateFees(subtotalCents);
+    const fees = calculateFees(subtotalCents, qty);
 
     // Get location info for description and tax calculation
     const location = gig.locationId
@@ -373,6 +387,7 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
       location?.city,
     );
 
+    // Calculate tax on subtotal + service fee + payment processing fee
     const taxCents = locationAddress
       ? await estimateTaxCents({
           currency: "usd",
@@ -380,6 +395,7 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
           lineItems: [
             { amountCents: subtotalCents, reference: "tickets" },
             { amountCents: fees.serviceFee, reference: "service_fee" },
+            { amountCents: fees.stripeFee, reference: "payment_processing" },
           ],
         })
       : 0;
@@ -426,6 +442,7 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
         stripeFee: fees.stripeFee / 100,
         total: fees.total / 100,
         serviceFeeDisplay: fees.serviceFeeDisplay,
+        feeChargeMode: fees.feeChargeMode,
         tax: taxCents / 100,
         totalWithTax: (fees.total + taxCents) / 100,
       },
@@ -672,12 +689,13 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
         total: 0,
         isFree: true,
         serviceFeeDisplay: platformFeeConfig.display,
+        feeChargeMode: FEE_CHARGE_ON,
       });
     }
 
     // Calculate amounts in cents then convert to dollars
     const subtotalCents = Math.round(pricePerTicket * 100 * qty);
-    const fees = calculateFees(subtotalCents);
+    const fees = calculateFees(subtotalCents, qty);
 
     const location = gig.locationId
       ? await Location.findById(gig.locationId).exec()
@@ -687,6 +705,7 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
       location?.city,
     );
 
+    // Calculate tax on subtotal + service fee + payment processing fee
     const taxCents = locationAddress
       ? await estimateTaxCents({
           currency: "usd",
@@ -694,6 +713,7 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
           lineItems: [
             { amountCents: subtotalCents, reference: "tickets" },
             { amountCents: fees.serviceFee, reference: "service_fee" },
+            { amountCents: fees.stripeFee, reference: "payment_processing" },
           ],
         })
       : 0;
@@ -705,6 +725,7 @@ router.post("/calculate-fees", async (req: Request, res: Response) => {
       total: fees.total / 100,
       isFree: false,
       serviceFeeDisplay: fees.serviceFeeDisplay,
+      feeChargeMode: fees.feeChargeMode,
       tax: taxCents / 100,
       totalWithTax: (fees.total + taxCents) / 100,
     });
