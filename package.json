@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "concurrently -k -n server,music,musician,muse \"npm run dev --prefix server\" \"npm run dev --prefix TripleAMusic\" \"npm run dev --prefix TripleAMusician\" \"npm run dev --prefix TripleAMuse\"",
-    "build": "npm run build --prefix server && npm run build --prefix TripleAMusic && npm run build --prefix TripleAMusician && npm run build --prefix TripleAMuse",
+    "build": "npm run build:apps && npm run build:unified",
+    "build:apps": "npm run build --prefix server && npm run build --prefix TripleAMusic && npm run build --prefix TripleAMusician && npm run build --prefix TripleAMuse",
+    "build:unified": "rm -rf dist && mkdir -p dist/music dist/musician dist/muse && cp -r TripleAMusic/dist/* dist/music/ && cp -r TripleAMusician/dist/* dist/musician/ && cp -r TripleAMuse/dist/* dist/muse/",
     "dev:server": "npm run dev --prefix server",
     "dev:music": "npm run dev --prefix TripleAMusic",
     "dev:musician": "npm run dev --prefix TripleAMusician",

@@ -1783,7 +1783,7 @@ function GigSeatingConfigPage() {
       description: string;
       tierType: "ga" | "vip" | "premium" | "reserved";
       price: number;
-      capacity: number | null;
+      capacity: number;
     }>
   >([]);
   const [tierError, setTierError] = useState<string | null>(null);
@@ -1856,7 +1856,6 @@ function GigSeatingConfigPage() {
       await api.updateGigSeatingConfig(gigId, {
         seatingType,
         seatCapacity: seatCapacity === "" ? undefined : Number(seatCapacity),
-        hasTicketTiers,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -1876,7 +1875,7 @@ function GigSeatingConfigPage() {
         description: "",
         tierType: "ga" as const,
         price: 0,
-        capacity: null,
+        capacity: 0,
       },
     ]);
   };
@@ -1896,7 +1895,6 @@ function GigSeatingConfigPage() {
         await api.updateTicketTier(tier.id, {
           name: tier.name,
           description: tier.description,
-          tierType: tier.tierType,
           price: tier.price,
           capacity: tier.capacity,
         });
@@ -2203,7 +2201,7 @@ function GigSeatingConfigPage() {
                       <input
                         type="number"
                         min={1}
-                        value={tier.capacity ?? ""}
+                        value={tier.capacity || ""}
                         onChange={(e) =>
                           setTiers((prev) =>
                             prev.map((t, i) =>
@@ -2212,7 +2210,7 @@ function GigSeatingConfigPage() {
                                     ...t,
                                     capacity:
                                       e.target.value === ""
-                                        ? null
+                                        ? 0
                                         : Number(e.target.value),
                                   }
                                 : t,

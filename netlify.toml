@@ -1,24 +1,27 @@
-# Triple A Apps - Netlify Configuration
-# This is the main Netlify config for the monorepo.
-# Each app (muse, music, musician) should be deployed as a separate Netlify site
-# with their own netlify.toml files in their directories.
+# Triple A Apps - Unified Netlify Configuration
+# Single site with host-based subdomain routing
+#
+# Deploy domains:
+#   - muse.tripleamusic.org  → /muse/*
+#   - music.tripleamusic.org → /music/*
+#   - musician.tripleamusic.org → /musician/*
+#   - tripleamusic.org (root) → /music/* (default)
 
 [build]
-  # The main site doesn't need to build anything - each app builds separately
   publish = "dist"
-  command = "echo 'Deploy individual apps as separate sites'"
+  command = "npm install && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
-# Netlify Functions configuration
+# Netlify Functions configuration (shared API)
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
   external_node_modules = ["mongoose"]
 
-# Headers for all sites
+# Security headers for all routes
 [[headers]]
   for = "/*"
   [headers.values]
@@ -26,10 +29,47 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Redirect /api/* to the serverless function
-# The function handles routes as /api/* internally
+# ============================================
+# API REDIRECTS (must come first - highest priority)
+# ============================================
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
+
+# ============================================
+# HOST-BASED SUBDOMAIN ROUTING
+# ============================================
+
+# MUSE subdomain → /muse/*
+[[redirects]]
+  from = "/*"
+  to = "/muse/:splat"
+  status = 200
+  force = true
+  conditions = {Host = ["muse.tripleamusic.org", "muse.tripleamusic.com", "muse.triplea.netlify.app"]}
+
+# MUSICIAN subdomain → /musician/*
+[[redirects]]
+  from = "/*"
+  to = "/musician/:splat"
+  status = 200
+  force = true
+  conditions = {Host = ["musician.tripleamusic.org", "musician.tripleamusic.com", "musician.triplea.netlify.app"]}
+
+# MUSIC subdomain → /music/*
+[[redirects]]
+  from = "/*"
+  to = "/music/:splat"
+  status = 200
+  force = true
+  conditions = {Host = ["music.tripleamusic.org", "music.tripleamusic.com", "music.triplea.netlify.app"]}
+
+# ============================================
+# DEFAULT / ROOT DOMAIN → MUSIC (fallback)
+# ============================================
+[[redirects]]
+  from = "/*"
+  to = "/music/:splat"
+  status = 200

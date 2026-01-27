@@ -367,18 +367,11 @@ export default function ConcertDetailPage() {
                     sections={seatingData.layout.sections}
                     tiers={seatingData.tiers}
                     selectedSeats={selectedSeats}
-                    onSelectSeat={(seatId) => {
-                      if (selectedSeats.includes(seatId)) {
-                        setSelectedSeats((prev) =>
-                          prev.filter((id) => id !== seatId),
-                        );
-                      } else if (selectedSeats.length < 10) {
-                        setSelectedSeats((prev) => [...prev, seatId]);
-                      }
+                    onSelectionChange={(seatIds: string[]) => {
+                      setSelectedSeats(seatIds.slice(0, 10));
                     }}
-                    maxSelectable={10}
+                    maxSeats={10}
                     stagePosition={seatingData.layout.stagePosition}
-                    className={styles.seatSelector}
                   />
                 ) : (
                   <Button
@@ -395,12 +388,12 @@ export default function ConcertDetailPage() {
                     <span className={styles.selectedSeatsLabel}>Selected:</span>
                     {selectedSeats.map((seatId) => {
                       const seat = seatingData.layout.seats.find(
-                        (s) => s.id === seatId,
+                        (s) => s.seatId === seatId,
                       );
                       return (
                         <span key={seatId} className={styles.selectedSeatChip}>
                           {seat?.row}
-                          {seat?.number}
+                          {seat?.seatNumber}
                           <button
                             type="button"
                             onClick={() =>

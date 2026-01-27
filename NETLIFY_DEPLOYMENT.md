@@ -4,90 +4,102 @@ This guide explains how to deploy the Triple A Apps suite to Netlify.
 
 ## Architecture Overview
 
-The project consists of three frontend apps and one serverless backend:
+The project consists of three frontend apps and one serverless backend, deployed as a **single Netlify site** with **host-based subdomain routing**:
 
-- **Triple A Muse** (`muse.<site>.netlify.app`) - Brand gateway & rentals/services
-- **Triple A Music** (`music.<site>.netlify.app`) - Consumer marketplace & tickets
-- **Triple A Musician** (`musician.<site>.netlify.app`) - Performer dashboard
-- **API** - Express server running as Netlify Functions
+- **Triple A Muse** (`muse.tripleamusic.org`) - Brand gateway & rentals/services
+- **Triple A Music** (`music.tripleamusic.org`) - Consumer marketplace & tickets
+- **Triple A Musician** (`musician.tripleamusic.org`) - Performer dashboard
+- **API** - Express server running as Netlify Functions (shared across all apps)
 
-## Deployment Options
+## Quick Start Deployment
 
-### Option 1: Three Separate Netlify Sites (Recommended)
+### 1. Create ONE Netlify Site
 
-Deploy each app as a separate Netlify site with subdomain routing:
+1. Go to [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project**
+2. Connect your GitHub/GitLab repo
+3. **Leave base directory empty** (use root)
+4. Build settings are auto-detected from `netlify.toml`:
+   - **Build command:** `npm install && npm run build`
+   - **Publish directory:** `dist`
+5. Click **Deploy**
 
-1. Create three Netlify sites:
-   - `muse-triplea` → Custom domain: `muse.yourdomain.com`
-   - `music-triplea` → Custom domain: `music.yourdomain.com`
-   - `musician-triplea` → Custom domain: `musician.yourdomain.com`
+### 2. Add Custom Domains
 
-2. For each site, set the base directory:
-   - Muse: `TripleAMuse`
-   - Music: `TripleAMusic`
-   - Musician: `TripleAMusician`
+In **Site settings** → **Domain management** → **Add custom domain**:
 
-3. Build settings (auto-detected from each app's `netlify.toml`):
-   - Build command: `cd .. && npm install && npm run build --prefix TripleAMuse` (adjust per app)
-   - Publish directory: `dist`
+| Domain                      | Routes to           |
+| --------------------------- | ------------------- |
+| `tripleamusic.org`          | Music app (default) |
+| `music.tripleamusic.org`    | Music app           |
+| `muse.tripleamusic.org`     | Muse app            |
+| `musician.tripleamusic.org` | Musician app        |
 
-### Option 2: Single Site with Branch Deploys
+### 3. Set Environment Variables
 
-Use Netlify's branch deploys to host all three apps:
+In **Site settings** → **Environment variables**, add:
 
-- `main` branch → Music app
-- `muse` branch → Muse app
-- `musician` branch → Musician app
+```
+MONGO_URI=mongodb+srv://...
+JWT_SECRET=your-random-secret
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+## How It Works
+
+The build process:
+
+1. Builds all 3 apps into their own `dist/` folders
+2. Copies them into a unified structure:
+   ```
+   dist/
+   ├── music/      ← TripleAMusic/dist/*
+   ├── musician/   ← TripleAMusician/dist/*
+   └── muse/       ← TripleAMuse/dist/*
+   ```
+3. Netlify's `netlify.toml` uses **host-based redirects** to route:
+   - `muse.*.org` → `/muse/*`
+   - `musician.*.org` → `/musician/*`
+   - `music.*.org` or root → `/music/*`
 
 ## Environment Variables
 
-Set these in your Netlify site settings (Site Settings → Environment Variables):
-
 ### Required
 
-```
-MONGO_URI=mongodb+srv://...        # MongoDB Atlas connection string
-JWT_SECRET=your-jwt-secret         # Strong random secret
-STRIPE_SECRET_KEY=sk_live_...      # Stripe secret key
-STRIPE_WEBHOOK_SECRET=whsec_...    # Stripe webhook secret
-```
+| Variable                | Description                         |
+| ----------------------- | ----------------------------------- |
+| `MONGO_URI`             | MongoDB Atlas connection string     |
+| `JWT_SECRET`            | Strong random secret for JWT tokens |
+| `STRIPE_SECRET_KEY`     | Stripe secret key                   |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret       |
 
 ### Optional
 
-```
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...  # Stripe publishable key
-VITE_GOOGLE_MAPS_API_KEY=...             # Google Maps API key
-SEED_DEMO_DATA=false                      # Set to false in production
-```
-
-### Auto-Detected (Don't Set Manually)
-
-These are automatically provided by Netlify:
-
-- `NETLIFY` - Set to `true` when running on Netlify
-- `URL` - The main site URL
-- `DEPLOY_PRIME_URL` - The deploy-specific URL
+| Variable                      | Description                            |
+| ----------------------------- | -------------------------------------- |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)      |
+| `VITE_GOOGLE_MAPS_API_KEY`    | Google Maps API key                    |
+| `SEED_DEMO_DATA`              | Set to `true` for demo data (dev only) |
 
 ## MongoDB Setup
 
 For production, use MongoDB Atlas:
 
 1. Create a free cluster at https://cloud.mongodb.com
-2. Create a database user and whitelist Netlify IPs (or use 0.0.0.0/0 for any IP)
-3. Get the connection string and set it as `MONGO_URI`
+2. Create a database user
+3. Whitelist Netlify IPs (or use `0.0.0.0/0` for any IP)
+4. Get the connection string and set it as `MONGO_URI`
 
 ## Stripe Webhooks
 
 Configure Stripe webhooks for your Netlify site:
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://music.yourdomain.com/api/stripe/webhook`
+2. Add endpoint: `https://tripleamusic.org/api/stripe/webhook`
 3. Select events: `checkout.session.completed`, `payment_intent.succeeded`, etc.
 4. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
 
 ## Local Development
-
-The apps automatically detect the local environment and use localhost URLs:
 
 ```bash
 # Install dependencies
@@ -107,60 +119,62 @@ URLs in development:
 ## Build Commands
 
 ```bash
-# Build all apps
+# Build all apps (unified)
 npm run build
 
-# Build individual apps
+# Build individual apps only
 npm run build --prefix TripleAMuse
 npm run build --prefix TripleAMusic
 npm run build --prefix TripleAMusician
-npm run build --prefix server
 ```
 
 ## Troubleshooting
 
 ### CORS Errors
 
-The server automatically allows origins from your Netlify sites. If you see CORS errors:
-
-1. Check that your site URL matches the expected subdomain pattern
-2. Verify environment variables are set correctly
+The server automatically allows origins from your Netlify sites. Check that your site URL matches the expected subdomain pattern.
 
 ### MongoDB Connection Errors
 
-1. Ensure MongoDB Atlas IP whitelist includes Netlify's IPs (or 0.0.0.0/0)
-2. Verify the connection string format is correct
+1. Ensure MongoDB Atlas IP whitelist includes `0.0.0.0/0`
+2. Verify the connection string format
 3. Check that the database user has proper permissions
 
 ### Function Timeouts
 
-Netlify Functions have a 10-second timeout by default (26s for Pro). If operations time out:
-
-1. Optimize database queries
-2. Consider upgrading to Netlify Pro for longer timeouts
-3. Use background functions for long-running tasks
+Netlify Functions have a 10-second timeout (26s for Pro). Optimize queries or upgrade to Pro for longer operations.
 
 ## File Structure
 
 ```
 /
-├── netlify.toml              # Root Netlify config
+├── netlify.toml              # Unified Netlify config with host-based routing
 ├── netlify/
 │   └── functions/
 │       └── api.ts            # Serverless function entry point
+├── dist/                     # Built output (after npm run build)
+│   ├── music/
+│   ├── musician/
+│   └── muse/
 ├── server/
 │   └── src/
-│       ├── index.ts          # Express server (local dev)
 │       └── serverless.ts     # Serverless wrapper
 ├── packages/
-│   └── shared/
-│       └── src/
-│           └── lib/
-│               └── env.ts    # Environment-aware URL config
+│   └── shared/               # Shared components & types
 ├── TripleAMuse/
-│   └── netlify.toml
 ├── TripleAMusic/
-│   └── netlify.toml
 └── TripleAMusician/
-    └── netlify.toml
+```
+
+## Adding Custom Domains to netlify.toml
+
+If you use different domains, update the `conditions.Host` arrays in `netlify.toml`:
+
+```toml
+[[redirects]]
+  from = "/*"
+  to = "/muse/:splat"
+  status = 200
+  force = true
+  conditions = {Host = ["muse.yourdomain.com", "muse.yourdomain.org"]}
 ```

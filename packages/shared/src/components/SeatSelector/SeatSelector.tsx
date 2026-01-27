@@ -201,7 +201,8 @@ export default function SeatSelector({
       {/* Seating chart */}
       <div className={styles.chart}>
         {Array.from(seatsBySection.entries()).map(([sectionName, rows]) => {
-          const section = sectionByName.get(sectionName);
+          const _section = sectionByName.get(sectionName);
+          void _section; // Available for future styling based on section
           return (
             <div key={sectionName} className={styles.section}>
               <h4 className={styles.sectionName}>{sectionName}</h4>
