@@ -56,8 +56,8 @@ export const getServerOrigin = (): string => {
 
 export const getApiBaseUrl = (): string => {
   if (isNetlify) {
-    // Netlify Functions path
-    return "/.netlify/functions/api";
+    // On Netlify, /api/* is redirected to the function
+    return "/api";
   }
   return `${getServerOrigin()}/api`;
 };
@@ -88,7 +88,7 @@ export const getMusicianOrigin = (): string => {
 
 /**
  * Convert a server-relative pathname to a full URL.
- * On Netlify, assets are served from the functions endpoint.
+ * On Netlify, assets are served through the /api redirect.
  */
 export const apiAssetUrl = (pathname?: string): string | undefined => {
   if (!pathname) return undefined;
@@ -97,8 +97,10 @@ export const apiAssetUrl = (pathname?: string): string | undefined => {
 
   const origin = getServerOrigin();
   if (isNetlify) {
-    // Netlify: serve assets through functions
-    return `/.netlify/functions/api${pathname.startsWith("/api") ? pathname.slice(4) : pathname}`;
+    // Netlify: /api/* is redirected to the function
+    // If pathname starts with /api, use as-is; otherwise prepend /api
+    if (pathname.startsWith("/api")) return pathname;
+    return `/api${pathname}`;
   }
   return `${origin}${pathname}`;
 };

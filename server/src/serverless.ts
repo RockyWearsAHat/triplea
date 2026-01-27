@@ -125,14 +125,28 @@ const connectDB = async () => {
 };
 
 // Wrap with serverless-http
+// Netlify redirects /api/* to this function, stripping the /api prefix
+// We need to add it back for Express routing to work correctly
 const serverlessHandler = serverless(app, {
-  basePath: "/.netlify/functions/api",
+  request: (request: any) => {
+    // On Netlify, the path comes in without /api prefix (e.g., /auth/login)
+    // Add /api prefix so Express routes match correctly
+    if (process.env.NETLIFY && !request.path.startsWith("/api")) {
+      request.url = `/api${request.url}`;
+      request.path = `/api${request.path}`;
+    }
+  },
 });
 
 // Export handler for Netlify Functions
 export const handler = async (event: any, context: any) => {
   // Keep the connection alive between invocations
   context.callbackWaitsForEmptyEventLoop = false;
+
+  // On Netlify, add /api prefix to the path if not present
+  if (process.env.NETLIFY && event.path && !event.path.startsWith("/api")) {
+    event.path = `/api${event.path}`;
+  }
 
   await connectDB();
   return serverlessHandler(event, context);

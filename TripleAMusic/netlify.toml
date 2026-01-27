@@ -17,19 +17,14 @@
   external_node_modules = ["mongoose"]
   included_files = ["../server/**", "../packages/**"]
 
-# API redirects to serverless function
+# API redirects - /api/* goes to the serverless function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/api/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
 
-[[redirects]]
-  from = "/.netlify/functions/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-
-# SPA routing - send all requests to index.html
+# SPA routing - all other requests go to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

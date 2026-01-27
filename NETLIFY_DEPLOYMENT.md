@@ -81,7 +81,7 @@ For production, use MongoDB Atlas:
 Configure Stripe webhooks for your Netlify site:
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://music.yourdomain.com/.netlify/functions/api/api/stripe/webhook`
+2. Add endpoint: `https://music.yourdomain.com/api/stripe/webhook`
 3. Select events: `checkout.session.completed`, `payment_intent.succeeded`, etc.
 4. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
 
