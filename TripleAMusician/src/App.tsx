@@ -58,11 +58,12 @@ function LoginPage() {
   }
 
   return (
-    <AppShell title="Sign in to Triple A Musician">
+    <AppShell title="Sign in to Triple A Musician" centered>
       <form
         onSubmit={handleSubmit}
         style={{
           maxWidth: 360,
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           gap: spacing.md,
@@ -243,11 +244,12 @@ function RegisterPage() {
   }
 
   return (
-    <AppShell title="Create musician account">
+    <AppShell title="Create musician account" centered>
       <form
         onSubmit={handleSubmit}
         style={{
           maxWidth: 360,
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           gap: spacing.md,

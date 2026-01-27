@@ -38,11 +38,13 @@ export function RegisterPage() {
     <AppShell
       title="Create account"
       subtitle="Unified identity across Triple A apps."
+      centered
     >
       <form
         onSubmit={handleSubmit}
         style={{
           maxWidth: 420,
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           gap: spacing.md,

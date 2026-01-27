@@ -2,39 +2,7 @@ Rocky
 rockywearsahat
 Online
 
-Rocky — Yesterday at 7:01 PM
-I'll help whether I'm getting paid or not, just depending on the scale it may become unmanageable for just me with school/life, millions of lines of code is not easy to keep track of, even with AI it uses tons of tokens to even find the relevant code when making somewhat niche but not super niche changes, you have to give it anchor points or it just gets lost entirely as the project expands
-Rocky — Yesterday at 7:02 PM
-yea absolutely, businesses are continuing, and I plan on being a team throughout the lifecycle of this application, moreso just genuine millions of lines is hard to read as one person, it's laggy, it's slow, it's rough to work on, possible but rough
-Rocky — Yesterday at 7:07 PM
-Yes, you can create the documents yourself but you should absolutley get them reviewed by a lawyer, and yea we'll get through it I'm just saying when you do have funds if the entire company relies on me for maintaining it's runtime I cannot be responsible solely for that, with a small user base I can find bugs quicker than they can, but with millions of users the probability someone does something unexpected is much much higher and having more than one set of eyes to review what is actually happening is WAY more beneficial than anything I could ever do just myself, even if it's just a freelance security worker or just a friend who wants to learn to code I can train them, but having 2 heads is easier to catch things before they go wrong over one head, that said I'll do my best but fair warning millions of lines of code is unmaintainable for one person so if the service grows to be larger than just us or a couple hundred users and a couple venues, it'll probably need a development team, we can always renegotiate salary agreements from there though bc 5% for one developer, though generous and though it was my original work that created it, unless I'm actively maintaining it that is alot of money to spend on development for one developer
-you don't need them to be notarized or anything until you want to go public, just draft them yourself, print them and sign them as applicable, then either scan them or just save the paper and it's legally binding
-if you go public you'll have to get alot of documents notarized but for basic operating agreements drafting them yourself is legal (atleast according to my grandfather who was a lawyer back in his day)
-as long as it has the correct signatures and it's dated and such it's legally binding if declared to be, you can bring it to court as your evidence
-that said though I will keep you updated as development continues, because the basic idea and workflows are actually quite simple and just need some smart implementations to be secure
-If it's implemented well once it shouldn't need to be implemented again is the key idea but that being said 2m+ lines of code gets laggy and hard to debug so I may have to split the projects or if this grows a substantial quantity we may need more devs
-Man — Yesterday at 7:14 PM
-Youre doing a phenomenal job, I imagine! I understand this is a lot of work, and Im willing to run the prototype when it is functional and published until we’re able to help you get a team that can clean it up and turn it into a machine everyone can help monitor.
-Rocky — Yesterday at 7:14 PM
-bet, thank you, I'll work on getting it running on netlify rq, it probably won't be forwarded with the proper urls rn but I'll send you a working link in like 15 hopefully
-messaging won't work because netlify is "serverless"
-serverless means it creates a new server instance for each request, not truely serverless, that's not a thing, but server is running consistently, serverless starts new instances each time and shuts them down afterwards to conserve and distribute resources, great in principle but then websockets don't work because there's no sustained connection to connect into, when I host it from my PC I'll fix that
-for right now everything should work just not live messaging
-Rocky — Yesterday at 8:02 PM
-https://tripleaevents.netlify.app/
-https://tripleaevents.netlify.app/music
-https://tripleaevents.netlify.app/muse
-https://tripleaevents.netlify.app/musician
-oh weird things are erroring, the first link works
-give me a second
-Man — Yesterday at 8:06 PM
-5% would be a lot of money for one developer, but my hope is that, if you plan on owning a business, we can renegotiate this best-of-2years-5% deal, with you leveraging your team of coders for this same project, and have your people manage this project that would feed so many people if this was successful.. If this project isnt successful, it will stay in the smallest fetal phase and make enough money for you to feel good about your work, and for me to make money on the equipment I already have… The renegotiation would terminate that precious 5% deal, and upon termination, you would receive a minimum of $1000 if 5% of two years is less than that, and you would be free to go. This project will not make more money than what we invest in it. $1000 is 5% of $20,000, so if you wanted to make $150,000 you would have to invest in your business, leverage against me a new deal, and receive a higher percentage than 5% for your employees.. If you dont invest, this thing wont grow, and I dont mind that, because the ground work will make me money without the website.
-Rocky — Yesterday at 8:06 PM
-there we go
-Man — Yesterday at 8:09 PM
-I am excited to show my wife what we have so far.
-Rocky — Yesterday at 8:10 PM
-I'm hyped you're hyped
+Rocky — Yesterday at 8:11 PM
 musician page is the most dire redesign needed, I'll try to set up the host panel and musician pages to be better
 those links will be live for the git repository though so it will always be the most up to date version if I've made edits
 any comments or anything feel free to share
@@ -154,6 +122,42 @@ Nah this conversation has been pretty good in shaping the key principles, muse s
 Idk why AI generated that but am I correct in that statement ^?
 Man — 12:54 AM
 The only issue with Muse, it all looks perfect, but the home page would also have lessons available somewhere small at the bottom, and rent instruments. Also, maybe a registered Musician logged in, can book another Musician like an engineer, and pay them to help them complete a project? Or is all this too much for the site?
+Oh! You do have rentals on there!
+It’s perfect!
+In order to book a private session with a Musician, you would also have to be a registered Musician…
+Rocky — 1:00 AM
+Yur, I don't think there's meetups yet, I'll add that in and like an inbox for notifications, I'll work on the artist page next, I'm fixing some db errors rq
+Man — 1:01 AM
+Bro, dont kill yourself. You seem in a good groove, but I know it’s early morning for you… you’ll catch fire again. My bad for keeping you going so long!!
+I just realized the time for where you are!
+Rocky — 1:03 AM
+CLASH
+ROYALE
+Man — 1:04 AM
+What about it?
+The Robot or what?
+Rocky — 1:08 AM
+lmao the tune
+Man — 1:08 AM
+Lol
+Rocky — 1:08 AM
+uhh there are testing accounts as well to test the flow through the app
+
+Demo users exist with password test:
+
+admin@admin.com
+music@music.com
+musician@music.com
+muse@music.com
+you can login with any of these, all three should work on music & muse, only musician should be able to access musician, admin has all site access and admin dashboard but idk I haven't reallt tested that much
+Man — 1:10 AM
+Bruv, night night. Im going to bed. My brain isnt speiabfks dkse ssusiws
+Lol jk. My brain is fried
+Log in to what?
+Muse?
+Oh, music and muse.. see, my brain registered nothing I read lol
+Great work mate… super locked in!!!
+This is a better website than most ALREADY. I remember talking about Pizza Hut, and how you can modify the pizzas… it’s coming along, absolutely.. glad we cleared so much up!
 
 ﻿
 Man

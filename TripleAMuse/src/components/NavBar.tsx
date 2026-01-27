@@ -1,9 +1,13 @@
 import { NavLink } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import { useAuth } from "@shared";
+import { Home, MessageSquare, LogIn, User, Settings } from "lucide-react";
 
 export function NavBar() {
   const { user } = useAuth();
+  const isAdmin = user?.role.includes("admin");
+  const isEmployee = user?.role.includes("rental_provider");
+
   return (
     <nav className={ui.nav}>
       <NavLink
@@ -12,17 +16,43 @@ export function NavBar() {
           [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
         }
       >
-        Home
+        <Home size={18} />
+        <span>Home</span>
       </NavLink>
 
-      {user?.role.includes("admin") && (
+      {user && (
+        <NavLink
+          to="/messages"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          <MessageSquare size={18} />
+          <span>Messages</span>
+        </NavLink>
+      )}
+
+      {isAdmin && (
         <NavLink
           to="/admin"
           className={({ isActive }) =>
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Admin
+          <Settings size={18} />
+          <span>Admin</span>
+        </NavLink>
+      )}
+
+      {isEmployee && !isAdmin && (
+        <NavLink
+          to="/employee"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          <Settings size={18} />
+          <span>Dashboard</span>
         </NavLink>
       )}
 
@@ -33,7 +63,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Login
+          <LogIn size={18} />
+          <span>Login</span>
         </NavLink>
       ) : (
         <NavLink
@@ -42,7 +73,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Account
+          <User size={18} />
+          <span>Account</span>
         </NavLink>
       )}
     </nav>

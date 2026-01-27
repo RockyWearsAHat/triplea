@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Instrument, Location } from "@shared";
-import { CategoryBar, ProductCard, Button } from "@shared";
+import { ProductCard, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./HomePage.module.scss";
 import {
@@ -9,89 +9,86 @@ import {
   openMusic,
   openMusician,
 } from "../lib/urls";
+import {
+  Music,
+  Mic2,
+  Calendar,
+  Guitar,
+  GraduationCap,
+  Users,
+  ArrowRight,
+  Star,
+  Sparkles,
+} from "lucide-react";
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Triple A Muse - "DIY Event Coordinator" (TOP PRIORITY APP)
+   Triple A Muse - Promotional Landing / Service Hub
    
-   From owner (Discord):
-   "Muse is like an event coordinator, select 'wedding, funeral, cruise, party, 
-   graduation' and then check mark select 'Drummer, or pianist, or vocalist, or 
-   Master of Ceremonies blah blah' you'll select the artists you want then select 
-   'local venue options' then select 'event set up packages, speakers, etc' you 
-   can select 'preferred genre'.."
+   This is the front door to Triple A. It should feel like a professional
+   service website that showcases what Triple A offers and funnels users
+   to the right app:
    
-   "Muse is where you would put it together yourself"
-   "you could put together an assortment of musicians such as drummers, pianists, 
-   sax players, singers.. (so you can get an uber to Taco Bell, the gas station, 
-   and the train station)"
-   
-   This is WHERE YOU PUT IT TOGETHER YOURSELF
-   Music is the premium "McDonald's menu" for promoted artists/events
+   - Music: Browse curated events, buy tickets, see premium artists
+   - Musician: Join as a performer, manage gigs, grow your career
+   - Muse: Book services directly (rentals, lessons, event coordination)
    ══════════════════════════════════════════════════════════════════════════ */
 
-// Event types - the FIRST thing users select
-const EVENT_TYPES = [
-  { id: "wedding", label: "Wedding", icon: "💒" },
-  { id: "funeral", label: "Memorial", icon: "🕊️" },
-  { id: "cruise", label: "Cruise", icon: "🚢" },
-  { id: "party", label: "Party", icon: "🎉" },
-  { id: "graduation", label: "Graduation", icon: "🎓" },
-  { id: "corporate", label: "Corporate", icon: "💼" },
-];
-
-// Performer types - users select which performers they need
-const PERFORMER_TYPES = [
-  { id: "drummer", label: "Drummer", icon: "🥁" },
-  { id: "pianist", label: "Pianist", icon: "🎹" },
-  { id: "vocalist", label: "Vocalist", icon: "🎤" },
-  { id: "saxophonist", label: "Sax Player", icon: "🎷" },
-  { id: "guitarist", label: "Guitarist", icon: "🎸" },
-  { id: "violinist", label: "Violinist", icon: "🎻" },
-  { id: "dj", label: "DJ", icon: "🎧" },
-  { id: "mc", label: "MC / Host", icon: "📢" },
-];
-
-// Genre preferences
-const GENRES = [
-  { id: "jazz", label: "Jazz" },
-  { id: "classical", label: "Classical" },
-  { id: "pop", label: "Pop" },
-  { id: "rnb", label: "R&B" },
-  { id: "gospel", label: "Gospel" },
-  { id: "rock", label: "Rock" },
-  { id: "country", label: "Country" },
-  { id: "latin", label: "Latin" },
-];
-
-// Instrument rental categories
-const INSTRUMENT_CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "drums", label: "Drums" },
-  { id: "brass", label: "Brass" },
-  { id: "strings", label: "Strings" },
-  { id: "keyboard", label: "Keys" },
-  { id: "guitar", label: "Guitars" },
-];
-
-// Service packages
-const SERVICE_PACKAGES = [
+// Service offerings
+const SERVICES = [
   {
-    id: "basic",
-    name: "Basic Setup",
-    desc: "Sound check & coordination",
-    price: 150,
+    id: "events",
+    icon: <Calendar size={28} />,
+    title: "Event Coordination",
+    description:
+      "From weddings to corporate events — we connect you with the perfect performers and handle the logistics.",
+    cta: "Plan an Event",
+    link: "/plan",
   },
   {
-    id: "standard",
-    name: "Standard Package",
-    desc: "Setup, sound, basic lighting",
-    price: 350,
+    id: "musicians",
+    icon: <Mic2 size={28} />,
+    title: "Live Performers",
+    description:
+      "Curated musicians for any occasion. Solo artists, bands, DJs, and more — vetted and ready to perform.",
+    cta: "Browse Artists",
+    link: "music",
   },
   {
-    id: "premium",
-    name: "Full Production",
-    desc: "Complete event production & on-site support",
-    price: 750,
+    id: "rentals",
+    icon: <Guitar size={28} />,
+    title: "Instrument Rentals",
+    description:
+      "Professional gear when you need it. Drums, keyboards, guitars, brass, and more available for rent.",
+    cta: "View Inventory",
+    link: "/rentals",
+  },
+  {
+    id: "lessons",
+    icon: <GraduationCap size={28} />,
+    title: "Music Lessons",
+    description:
+      "Learn from professionals. One-on-one or group sessions for all skill levels and instruments.",
+    cta: "Find a Teacher",
+    link: "/lessons",
+  },
+];
+
+// Featured reasons to choose Triple A
+const FEATURES = [
+  {
+    icon: <Star size={20} />,
+    title: "Vetted Professionals",
+    description: "Every musician is reviewed and rated by real clients.",
+  },
+  {
+    icon: <Users size={20} />,
+    title: "End-to-End Support",
+    description: "From booking to event day, we've got you covered.",
+  },
+  {
+    icon: <Sparkles size={20} />,
+    title: "Premium Equipment",
+    description: "Professional-grade instruments and sound systems.",
   },
 ];
 
@@ -100,18 +97,6 @@ export function HomePage() {
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Event coordinator state
-  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
-  const [selectedPerformers, setSelectedPerformers] = useState<Set<string>>(
-    new Set(),
-  );
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
-  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-
-  // Rentals state
-  const [rentalCategory, setRentalCategory] = useState("all");
 
   useEffect(() => {
     Promise.all([api.getMarketplaceCatalog(), api.listPublicLocations()])
@@ -123,145 +108,90 @@ export function HomePage() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  const togglePerformer = (id: string) => {
-    setSelectedPerformers((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleGenre = (id: string) => {
-    setSelectedGenres((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const filteredInstruments = useMemo(() => {
-    return instruments.filter(
-      (inst) =>
-        rentalCategory === "all" ||
-        (inst.category ?? "").toLowerCase().includes(rentalCategory),
-    );
-  }, [instruments, rentalCategory]);
-
-  const canGetQuote =
-    selectedEvent &&
-    selectedPerformers.size > 0 &&
-    selectedVenue &&
-    selectedPackage;
-
   return (
     <div className={styles.page}>
-      {/* Hero */}
+      {/* Hero Section */}
       <header className={styles.hero}>
-        <p className={styles.kicker}>Triple A Muse</p>
-        <h1 className={styles.heroTitle}>Plan your event</h1>
+        <p className={styles.kicker}>Triple A Music Services</p>
+        <h1 className={styles.heroTitle}>
+          Live music, <span className={styles.heroHighlight}>made simple.</span>
+        </h1>
         <p className={styles.heroSubtitle}>
-          Select your occasion, choose your performers, and we'll handle the
-          rest.
+          Whether you're planning an event, looking to perform, or need
+          professional gear — we've got you covered.
         </p>
+        <div className={styles.heroCta}>
+          <Button variant="primary" size="lg" onClick={openMusic}>
+            Explore Events
+          </Button>
+          <Button variant="secondary" size="lg" onClick={openMusician}>
+            Join as Performer
+          </Button>
+        </div>
       </header>
 
-      {/* Step 1: Event Type */}
-      <section className={styles.section}>
-        <div className={styles.stepHeader}>
-          <span className={styles.stepNumber}>1</span>
-          <div>
-            <h2 className={styles.sectionTitle}>What's the occasion?</h2>
-            <p className={styles.sectionSubtitle}>Select your event type</p>
-          </div>
+      {/* Services Grid */}
+      <section className={styles.servicesSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>What we offer</h2>
+          <p className={styles.sectionSubtitle}>
+            Everything around the gig — handled.
+          </p>
         </div>
-        <div className={styles.chipGrid}>
-          {EVENT_TYPES.map((evt) => (
-            <button
-              key={evt.id}
-              className={`${styles.eventChip} ${selectedEvent === evt.id ? styles.chipSelected : ""}`}
-              onClick={() => setSelectedEvent(evt.id)}
+        <div className={styles.servicesGrid}>
+          {SERVICES.map((service) => (
+            <article
+              key={service.id}
+              className={styles.serviceCard}
+              onClick={() => {
+                if (service.link === "music") {
+                  openMusic();
+                } else {
+                  window.location.href = service.link;
+                }
+              }}
             >
-              <span className={styles.chipIcon}>{evt.icon}</span>
-              <span className={styles.chipLabel}>{evt.label}</span>
-            </button>
+              <div className={styles.serviceIcon}>{service.icon}</div>
+              <h3 className={styles.serviceTitle}>{service.title}</h3>
+              <p className={styles.serviceDesc}>{service.description}</p>
+              <span className={styles.serviceCta}>
+                {service.cta} <ArrowRight size={14} />
+              </span>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* Step 2: Performers */}
-      <section className={styles.section}>
-        <div className={styles.stepHeader}>
-          <span className={styles.stepNumber}>2</span>
-          <div>
-            <h2 className={styles.sectionTitle}>Who do you need?</h2>
-            <p className={styles.sectionSubtitle}>
-              Select all performers you want
-            </p>
-          </div>
-        </div>
-        <div className={styles.chipGrid}>
-          {PERFORMER_TYPES.map((p) => (
-            <button
-              key={p.id}
-              className={`${styles.performerChip} ${selectedPerformers.has(p.id) ? styles.chipSelected : ""}`}
-              onClick={() => togglePerformer(p.id)}
-            >
-              <span className={styles.chipIcon}>{p.icon}</span>
-              <span className={styles.chipLabel}>{p.label}</span>
-              {selectedPerformers.has(p.id) && (
-                <span className={styles.chipCheck}>✓</span>
-              )}
-            </button>
+      {/* Features Strip */}
+      <section className={styles.featuresSection}>
+        <div className={styles.featuresGrid}>
+          {FEATURES.map((feature, i) => (
+            <div key={i} className={styles.featureItem}>
+              <div className={styles.featureIcon}>{feature.icon}</div>
+              <div>
+                <h3 className={styles.featureTitle}>{feature.title}</h3>
+                <p className={styles.featureDesc}>{feature.description}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Step 3: Genre Preference */}
-      <section className={styles.section}>
-        <div className={styles.stepHeader}>
-          <span className={styles.stepNumber}>3</span>
-          <div>
-            <h2 className={styles.sectionTitle}>Preferred genre</h2>
+      {/* Venues Preview */}
+      {locations.length > 0 && (
+        <section className={styles.previewSection}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Featured Venues</h2>
             <p className={styles.sectionSubtitle}>
-              Optional — helps us match the right artists
+              Beautiful spaces ready for your next event
             </p>
           </div>
-        </div>
-        <div className={styles.genreGrid}>
-          {GENRES.map((g) => (
-            <button
-              key={g.id}
-              className={`${styles.genreChip} ${selectedGenres.has(g.id) ? styles.chipSelected : ""}`}
-              onClick={() => toggleGenre(g.id)}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Step 4: Local Venue Options */}
-      <section className={styles.section}>
-        <div className={styles.stepHeader}>
-          <span className={styles.stepNumber}>4</span>
-          <div>
-            <h2 className={styles.sectionTitle}>Select a venue</h2>
-            <p className={styles.sectionSubtitle}>
-              Choose from available local venues
-            </p>
-          </div>
-        </div>
-        {locations.length === 0 ? (
-          <p className={ui.help}>No venues available yet</p>
-        ) : (
           <div className={styles.venueGrid}>
-            {locations.map((loc) => (
-              <button
+            {locations.slice(0, 4).map((loc) => (
+              <article
                 key={loc.id}
-                className={`${styles.venueCard} ${selectedVenue === loc.id ? styles.venueSelected : ""}`}
-                onClick={() => setSelectedVenue(loc.id)}
+                className={styles.venueCard}
+                onClick={openMusic}
               >
                 <div className={styles.venueImageWrapper}>
                   {loc.imageUrl ? (
@@ -269,15 +199,9 @@ export function HomePage() {
                       src={getAssetUrl(loc.imageUrl)}
                       alt={loc.name}
                       className={styles.venueImage}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
                     />
                   ) : (
                     <div className={styles.venueImageFallback}>🏛️</div>
-                  )}
-                  {selectedVenue === loc.id && (
-                    <span className={styles.venueCheck}>✓</span>
                   )}
                 </div>
                 <div className={styles.venueInfo}>
@@ -289,85 +213,28 @@ export function HomePage() {
                     </p>
                   )}
                 </div>
-              </button>
+              </article>
             ))}
           </div>
-        )}
-      </section>
+          <div className={styles.previewCta}>
+            <Button variant="ghost" onClick={openMusic}>
+              View all venues →
+            </Button>
+          </div>
+        </section>
+      )}
 
-      {/* Step 5: Event Package */}
-      <section className={styles.section}>
-        <div className={styles.stepHeader}>
-          <span className={styles.stepNumber}>5</span>
-          <div>
-            <h2 className={styles.sectionTitle}>Event setup package</h2>
+      {/* Instrument Rentals Preview */}
+      {!loading && instruments.length > 0 && (
+        <section className={styles.previewSection}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Instrument Rentals</h2>
             <p className={styles.sectionSubtitle}>
-              Logistics & production support
+              Professional gear for your performance
             </p>
           </div>
-        </div>
-        <div className={styles.packageGrid}>
-          {SERVICE_PACKAGES.map((pkg) => (
-            <button
-              key={pkg.id}
-              className={`${styles.packageCard} ${selectedPackage === pkg.id ? styles.packageSelected : ""}`}
-              onClick={() => setSelectedPackage(pkg.id)}
-            >
-              <h3 className={styles.packageName}>{pkg.name}</h3>
-              <p className={styles.packageDesc}>{pkg.desc}</p>
-              <span className={styles.packagePrice}>From ${pkg.price}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Quote CTA */}
-      <section className={styles.ctaSection}>
-        <Button
-          variant="primary"
-          size="lg"
-          disabled={!canGetQuote}
-          onClick={() => alert("Quote request submitted!")}
-        >
-          {canGetQuote ? "Get a Quote" : "Complete selections above"}
-        </Button>
-        {canGetQuote && (
-          <p className={styles.ctaHint}>
-            {selectedPerformers.size} performer
-            {selectedPerformers.size > 1 ? "s" : ""} selected
-          </p>
-        )}
-      </section>
-
-      {/* Divider */}
-      <div className={styles.divider} />
-
-      {/* Instrument Rentals Section */}
-      <section className={styles.rentalSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Instrument Rentals</h2>
-          <p className={styles.sectionSubtitle}>
-            Professional gear for your performance
-          </p>
-        </div>
-
-        <CategoryBar
-          categories={INSTRUMENT_CATEGORIES}
-          active={rentalCategory}
-          onSelect={(id) => setRentalCategory(id)}
-        />
-
-        {loading ? (
-          <div className={styles.loadingState}>
-            <p className={ui.help}>Loading instruments…</p>
-          </div>
-        ) : filteredInstruments.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={ui.help}>No instruments found</p>
-          </div>
-        ) : (
           <div className={styles.productGrid}>
-            {filteredInstruments.slice(0, 6).map((inst) => (
+            {instruments.slice(0, 4).map((inst) => (
               <ProductCard
                 key={inst.id}
                 id={inst.id}
@@ -377,27 +244,26 @@ export function HomePage() {
                 imageUrl={
                   inst.imageUrl ? getAssetUrl(inst.imageUrl) : undefined
                 }
-                onPrimary={() => alert(`View details for ${inst.name}`)}
+                onPrimary={() => (window.location.href = "/rentals")}
               />
             ))}
           </div>
-        )}
-
-        {filteredInstruments.length > 6 && (
-          <div className={styles.viewAllRow}>
-            <button className={styles.viewAllBtn}>
-              View all {filteredInstruments.length} instruments →
-            </button>
+          <div className={styles.previewCta}>
+            <Button
+              variant="ghost"
+              onClick={() => (window.location.href = "/rentals")}
+            >
+              View all instruments →
+            </Button>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* App Funnels */}
       <section className={styles.funnelSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Explore Triple A</h2>
+          <h2 className={styles.sectionTitle}>Get Started</h2>
         </div>
-
         <div className={styles.funnelGrid}>
           <article
             className={styles.funnelCard}
@@ -406,11 +272,13 @@ export function HomePage() {
             role="button"
             onKeyDown={(e) => e.key === "Enter" && openMusic()}
           >
-            <div className={styles.funnelIcon}>🎫</div>
+            <div className={styles.funnelIcon}>
+              <Music size={32} />
+            </div>
             <div className={styles.funnelContent}>
               <h3 className={styles.funnelName}>Triple A Music</h3>
               <p className={styles.funnelDesc}>
-                Browse curated events and buy tickets to see top performers.
+                Browse curated events, buy tickets, and discover top performers.
               </p>
             </div>
             <span className={styles.funnelArrow}>→</span>
@@ -423,7 +291,9 @@ export function HomePage() {
             role="button"
             onKeyDown={(e) => e.key === "Enter" && openMusician()}
           >
-            <div className={styles.funnelIcon}>🎸</div>
+            <div className={styles.funnelIcon}>
+              <Mic2 size={32} />
+            </div>
             <div className={styles.funnelContent}>
               <h3 className={styles.funnelName}>Triple A Musician</h3>
               <p className={styles.funnelDesc}>
@@ -439,15 +309,13 @@ export function HomePage() {
       {/* Mission Footer */}
       <footer className={styles.missionFooter}>
         <h2 className={styles.missionTitle}>
-          Everything around the gig — handled.
+          <strong>Acoustics</strong> · <strong>Acapellas</strong> ·{" "}
+          <strong>Accompaniments</strong>
         </h2>
         <p className={styles.missionText}>
-          Triple A is the simplest way to organize live music. From finding the
-          right performers to coordinating logistics, we help you create
+          Triple A is the simplest way to bring live music to your life. From
+          finding the right performers to coordinating logistics, we help create
           unforgettable experiences.
-        </p>
-        <p className={styles.missionBrand}>
-          <strong>Acoustics · Acapellas · Accompaniments</strong>
         </p>
       </footer>
     </div>

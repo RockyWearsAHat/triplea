@@ -62,11 +62,12 @@ export function LoginPage() {
   }
 
   return (
-    <AppShell title="Sign in to Triple A">
+    <AppShell title="Sign in to Triple A" centered>
       <form
         onSubmit={handleSubmit}
         style={{
           maxWidth: 360,
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           gap: spacing.md,

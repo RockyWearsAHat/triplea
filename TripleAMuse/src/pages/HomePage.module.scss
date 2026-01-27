@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Triple A Muse - HomePage Styles
-   Event Coordinator Flow: Select occasion → Select performers → Genre → Package
+   Promotional Landing Page / Service Hub
    ══════════════════════════════════════════════════════════════════════════ */
 
 .page {
@@ -16,17 +16,200 @@
    Hero
    ───────────────────────────────────────────────────────────────────────── */
 .hero {
-  padding: clamp(32px, 6vh, 56px) 0 clamp(16px, 3vh, 28px);
+  padding: clamp(48px, 10vh, 80px) 0 clamp(32px, 6vh, 56px);
   text-align: center;
 }
 
 .kicker {
-  margin: 0 0 8px;
-  font-size: 12px;
+  margin: 0 0 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--gold);
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.heroHighlight {
+  color: var(--gold);
+}
+
+.heroSubtitle {
+  margin: 16px auto 0;
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--text-muted);
+  max-width: 48ch;
+  line-height: 1.5;
+}
+
+.heroCta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Section Headers
+   ───────────────────────────────────────────────────────────────────────── */
+.sectionHeader {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sectionSubtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Services Section
+   ───────────────────────────────────────────────────────────────────────── */
+.servicesSection {
+  padding: clamp(32px, 6vh, 56px) 0;
+  border-top: 1px solid var(--border);
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.serviceCard {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 200ms ease;
+  text-align: left;
+}
+
+.serviceCard:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.serviceIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.serviceTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.serviceDesc {
+  margin: 8px 0 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.serviceCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.serviceCard:hover .serviceCta {
+  text-decoration: underline;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Features Strip
+   ───────────────────────────────────────────────────────────────────────── */
+.featuresSection {
+  padding: clamp(24px, 4vh, 40px) 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin: 0 calc(-1 * var(--page-pad));
+  padding-left: var(--page-pad);
+  padding-right: var(--page-pad);
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.featureIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg));
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.featureTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.featureDesc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Preview Sections (Venues, Rentals)
+   ───────────────────────────────────────────────────────────────────────── */
+.previewSection {
+  padding: clamp(32px, 5vh, 48px) 0;
+  border-top: 1px solid var(--border);
+}
+
+.previewCta {
+  margin-top: 20px;
+  text-align: center;
 }
 
 .heroTitle {

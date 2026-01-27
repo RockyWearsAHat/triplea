@@ -6,9 +6,16 @@ interface AppShellProps {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  /** Centers content vertically and horizontally - use for login/auth pages */
+  centered?: boolean;
 }
 
-export function AppShell({ title, subtitle, children }: AppShellProps) {
+export function AppShell({
+  title,
+  subtitle,
+  children,
+  centered,
+}: AppShellProps) {
   useEffect(() => {
     const app = document.body.dataset.taaApp;
     const appName =
@@ -28,7 +35,7 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
   }, [title]);
 
   return (
-    <section className={styles.shell}>
+    <section className={centered ? styles.shellCentered : styles.shell}>
       <header className={styles.header}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}

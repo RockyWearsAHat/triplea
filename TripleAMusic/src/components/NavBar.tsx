@@ -5,8 +5,6 @@ import { useCart } from "../context/CartContext";
 import {
   Music,
   LayoutDashboard,
-  CalendarDays,
-  ScanLine,
   MessageSquare,
   Ticket,
   ShoppingCart,
@@ -19,6 +17,7 @@ import styles from "./NavBar.module.scss";
 export function NavBar() {
   const { user } = useAuth();
   const { itemCount } = useCart();
+  const isHost = user?.role.includes("customer");
 
   return (
     <nav className={ui.nav}>
@@ -32,36 +31,16 @@ export function NavBar() {
         <span className={styles.navLabel}>Concerts</span>
       </NavLink>
 
-      {user?.role.includes("customer") && (
-        <>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            <LayoutDashboard size={18} />
-            <span className={styles.navLabel}>Host</span>
-          </NavLink>
-          <NavLink
-            to="/events"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            <CalendarDays size={18} />
-            <span className={styles.navLabel}>Events</span>
-          </NavLink>
-          <NavLink
-            to="/scan-tickets"
-            className={({ isActive }) =>
-              [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
-            }
-          >
-            <ScanLine size={18} />
-            <span className={styles.navLabel}>Scanner</span>
-          </NavLink>
-        </>
+      {isHost && (
+        <NavLink
+          to="/manage"
+          className={({ isActive }) =>
+            [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
+          }
+        >
+          <LayoutDashboard size={18} />
+          <span className={styles.navLabel}>Manage</span>
+        </NavLink>
       )}
 
       {user && (
@@ -82,7 +61,7 @@ export function NavBar() {
             }
           >
             <Ticket size={18} />
-            <span className={styles.navLabel}>My Tickets</span>
+            <span className={styles.navLabel}>Tickets</span>
           </NavLink>
         </>
       )}

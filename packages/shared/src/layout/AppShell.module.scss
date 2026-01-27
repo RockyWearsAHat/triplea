@@ -6,6 +6,27 @@
   min-height: 0;
 }
 
+.shellCentered {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 0;
+}
+
+.shellCentered .header {
+  text-align: center;
+}
+
+.shellCentered .main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .header {
   margin-bottom: 18px;
 }
