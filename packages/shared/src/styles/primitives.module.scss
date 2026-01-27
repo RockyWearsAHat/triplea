@@ -19,9 +19,11 @@
   flex-direction: column;
   gap: 14px;
   margin: calc(var(--page-pad) * -1) calc(var(--page-pad) * -1) 20px;
-  padding: 16px var(--page-pad) 12px;
+  padding: 16px var(--page-pad) var(--chrome-bottom-pad, 12px);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  --chrome-bottom-pad: 12px;
+  --nav-underline-height: 2px;
 }
 
 .header {
@@ -78,21 +80,37 @@
   font-weight: 500;
   color: var(--text-muted);
   background: transparent;
-  border: none;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
+  position: relative;
+  transition: color 120ms ease;
+}
+
+.navLink::after {
+  content: "";
+  position: absolute;
+  /* Position underline to sit right at the navbar border */
+  bottom: calc(-1 * var(--chrome-bottom-pad, 12px));
+  left: 0;
+  right: 0;
+  height: var(--nav-underline-height, 2px);
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
 
 .navLink:hover {
   color: var(--text);
-  background: var(--surface);
 }
 
 .navLinkActive {
-  color: var(--text);
-  background: var(--surface);
-  font-weight: 600;
+  color: var(--primary);
+}
+
+.navLinkActive::after {
+  opacity: 1;
+}
+
+.navLinkActive:hover {
+  color: var(--primary);
 }
 
 @media (min-width: 720px) {

@@ -11,9 +11,54 @@ interface EmailParams {
   text: string;
 }
 
+// Brand colors from copilot-instructions.md
+const COLORS = {
+  darkBlue: "#1C276E",
+  lightBlue: "#ADB8E0",
+  gold: "#E59D0D",
+  lightPurple: "#825ECA",
+  darkPurple: "#4E238B",
+  grayNeutral: "#4B4E63",
+  white: "#FFFFFF",
+  black: "#000000",
+};
+
 // Email service configuration
 const EMAIL_FROM = process.env.EMAIL_FROM ?? "noreply@tripleamusic.org";
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
+
+// Common email styles using brand colors
+function getEmailStyles(): string {
+  return `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: ${COLORS.black}; }
+    .container { max-width: 600px; margin: 0 auto; background: ${COLORS.white}; }
+    .header { background: linear-gradient(135deg, ${COLORS.darkBlue} 0%, ${COLORS.darkPurple} 100%); color: ${COLORS.white}; padding: 32px; text-align: center; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; }
+    .header p { margin: 0; opacity: 0.9; font-size: 14px; }
+    .content { padding: 32px; }
+    .message { color: ${COLORS.black}; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+    .cta-button { display: block; background: ${COLORS.gold}; color: ${COLORS.white}; text-decoration: none; padding: 16px 32px; border-radius: 6px; text-align: center; font-weight: 600; margin: 24px 0; }
+    .warning { background: #FEF3CD; border: 1px solid ${COLORS.gold}; border-radius: 6px; padding: 16px; margin: 24px 0; color: #664D03; font-size: 14px; }
+    .info-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 20px; margin: 24px 0; }
+    .link-fallback { color: ${COLORS.grayNeutral}; font-size: 14px; word-break: break-all; margin-top: 16px; }
+    .link-fallback a { color: ${COLORS.darkBlue}; text-decoration: none; }
+    .footer { background: #f8f9fa; padding: 24px; text-align: center; font-size: 14px; color: ${COLORS.grayNeutral}; border-top: 1px solid #e9ecef; }
+    .footer a { color: ${COLORS.darkBlue}; text-decoration: none; }
+    .confirmation-code { background: #f8f9fa; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px; border: 1px solid #e9ecef; }
+    .confirmation-code label { display: block; font-size: 12px; text-transform: uppercase; color: ${COLORS.grayNeutral}; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .confirmation-code span { font-size: 28px; font-weight: 700; color: ${COLORS.darkBlue}; letter-spacing: 2px; }
+    .event-details { border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .event-details h2 { margin: 0 0 16px 0; font-size: 20px; color: ${COLORS.black}; }
+    .detail-row { display: flex; align-items: center; margin-bottom: 12px; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-icon { width: 24px; margin-right: 12px; font-size: 16px; }
+    .detail-text { color: ${COLORS.black}; }
+    .ticket-info { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e9ecef; }
+    .ticket-info h3 { margin: 0 0 12px 0; font-size: 16px; color: ${COLORS.black}; }
+    .ticket-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: ${COLORS.grayNeutral}; }
+    .ticket-row.total { border-top: 1px solid #e9ecef; padding-top: 12px; margin-top: 12px; font-weight: 600; color: ${COLORS.black}; }
+  `;
+}
 
 // In development/demo mode, we just log emails
 // In production, this would integrate with a real email provider
@@ -64,26 +109,12 @@ export async function sendPasswordResetEmail(params: {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reset Your Password</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f7; }
-    .container { max-width: 600px; margin: 0 auto; background: #fff; }
-    .header { background: linear-gradient(135deg, #1C276E 0%, #4E238B 100%); color: #fff; padding: 32px; text-align: center; }
-    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
-    .header p { margin: 0; opacity: 0.9; }
-    .content { padding: 32px; }
-    .message { color: #1d1d1f; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
-    .cta-button { display: block; background: #E59D0D; color: #fff; text-decoration: none; padding: 16px 32px; border-radius: 8px; text-align: center; font-weight: 600; margin: 24px 0; }
-    .cta-button:hover { background: #d18c0c; }
-    .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 24px 0; color: #856404; font-size: 14px; }
-    .link-fallback { color: #666; font-size: 14px; word-break: break-all; margin-top: 16px; }
-    .footer { background: #f8f9fa; padding: 24px; text-align: center; font-size: 14px; color: #666; }
-    .footer a { color: #1C276E; text-decoration: none; }
-  </style>
+  <style>${getEmailStyles()}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🔐 Password Reset Request</h1>
+      <h1>Password Reset Request</h1>
       <p>Triple A Music</p>
     </div>
     
@@ -96,7 +127,7 @@ export async function sendPasswordResetEmail(params: {
       <a href="${resetUrl}" class="cta-button">Reset Password</a>
       
       <div class="warning">
-        ⚠️ This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
+        <strong>Important:</strong> This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
       </div>
       
       <p class="link-fallback">
@@ -106,7 +137,7 @@ export async function sendPasswordResetEmail(params: {
     </div>
     
     <div class="footer">
-      <p>Triple A Music</p>
+      <p><strong>Triple A Music</strong></p>
       <p><a href="${baseUrl}">tripleamusic.org</a></p>
     </div>
   </div>
@@ -114,8 +145,8 @@ export async function sendPasswordResetEmail(params: {
 </html>
 `;
 
-  const text = `
-Password Reset Request
+  const text = `PASSWORD RESET REQUEST
+======================
 
 Hi ${userName},
 
@@ -124,7 +155,7 @@ We received a request to reset the password for your Triple A account.
 Click this link to reset your password:
 ${resetUrl}
 
-This link will expire in 1 hour.
+IMPORTANT: This link will expire in 1 hour.
 
 If you didn't request a password reset, you can safely ignore this email.
 
@@ -135,7 +166,7 @@ tripleamusic.org
 
   return sendEmail({
     to: email,
-    subject: "🔐 Reset your Triple A password",
+    subject: "Reset your Triple A password",
     html,
     text,
   });
@@ -156,7 +187,8 @@ export async function sendTicketConfirmationEmail(params: {
   });
 
   const isFree = ticket.pricePerTicket === 0;
-  const ticketUrl = `http://localhost:5173/tickets/${ticket.confirmationCode}`;
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
+  const ticketUrl = `${baseUrl}/tickets/${ticket.confirmationCode}`;
 
   const html = `
 <!DOCTYPE html>
@@ -165,36 +197,12 @@ export async function sendTicketConfirmationEmail(params: {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Tickets for ${gig.title}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f7; }
-    .container { max-width: 600px; margin: 0 auto; background: #fff; }
-    .header { background: linear-gradient(135deg, #1C276E 0%, #4E238B 100%); color: #fff; padding: 32px; text-align: center; }
-    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
-    .header p { margin: 0; opacity: 0.9; }
-    .content { padding: 32px; }
-    .confirmation-code { background: #f8f9fa; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px; }
-    .confirmation-code label { display: block; font-size: 12px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
-    .confirmation-code span { font-size: 28px; font-weight: 700; color: #1C276E; letter-spacing: 2px; }
-    .event-details { border: 1px solid #e5e5e7; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .event-details h2 { margin: 0 0 16px 0; font-size: 20px; color: #1d1d1f; }
-    .detail-row { display: flex; align-items: center; margin-bottom: 12px; }
-    .detail-row:last-child { margin-bottom: 0; }
-    .detail-icon { width: 24px; margin-right: 12px; font-size: 16px; }
-    .detail-text { color: #1d1d1f; }
-    .ticket-info { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .ticket-info h3 { margin: 0 0 12px 0; font-size: 16px; color: #1d1d1f; }
-    .ticket-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #666; }
-    .ticket-row.total { border-top: 1px solid #e5e5e7; padding-top: 12px; margin-top: 12px; font-weight: 600; color: #1d1d1f; }
-    .cta-button { display: block; background: #E59D0D; color: #fff; text-decoration: none; padding: 16px 32px; border-radius: 8px; text-align: center; font-weight: 600; margin: 24px 0; }
-    .cta-button:hover { background: #d18c0c; }
-    .footer { background: #f8f9fa; padding: 24px; text-align: center; font-size: 14px; color: #666; }
-    .footer a { color: #1C276E; text-decoration: none; }
-  </style>
+  <style>${getEmailStyles()}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎵 Your tickets are confirmed!</h1>
+      <h1>Your tickets are confirmed!</h1>
       <p>${isFree ? "You're on the list" : "Thank you for your purchase"}</p>
     </div>
     
@@ -246,37 +254,46 @@ export async function sendTicketConfirmationEmail(params: {
       
       <a href="${ticketUrl}" class="cta-button">View Your Tickets</a>
       
-      <p style="color: #666; font-size: 14px; text-align: center;">
-        Present the QR code at the venue for entry. Your QR code will rotate every 30 seconds for security.
-      </p>
+      <div class="info-box" style="text-align: center;">
+        <p style="margin: 0; color: ${COLORS.grayNeutral}; font-size: 14px;">
+          Present the QR code at the venue for entry.<br>
+          Your QR code will rotate every 30 seconds for security.
+        </p>
+      </div>
     </div>
     
     <div class="footer">
-      <p>Triple A Music</p>
-      <p><a href="http://localhost:5173">tripleamusic.org</a></p>
+      <p><strong>Triple A Music</strong></p>
+      <p><a href="${baseUrl}">tripleamusic.org</a></p>
     </div>
   </div>
 </body>
 </html>
 `;
 
-  const text = `
-Your tickets are confirmed!
+  const text = `YOUR TICKETS ARE CONFIRMED!
+===========================
 
 Confirmation Code: ${ticket.confirmationCode}
 
+EVENT DETAILS
+-------------
 Event: ${gig.title}
 Date: ${eventDate}
 ${gig.time ? `Time: ${gig.time}` : ""}
 ${locationName ? `Venue: ${locationName}` : ""}
 
-Order Details:
-- Tickets: ${ticket.quantity}x ${isFree ? "Free" : `$${ticket.pricePerTicket.toFixed(2)}`}
-- Total: ${isFree ? "Free" : `$${ticket.totalPaid.toFixed(2)}`}
+ORDER DETAILS
+-------------
+Tickets: ${ticket.quantity}x ${isFree ? "Free" : `$${ticket.pricePerTicket.toFixed(2)}`}
+Total: ${isFree ? "Free" : `$${ticket.totalPaid.toFixed(2)}`}
 
-View your tickets: ${ticketUrl}
+VIEW YOUR TICKETS
+-----------------
+${ticketUrl}
 
-Present the QR code at the venue for entry. Your QR code will rotate every 30 seconds for security.
+Present the QR code at the venue for entry.
+Your QR code will rotate every 30 seconds for security.
 
 ---
 Triple A Music
@@ -285,7 +302,7 @@ tripleamusic.org
 
   return sendEmail({
     to: ticket.email,
-    subject: `🎵 Your tickets for ${gig.title} - ${ticket.confirmationCode}`,
+    subject: `Your tickets for ${gig.title} - ${ticket.confirmationCode}`,
     html,
     text,
   });
