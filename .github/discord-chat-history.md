@@ -2,146 +2,6 @@ Rocky
 rockywearsahat
 Online
 
-Man — 1/21/26, 12:57 PM
-Musician is similar to “Uber Driver”
-I should’ve corrected this earlier!
-Man — 1/21/26, 1:16 PM
-The only one I would tell ai I want to be like is Muse (Uber Eats) and Musician (Uber Driver)… maybe Music (Uber)
-Man — 1/23/26, 3:43 PM
-I got a $23.04 refund from namecheap.com should I be aware of anything?
-Rocky — 1/23/26, 10:05 PM
-Uhhh?? No? I don't believe so?
-I'll look on the account to see what I can find if there is payment history or if you want to scour for it I'm sure you can figure out what it is, but idk that's strange?
-Maybe some configuration/registration thing where it charged you for some option or like not as a first time purchase and then the system caught up with what the offer actually was or smth?
-Honestly I'm not sure?
-Man — 1/24/26, 8:17 AM
-Okay, as long as you still have access to what you need, I dont have any worry about it.
-Rocky — Yesterday at 12:00 PM
-Image
-Image
-Image
-Image
-Image
-Image
-Getting there
-I'm going to work on getting seat reservations and venue setup are working in a bit, I'll do some UI redesigning as well so there's a clear direction the user is supposed to travel (like they can see some of the Concerts near you section below "Find live music")
-Also sorry for slacking in war this week, I was exhausted, if you want to demote me that is valid and I deserve it I didn't hold true to the rules & there are other people who did better, I'm happy to stay co but also like rules are rules so whatever you decide
-Man — Yesterday at 1:32 PM
-What would be interesting, is if one person booked an artist and paid all the tickets to have a private performance. This website is going to create so many experiences man. I love the progress bro, and Im impressed at how you articulate the clear direction youre traveling even if it doesnt resemble the journey you want the consumer to travel yet..
-Man — Yesterday at 1:33 PM
-Nah bruv. You still Co, only one co will be demoted in the same week, and Tris did less, you good bruv.. you might not get the vote by the Colosseum after this one, but that’s for the people to determine. In Legendary III we will have 5 Co-Leaders and I’ll promote you back up then if you dont get the vote.
-Rocky — Yesterday at 1:34 PM
-Thanks chief, I'm working to improve the things I've done and the site is coming along well, it's still not live but I've just been a little lazy I'll get it published soon, and maybe we'll see I just was sick and exhausted this week and ended up passing out 2 nights before doing any battles/my final battle, I'll do better in the colleseum
-Man — Yesterday at 1:41 PM
-Im in no rush, I wanna give you (The Artist) time to perfect his painting. I dont micromanage Rock; I love depth, intricacy, and all the bases covered for protection.
-
-(My wife was wondering if there was a way to have the rights to this model youre creating nationwide, so nobody can take this business idea, and pretend they came up with it. Im sure it would cost a fortune to do if it’s even possible. If it’s not possible, that’s fine too.)
-Rocky — Yesterday at 2:59 PM
-I mean yes but that's more a question for Nat she has a much better idea of financial law then I do, the service and the code itself is copyrighted and I can backdate a license so it covers everything, so legally yes it would be yours/mine but I sign rights over to you, about copyrighting/trademarking the actual service, I'm less sure about that, you can trademark aspects of it but that's more a question for a lawyer than me
-Man — Yesterday at 3:13 PM
-I appreciate it! Good to know. Thank you.
-Rocky — Yesterday at 4:05 PM
-basically the code and the proprietary software can be copyrighted and is automatically, the repository is private as well so it's not like people can easily access the source code, this is particularly important for the server they have to trial by fire to try and hack it instead of being able to analyze the code for flaws
-that is more security then copyright, I think portions of the service can be copywrighted/trademarked, but to what extent I'm unsure, possibly the premise of an "All in one" service but idk if that's trademarkable, plus trademarks and patents are expensive and lengthy to get, I'd say worry about getting the service up and running first then when you have some money get a good lawyer and figure out what to do from there, what is protectable, what should be done, how to register publically (if it ever grows to that size), etc
-Rocky — Yesterday at 4:12 PM
-I can't be a one man team if that's the vision, but I can absolutely get it up and working, as for the legal stuff though I'm less sure what is protected, but I do know noone can just copy and paste your code and it become theirs, it's my intellectual property and when we create a license it will be yours which you can choose what to do with, but as for the actual services offered you have to talk to a lawyer about that as I'm not particularly sure what can be protected and what is considered fair game and hard to make a case for, it will mainly be what you can argue to be innovations or creations of your own//original works, the code is already copy-written automatically just being written and published by me (nothing about me but that's how intellectual property works however without a license someone could fairly argue they didn't know but the code belongs to me and I can do what I want with it, I'll make a document to include you in the ownership and ensure that it is a non-commercial restricted with permission license and everyone else from any version will be prosecuted to the extent of the law)
-Man — Yesterday at 4:42 PM
-Yeah, Im not requesting you be a one man team lol.. I was just interested in seeing if you knew anything briefly about that. Dont worry any further about my earlier question. I put it in parentheses, because I knew it has nothing to do with what youre supposed to do, I was just seeing if you knew anything, especially because your work is really good!
-Rocky — Yesterday at 4:44 PM
-Namely just created/written works automatically get copyrighted, you can bring someone to court if you can prove you had it before them, business stuff gets kinda trivial though because you can't copyright things to ensure you have a monopoly on them essentailly, you have to talk to a lawyer for the real answers there
-Man — Yesterday at 4:44 PM
-Thank you, lawyer, perfect.
-Rocky — Yesterday at 4:45 PM
-\*Not legal advice lol
-Don't sue me por favor
-Man — Yesterday at 4:45 PM
-Couldnt imagine doing that bruv, I would see it the other way around if anything.
-Rocky — Yesterday at 4:46 PM
-Nah, I couldn't
-Don't have the money
-Man — Yesterday at 4:47 PM
-Lol smh glad that’s your #1 reason lol
-Rocky — Yesterday at 4:47 PM
-yea, I mean as long as I don't get done dirty I have nothing to sue over
-Man — Yesterday at 4:47 PM
-Likewise
-Rocky — Yesterday at 4:47 PM
-and most people online aren't trying to hack tbh, the most you'll have is probably copycats for awhile and hopefully by that time you have a better team
-👍
-Not that I'm bad just a multi state/national service I could not keep running and fixing and maintaining as one single person, I can try and if AI keeps improving it's possible but it's insanely difficult
-I can fix some things but if someone tried to bring it down with enough force they probably could, shitty thing about apps and security it's cat and mouse and you just gotta hope you can patch the holes before someone you don't want to find them finds them, I'll do my due dilligence but honestly as to what extent the buisness is protected I'd just research with google and chatgpt, maybe consult a copyright lawyer if you're really that serious bc they will know what is better
-Man — Yesterday at 4:50 PM
-Not worried about it.. even if someone stole the idea, it’s not a big deal.. just was speaking imaginatively.
-Rocky — Yesterday at 4:51 PM
-valid, yes the code technically belongs to me I'll update the repository to sign rights over to you as well with creation and limited rights for non-profit (e.g. I could show an employeer) outside of the salary I take from the company (I can't profit off the code myself) for myself, so it'll technically belong to you, maintained by me
-Man — Yesterday at 4:52 PM
-There would definitely need to be cemented agreements in place for there to be anything to sue over anyway… the best of 2 years on 5% would still need to explain the obligation you would have and for how long. I couldnt see you needing to be a one man team to prevent theft, I would more so see you as a partner, modifying the website aesthetically at most
-Rocky — Yesterday at 4:52 PM
-we could technically transfer the git repository to you as well if you want to technically "own" the code but that's your decision
-Man — Yesterday at 4:52 PM
-Idc about ownership.. it was my wife’s question.
-Rocky — Yesterday at 4:53 PM
-Yea we can figure it out, there are alot of controls that I tried to add to help you set up the business how you want, there are these site configs:
-
-# Fee Configuration
-
-# Platform service fee (Triple A Fee) - can be:
-
-# - Percentage: "1%" or "1.5%" (0-100 with up to 2 decimal places)
-
-# - Flat amount: "$1" or "$0.50" or "1" (in dollars, with or without $ sign)
-
-# Default: 1%
-
-PLATFORM_SERVICE_FEE=$1
-
-# Fee charge mode - controls whether the Triple A Fee is charged:
-
-# - "transaction" = once per checkout (regardless of ticket count)
-
-# - "ticket" = per ticket purchased (multiplied by quantity)
-
-# Default: transaction
-
-FEE_CHARGE_ON=ticket
-
-# Stripe processing fee (reference only - these are Stripe's actual fees)
-
-# Percentage component: 2.9%
-
-STRIPE_FEE_PERCENT=2.9%
-
-# Fixed component: $0.30
-
-STRIPE_FEE_FIXED=0.30
-
-# Enable Stripe Tax for automatic tax calculation and remittance
-
-# Set to "true" to enable (requires Stripe Tax to be set up in your Stripe dashboard)
-
-# When enabled, use the /api/stripe/create-checkout-session endpoint for hosted checkout
-
-STRIPE_TAX_ENABLED=true
-
-so you can modify those how you see fit
-that is for tickets, I'll add controls for artists booking and venue posting
-Man — Yesterday at 4:54 PM
-I see you as a partner… which is why I would offer you 5% of the best 2 years based income coming from the site. We would still need to put it in writing, so I gotta get a lawyer anyway.
-Rocky — Yesterday at 4:55 PM
-We'll figure it out, don't stress it or dive into it too much when you don't need to, I'll let you know when the site is fully functional and you can test it and give feedback
-It's like 50% of the way though that final 50% is always kinda brutal so we'll see if we/I can get it up an running soon, then you can worry about a lawyer
-when it's like a couple weeks out I'll let you know, I'd be surprised if I could finish it in two weeks atm though there is alot of functionality but I'm working away, just might not be perfect from the jump
-Man — Yesterday at 4:57 PM
-I dont understand any of that code.. which is why you would be a partner for it.. It would take a while for me to get this aspect of the business up and running anyway. I dont see me utilizing this website for at least a year or two. I have to do the promotional marketing, the footwork, make the connections, and send you information of the people who register to be rented from, or perform, or the venues that give me the ability to broker on their behalf.
-Does this website have a way of calculating the amount made per year?
-Like I said, this is a COMMUNITY based idea. Companies, and performers registering is what will create the traffic, not necessarily my equipment.
-The reason I would give you 5% of the best 2 years is for continual assistance, and a return on investment for you that’s worth you working without getting paid upfront.
-One of the reasons I had no problem with you having 50% ownership of the website without transferring the website ownership to me, is so that you would have leverage until you received some form of payment.. if you want me to just pay you $500 now to complete this project and transfer it to me, that’s up to you… Dont want you slaving over something you dont want ties to! I would just have to hire someone else to continue to update the website based on new company registrations.
-Man — Yesterday at 5:30 PM
-I assume I will need a lawyer for more than just copywriting… I will need a lawyer to write up a digital contract companies and performers can sign on line, so I can document easily, their agreement to participate with this program. I want the demand to be easy to get, which means I want to have agreements where I can hold venues, musicians, and customers accountable .. I would potentially even get a third party to do customer service based on how big this would get…
-This thing youre building by yourself is huge, and this thing Im building by myself is huge.. bigger than us.. it’s gonna take some trust for me to let you in on the work Im doing and vice versa… Just know I trust you, and want to give you leverage so you have security in your work. If you want $500 and want to stop when you’ve completed the journey, we can do that too, like I said a few messages ago.
-Rocky — Yesterday at 6:59 PM
-I can add it, stripe itself collects tax and tells you if you've hit nexus and need to remit in that state, you have to provide the registration for the business in that state though
 Rocky — Yesterday at 7:01 PM
 I'll help whether I'm getting paid or not, just depending on the scale it may become unmanageable for just me with school/life, millions of lines of code is not easy to keep track of, even with AI it uses tons of tokens to even find the relevant code when making somewhat niche but not super niche changes, you have to give it anchor points or it just gets lost entirely as the project expands
 Rocky — Yesterday at 7:02 PM
@@ -284,6 +144,16 @@ very litte overlap between them as well, similar in principle but every function
 Nah it's a good correlation I think I was just confused as to what you meant bc I wasn't quite grasping the scope
 TBH when you develop software more time is spent at the whiteboard and mockup drawings than time is spent coding most often, it's important to make the points clear as to what you are trying to achieve bc if someone doesn't understand it you'll be running in circles for hours
 Like my last group project in my web dev class, 4 days spent planning the idea and drawing mockups and doing very basic setups to structure it all correctly, then like 2-3 days implementing, this was a group of 4/5 so to get the message across so everyone understood and knew their tasks took 3 or 4 days, software is an idea before anything else the clearer the idea the easier it is to build
+Rocky — 12:41 AM
+yo man if you're still up can you do one super quick review for me, do you like this setup for muse? it needs to be revised a bit but the general concept having the search/schedule event? https://tripleaevents.netlify.app/muse/
+better or worse?
+Man — 12:45 AM
+I need to make the idea super clear.. Maybe I should take some time to do that, so you dont run yourself into the ground..
+Rocky — 12:47 AM
+Nah this conversation has been pretty good in shaping the key principles, muse should be a place for advertisement/featureds mainly, music for concerts near the user or popular, maybe some featureds, music should also be the place to post a venue or reach out to an artist to play a gig. Musician is the artist place
+Idk why AI generated that but am I correct in that statement ^?
+Man — 12:54 AM
+The only issue with Muse, it all looks perfect, but the home page would also have lessons available somewhere small at the bottom, and rent instruments. Also, maybe a registered Musician logged in, can book another Musician like an engineer, and pay them to help them complete a project? Or is all this too much for the site?
 
 ﻿
 Man

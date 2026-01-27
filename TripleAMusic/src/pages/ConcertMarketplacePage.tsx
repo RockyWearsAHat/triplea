@@ -12,12 +12,19 @@ import {
 } from "../lib/urls";
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Triple A Music - Premium Concert Marketplace
+   Triple A Music - Premium Concert Marketplace / Music Label
    
-   Vision from owner: Like "Uber Eats" / "McDonald's Menu"
+   Vision from owner (Jan 27 Discord):
+   "Triple A Music would basically be a Music Label which would fund, produce, 
+   market, and distribute an artist's music, handling logistics, financing, and 
+   promotion... Basically the best of the best TripleAMusicians would go there, 
+   and the customers would go to TripleAMusic to see the cream of the crop."
+   
+   Like "Uber Eats" / "McDonald's Menu":
    - Premium showcase of promoted artists and venues
    - Curated, not DIY (that's Muse)
    - Ticket sales for Triple A Music promoted artists prioritized
+   - Shows: previous performances, rehearsals, music videos, star ratings & reviews
    - Clean, premium branding feel
    ══════════════════════════════════════════════════════════════════════════ */
 

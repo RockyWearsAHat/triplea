@@ -5,11 +5,17 @@ import StatusCard from "@shared/components/StatusCard";
 /* ══════════════════════════════════════════════════════════════════════════
    Triple A Musician - Dashboard
    
-   Vision from owner: Like "Uber Driver" app
+   Vision from owner (Jan 27 Discord): Like "Uber Driver" app
    - Work dashboard showing incoming requests, upcoming gigs
    - Clear status: earnings, rating, pending requests
    - Quick actions to respond to requests
    - Focus on "today/this week" 
+   
+   Future potential from Discord:
+   - Musicians could "Rent Out Equipment on Muse" (community sourcing, env-gated)
+   - Same abilities as hosts from their dashboard when applicable
+   - If at an apartment with an ideal event space, could register for another 
+     artist to perform there
    ══════════════════════════════════════════════════════════════════════════ */
 
 export function DashboardPage() {

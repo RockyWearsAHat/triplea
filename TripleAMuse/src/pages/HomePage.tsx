@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Instrument } from "@shared";
+import type { Instrument, Location } from "@shared";
 import { CategoryBar, ProductCard, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./HomePage.module.scss";
@@ -98,6 +98,7 @@ const SERVICE_PACKAGES = [
 export function HomePage() {
   const api = useMemo(() => createApiClient(), []);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Event coordinator state
@@ -106,15 +107,18 @@ export function HomePage() {
     new Set(),
   );
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
   // Rentals state
   const [rentalCategory, setRentalCategory] = useState("all");
 
   useEffect(() => {
-    api
-      .getMarketplaceCatalog()
-      .then((data) => setInstruments(data.instruments))
+    Promise.all([api.getMarketplaceCatalog(), api.listPublicLocations()])
+      .then(([catalog, locs]) => {
+        setInstruments(catalog.instruments);
+        setLocations(locs);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [api]);
@@ -146,7 +150,10 @@ export function HomePage() {
   }, [instruments, rentalCategory]);
 
   const canGetQuote =
-    selectedEvent && selectedPerformers.size > 0 && selectedPackage;
+    selectedEvent &&
+    selectedPerformers.size > 0 &&
+    selectedVenue &&
+    selectedPackage;
 
   return (
     <div className={styles.page}>
@@ -235,10 +242,63 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Step 4: Event Package */}
+      {/* Step 4: Local Venue Options */}
       <section className={styles.section}>
         <div className={styles.stepHeader}>
           <span className={styles.stepNumber}>4</span>
+          <div>
+            <h2 className={styles.sectionTitle}>Select a venue</h2>
+            <p className={styles.sectionSubtitle}>
+              Choose from available local venues
+            </p>
+          </div>
+        </div>
+        {locations.length === 0 ? (
+          <p className={ui.help}>No venues available yet</p>
+        ) : (
+          <div className={styles.venueGrid}>
+            {locations.map((loc) => (
+              <button
+                key={loc.id}
+                className={`${styles.venueCard} ${selectedVenue === loc.id ? styles.venueSelected : ""}`}
+                onClick={() => setSelectedVenue(loc.id)}
+              >
+                <div className={styles.venueImageWrapper}>
+                  {loc.imageUrl ? (
+                    <img
+                      src={getAssetUrl(loc.imageUrl)}
+                      alt={loc.name}
+                      className={styles.venueImage}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className={styles.venueImageFallback}>🏛️</div>
+                  )}
+                  {selectedVenue === loc.id && (
+                    <span className={styles.venueCheck}>✓</span>
+                  )}
+                </div>
+                <div className={styles.venueInfo}>
+                  <h3 className={styles.venueName}>{loc.name}</h3>
+                  <p className={styles.venueCity}>{loc.city}</p>
+                  {loc.seatCapacity && (
+                    <p className={styles.venueCapacity}>
+                      Up to {loc.seatCapacity} guests
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Step 5: Event Package */}
+      <section className={styles.section}>
+        <div className={styles.stepHeader}>
+          <span className={styles.stepNumber}>5</span>
           <div>
             <h2 className={styles.sectionTitle}>Event setup package</h2>
             <p className={styles.sectionSubtitle}>
