@@ -324,6 +324,15 @@ export function MyGigsPage() {
                             <Settings size={14} />
                             Seating & Tickets
                           </Button>
+                          {g.gigType === "public-concert" && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => navigate(`/gigs/${g.id}/tickets`)}
+                            >
+                              Manage Tickets
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}

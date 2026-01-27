@@ -60,6 +60,12 @@ export interface ITicket extends Document {
   tierName?: string;
   /** Assigned seats for reserved seating (one per ticket quantity) */
   seatAssignments?: ISeatAssignment[];
+  /** Whether this ticket was issued by the host (comp/gifted) */
+  issuedByHost?: boolean;
+  /** User ID of the host who issued this ticket */
+  issuedByUserId?: Types.ObjectId | null;
+  /** Optional note from the host when issuing */
+  issueNote?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -148,6 +154,14 @@ const TicketSchema = new Schema<ITicket>(
         seatNumber: { type: String, required: true },
       },
     ],
+    // Fields for host-issued tickets (comp tickets, walk-ins, etc.)
+    issuedByHost: { type: Boolean, default: false },
+    issuedByUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    issueNote: { type: String },
   },
   { timestamps: true },
 );

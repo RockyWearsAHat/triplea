@@ -36,6 +36,7 @@ import StaffJoinPage from "./pages/StaffJoinPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
 import AccountPage from "./pages/AccountPage";
+import EventTicketsPage from "./pages/EventTicketsPage";
 import { CartProvider } from "./context/CartContext";
 import { createApiClient } from "./lib/urls";
 
@@ -2020,6 +2021,14 @@ function App() {
                 element={
                   <RequireRole role="customer">
                     <GigSeatingConfigPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/gigs/:gigId/tickets"
+                element={
+                  <RequireRole role="customer">
+                    <EventTicketsPage />
                   </RequireRole>
                 }
               />

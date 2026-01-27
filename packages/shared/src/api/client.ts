@@ -507,6 +507,39 @@ export class TripleAApiClient {
     return data.gig;
   }
 
+  /**
+   * Get a single gig by ID (host/admin only - for event management)
+   */
+  async getGig(id: string): Promise<{
+    id: string;
+    title: string;
+    description?: string;
+    date: string;
+    time?: string;
+    budget?: number;
+    status: string;
+    gigType?: string;
+    openForTickets?: boolean;
+    ticketPrice?: number;
+    seatingType?: string;
+    seatCapacity?: number;
+    hasTicketTiers?: boolean;
+    locationId: string | null;
+    location?: {
+      id: string;
+      name: string;
+      address?: string;
+      city?: string;
+    } | null;
+    ticketsSold?: number;
+    ticketRevenue?: number;
+    createdAt?: string;
+  }> {
+    return await this.request(`/gigs/${encodeURIComponent(id)}`, {
+      method: "GET",
+    });
+  }
+
   async createGig(params: {
     title: string;
     description?: string;
@@ -790,6 +823,15 @@ export class TripleAApiClient {
       status: string;
       usedAt: string | null;
       createdAt: string;
+      tierName?: string;
+      seatAssignments?: Array<{
+        seatId: string;
+        section: string;
+        row: string;
+        seatNumber: string;
+      }>;
+      isComped?: boolean;
+      issuedByHost?: boolean;
     }>;
     stats: {
       total: number;
@@ -802,6 +844,88 @@ export class TripleAApiClient {
     return await this.request(`/tickets/gig/${encodeURIComponent(gigId)}`, {
       method: "GET",
     });
+  }
+
+  /**
+   * Issue tickets to a specific email (host/admin only)
+   * Use cases: comp tickets, walk-ins, gifted tickets
+   */
+  async issueTicket(params: {
+    gigId: string;
+    email: string;
+    holderName: string;
+    quantity?: number;
+    tierId?: string;
+    seatIds?: string[];
+    sendEmail?: boolean;
+    note?: string;
+    isComp?: boolean;
+  }): Promise<{
+    ticket: {
+      id: string;
+      confirmationCode: string;
+      gigId: string;
+      quantity: number;
+      pricePerTicket: number;
+      totalPaid: number;
+      status: string;
+      holderName: string;
+      email: string;
+      tierId: string | null;
+      tierName?: string;
+      seatAssignments?: Array<{
+        seatId: string;
+        section: string;
+        row: string;
+        seatNumber: string;
+      }>;
+      isComp: boolean;
+      createdAt: string;
+    };
+    emailSent: boolean;
+  }> {
+    return await this.request("/tickets/issue", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * Cancel a ticket (host/admin only)
+   */
+  async cancelTicket(
+    ticketId: string,
+    params?: { reason?: string; sendEmail?: boolean },
+  ): Promise<{
+    success: boolean;
+    ticket: {
+      id: string;
+      confirmationCode: string;
+      status: string;
+    };
+  }> {
+    return await this.request(
+      `/tickets/${encodeURIComponent(ticketId)}/cancel`,
+      {
+        method: "POST",
+        body: JSON.stringify(params ?? {}),
+      },
+    );
+  }
+
+  /**
+   * Resend ticket confirmation email (host/admin only)
+   */
+  async resendTicketEmail(ticketId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return await this.request(
+      `/tickets/${encodeURIComponent(ticketId)}/resend`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   // --- Stripe / Payments ---

@@ -75,6 +75,89 @@ router.post(
   },
 );
 
+// Get a single gig by ID (host/admin only for their own gigs)
+router.get(
+  "/:id",
+  requireRole("customer"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params as { id: string };
+      const userId = req.authUser!.id;
+
+      const gig = await Gig.findById(id).exec();
+      if (!gig) {
+        return res.status(404).json({ message: "Gig not found" });
+      }
+
+      // Check if user is the creator or admin
+      const isOwner = String(gig.createdByUserId) === userId;
+      const isAdmin = req.authUser!.roles?.includes("admin") ?? false;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Get location details
+      let location = null;
+      if (gig.locationId) {
+        const loc = await Location.findById(gig.locationId).exec();
+        if (loc) {
+          location = {
+            id: loc.id,
+            name: loc.name,
+            address: loc.address,
+            city: loc.city,
+          };
+        }
+      }
+
+      // Get ticket stats
+      const ticketStats = await Ticket.aggregate([
+        {
+          $match: {
+            gigId: gig._id,
+            status: { $in: ["valid", "used"] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            ticketsSold: { $sum: "$quantity" },
+            ticketRevenue: { $sum: "$totalPaid" },
+          },
+        },
+      ]);
+
+      const stats = ticketStats[0] ?? { ticketsSold: 0, ticketRevenue: 0 };
+
+      return res.json({
+        id: gig.id,
+        title: gig.title,
+        description: gig.description,
+        date: gig.date,
+        time: gig.time,
+        budget: gig.budget,
+        status: gig.status,
+        gigType: gig.gigType,
+        openForTickets: gig.openForTickets,
+        ticketPrice: gig.ticketPrice,
+        seatingType: gig.seatingType,
+        seatCapacity: gig.seatCapacity,
+        hasTicketTiers: gig.hasTicketTiers,
+        locationId: gig.locationId ? String(gig.locationId) : null,
+        location,
+        ticketsSold: stats.ticketsSold,
+        ticketRevenue: stats.ticketRevenue,
+        createdAt: (gig as any).createdAt,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("GET /gigs/:id error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
 router.get(
   "/mine",
   requireRole("customer"),

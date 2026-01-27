@@ -453,3 +453,340 @@ tripleamusic.org
     text,
   });
 }
+
+/**
+ * Send email when a host issues/gifts tickets to someone
+ */
+export async function sendIssuedTicketEmail(params: {
+  ticket: ITicket;
+  gig: IGig;
+  locationName?: string;
+  issuedByName: string;
+  note?: string;
+  isComp?: boolean;
+}): Promise<boolean> {
+  const { ticket, gig, locationName, issuedByName, note, isComp } = params;
+
+  const eventDate = new Date(gig.date).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
+  const ticketUrl = `${baseUrl}/tickets/${ticket.confirmationCode}`;
+
+  const ticketTypeLabel = isComp ? "Complimentary Tickets" : "Tickets";
+  const subjectLine = isComp
+    ? `🎁 You've received complimentary tickets to ${gig.title}!`
+    : `🎟️ ${issuedByName} sent you tickets to ${gig.title}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${ticketTypeLabel} for ${gig.title}</title>
+  <style>${getEmailStyles()}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${isComp ? "You're on the guest list!" : "You've got tickets!"}</h1>
+      <p>${issuedByName} sent you ${ticket.quantity} ticket${ticket.quantity > 1 ? "s" : ""}</p>
+    </div>
+    
+    <div class="content">
+      ${
+        note
+          ? `
+      <div class="info-box" style="margin-bottom: 24px; border-left: 4px solid ${COLORS.gold};">
+        <p style="margin: 0; font-style: italic; color: ${COLORS.grayNeutral};">
+          "${note}"
+          <br><span style="font-size: 12px; margin-top: 8px; display: block;">— ${issuedByName}</span>
+        </p>
+      </div>
+      `
+          : ""
+      }
+
+      <div class="confirmation-code">
+        <label>Confirmation Code</label>
+        <span>${ticket.confirmationCode}</span>
+      </div>
+      
+      <div class="event-details">
+        <h2>${gig.title}</h2>
+        <div class="detail-row">
+          <span class="detail-icon">📅</span>
+          <span class="detail-text">${eventDate}</span>
+        </div>
+        ${
+          gig.time
+            ? `
+        <div class="detail-row">
+          <span class="detail-icon">🕐</span>
+          <span class="detail-text">${gig.time}</span>
+        </div>
+        `
+            : ""
+        }
+        ${
+          locationName
+            ? `
+        <div class="detail-row">
+          <span class="detail-icon">📍</span>
+          <span class="detail-text">${locationName}</span>
+        </div>
+        `
+            : ""
+        }
+      </div>
+      
+      <div class="ticket-info">
+        <h3>Ticket Details</h3>
+        <div class="ticket-row">
+          <span>Tickets</span>
+          <span>${ticket.quantity}x ${isComp ? "Complimentary" : "Issued"}</span>
+        </div>
+        <div class="ticket-row">
+          <span>Recipient</span>
+          <span>${ticket.holderName}</span>
+        </div>
+        ${
+          ticket.tierName
+            ? `
+        <div class="ticket-row">
+          <span>Tier</span>
+          <span>${ticket.tierName}</span>
+        </div>
+        `
+            : ""
+        }
+        <div class="ticket-row total">
+          <span>Cost</span>
+          <span style="color: ${isComp ? COLORS.gold : COLORS.black};">
+            ${isComp ? "Complimentary (Free)" : `$${ticket.totalPaid.toFixed(2)}`}
+          </span>
+        </div>
+      </div>
+      
+      <a href="${ticketUrl}" class="cta-button">View Your Tickets</a>
+      
+      <div class="info-box" style="text-align: center;">
+        <p style="margin: 0; color: ${COLORS.grayNeutral}; font-size: 14px;">
+          Present the QR code at the venue for entry.<br>
+          Your QR code will rotate every 30 seconds for security.
+        </p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p><strong>Triple A Music</strong></p>
+      <p><a href="${baseUrl}">tripleamusic.org</a></p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  const text = `${isComp ? "YOU'RE ON THE GUEST LIST!" : "YOU'VE GOT TICKETS!"}
+${"=".repeat(30)}
+
+${issuedByName} sent you ${ticket.quantity} ticket${ticket.quantity > 1 ? "s" : ""} to ${gig.title}!
+
+${note ? `"${note}"\n— ${issuedByName}\n\n` : ""}Confirmation Code: ${ticket.confirmationCode}
+
+EVENT DETAILS
+-------------
+Event: ${gig.title}
+Date: ${eventDate}
+${gig.time ? `Time: ${gig.time}` : ""}
+${locationName ? `Venue: ${locationName}` : ""}
+
+TICKET DETAILS
+--------------
+Tickets: ${ticket.quantity}x ${isComp ? "Complimentary" : "Issued"}
+Recipient: ${ticket.holderName}
+${ticket.tierName ? `Tier: ${ticket.tierName}` : ""}
+Cost: ${isComp ? "Complimentary (Free)" : `$${ticket.totalPaid.toFixed(2)}`}
+
+VIEW YOUR TICKETS
+-----------------
+${ticketUrl}
+
+Present the QR code at the venue for entry.
+Your QR code will rotate every 30 seconds for security.
+
+---
+Triple A Music
+tripleamusic.org
+`;
+
+  return sendEmail({
+    to: ticket.email,
+    subject: subjectLine,
+    html,
+    text,
+  });
+}
+
+/**
+ * Send email when a ticket is cancelled by the host
+ */
+export async function sendTicketCancellationEmail(params: {
+  ticket: ITicket;
+  gig: IGig;
+  locationName?: string;
+  reason?: string;
+}): Promise<boolean> {
+  const { ticket, gig, locationName, reason } = params;
+
+  const eventDate = new Date(gig.date).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket Cancelled - ${gig.title}</title>
+  <style>${getEmailStyles()}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="background: linear-gradient(135deg, #6B7280 0%, #374151 100%);">
+      <h1>Ticket Cancelled</h1>
+      <p>Your ticket for ${gig.title} has been cancelled</p>
+    </div>
+    
+    <div class="content">
+      <div class="confirmation-code" style="border-color: #E5E7EB;">
+        <label style="color: #9CA3AF;">Confirmation Code (Cancelled)</label>
+        <span style="color: #9CA3AF; text-decoration: line-through;">${ticket.confirmationCode}</span>
+      </div>
+      
+      ${
+        reason
+          ? `
+      <div class="warning" style="background: #FEE2E2; border-color: #EF4444; color: #991B1B;">
+        <strong>Cancellation reason:</strong> ${reason}
+      </div>
+      `
+          : ""
+      }
+      
+      <div class="event-details" style="opacity: 0.7;">
+        <h2>${gig.title}</h2>
+        <div class="detail-row">
+          <span class="detail-icon">📅</span>
+          <span class="detail-text">${eventDate}</span>
+        </div>
+        ${
+          gig.time
+            ? `
+        <div class="detail-row">
+          <span class="detail-icon">🕐</span>
+          <span class="detail-text">${gig.time}</span>
+        </div>
+        `
+            : ""
+        }
+        ${
+          locationName
+            ? `
+        <div class="detail-row">
+          <span class="detail-icon">📍</span>
+          <span class="detail-text">${locationName}</span>
+        </div>
+        `
+            : ""
+        }
+      </div>
+      
+      <div class="ticket-info">
+        <h3>Cancelled Ticket Details</h3>
+        <div class="ticket-row">
+          <span>Tickets</span>
+          <span>${ticket.quantity}</span>
+        </div>
+        <div class="ticket-row">
+          <span>Holder</span>
+          <span>${ticket.holderName}</span>
+        </div>
+        ${
+          ticket.totalPaid > 0
+            ? `
+        <div class="ticket-row total">
+          <span>Original Payment</span>
+          <span>$${ticket.totalPaid.toFixed(2)}</span>
+        </div>
+        <p style="font-size: 13px; color: ${COLORS.grayNeutral}; margin-top: 12px;">
+          If you paid for this ticket, please contact the event organizer regarding refunds.
+        </p>
+        `
+            : ""
+        }
+      </div>
+      
+      <div class="info-box" style="text-align: center;">
+        <p style="margin: 0; color: ${COLORS.grayNeutral}; font-size: 14px;">
+          This ticket is no longer valid for entry.<br>
+          If you have questions, please contact the event organizer.
+        </p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p><strong>Triple A Music</strong></p>
+      <p><a href="${baseUrl}">tripleamusic.org</a></p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  const text = `TICKET CANCELLED
+================
+
+Your ticket for ${gig.title} has been cancelled.
+
+Confirmation Code (Cancelled): ${ticket.confirmationCode}
+
+${reason ? `Cancellation reason: ${reason}\n\n` : ""}EVENT DETAILS
+-------------
+Event: ${gig.title}
+Date: ${eventDate}
+${gig.time ? `Time: ${gig.time}` : ""}
+${locationName ? `Venue: ${locationName}` : ""}
+
+CANCELLED TICKET DETAILS
+------------------------
+Tickets: ${ticket.quantity}
+Holder: ${ticket.holderName}
+${ticket.totalPaid > 0 ? `Original Payment: $${ticket.totalPaid.toFixed(2)}\n\nIf you paid for this ticket, please contact the event organizer regarding refunds.` : ""}
+
+This ticket is no longer valid for entry.
+If you have questions, please contact the event organizer.
+
+---
+Triple A Music
+tripleamusic.org
+`;
+
+  return sendEmail({
+    to: ticket.email,
+    subject: `Ticket Cancelled - ${gig.title}`,
+    html,
+    text,
+  });
+}

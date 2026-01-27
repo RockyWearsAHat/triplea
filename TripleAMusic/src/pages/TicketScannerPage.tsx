@@ -6,8 +6,6 @@ import { ArrowLeft } from "lucide-react";
 import styles from "./TicketScannerPage.module.scss";
 import { createApiClient } from "../lib/urls";
 
-type ScanMode = "camera" | "manual";
-
 interface ScanState {
   status: "idle" | "scanning" | "success" | "error";
   result?: TicketScanResult;
@@ -22,8 +20,6 @@ export default function TicketScannerPage() {
   const [myGigs, setMyGigs] = useState<Gig[]>([]);
   const [selectedGigId, setSelectedGigId] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [scanMode, setScanMode] = useState<ScanMode>("camera");
-  const [manualInput, setManualInput] = useState("");
   const [scanState, setScanState] = useState<ScanState>({ status: "idle" });
   const [admitting, setAdmitting] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -137,38 +133,6 @@ export default function TicketScannerPage() {
     [api, selectedGigId, scanState.status],
   );
 
-  const handleScan = useCallback(async () => {
-    if (!manualInput.trim()) return;
-
-    setScanState({ status: "scanning" });
-
-    try {
-      const result = await api.scanTicket(
-        manualInput.trim(),
-        selectedGigId || undefined,
-      );
-
-      if (result.valid) {
-        setScanState({
-          status: "success",
-          result,
-          message: "Ticket verified successfully!",
-        });
-      } else {
-        setScanState({
-          status: "error",
-          result,
-          message: result.message || "Invalid ticket",
-        });
-      }
-    } catch (err) {
-      setScanState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Failed to scan ticket",
-      });
-    }
-  }, [api, manualInput, selectedGigId]);
-
   const handleAdmit = useCallback(async () => {
     if (!scanState.result?.ticket?.id) return;
 
@@ -196,7 +160,6 @@ export default function TicketScannerPage() {
       // Reset after a delay
       setTimeout(() => {
         setScanState({ status: "idle" });
-        setManualInput("");
         setCameraEnabled(true); // Re-enable camera for next scan
       }, 2000);
     } catch (err) {
@@ -211,7 +174,6 @@ export default function TicketScannerPage() {
 
   const handleReset = useCallback(() => {
     setScanState({ status: "idle" });
-    setManualInput("");
     setCameraEnabled(true); // Re-enable camera
     setCameraError(null);
   }, []);
@@ -287,115 +249,75 @@ export default function TicketScannerPage() {
 
       {/* Scanner section */}
       <div className={styles.scannerSection}>
-        <div className={styles.scannerTabs}>
-          <button
-            className={`${styles.scannerTab} ${scanMode === "camera" ? styles.active : ""}`}
-            onClick={() => setScanMode("camera")}
-          >
-            📷 Camera
-          </button>
-          <button
-            className={`${styles.scannerTab} ${scanMode === "manual" ? styles.active : ""}`}
-            onClick={() => setScanMode("manual")}
-          >
-            ⌨️ Manual Entry
-          </button>
-        </div>
-
         <div className={styles.scannerBody}>
-          {scanMode === "camera" ? (
-            <div className={styles.cameraScanner}>
-              {cameraError ? (
-                <div className={styles.cameraPlaceholder}>
-                  <span className={styles.cameraIcon}>⚠️</span>
-                  <p>{cameraError}</p>
-                  <button
-                    className={styles.resetButton}
-                    onClick={() => {
-                      setCameraError(null);
-                      setCameraEnabled(true);
-                    }}
-                    style={{ marginTop: 12 }}
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : cameraEnabled && scanState.status !== "success" ? (
-                <div className={styles.cameraContainer}>
-                  <Scanner
-                    onScan={(result) => {
-                      if (result?.[0]?.rawValue) {
-                        handleCameraScan(result[0].rawValue);
-                      }
-                    }}
-                    onError={(error) => {
-                      console.error("Camera error:", error);
-                      const errorMessage =
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to access camera. Please check permissions.";
-                      setCameraError(errorMessage);
-                    }}
-                    constraints={{
-                      facingMode: "environment",
-                    }}
-                    styles={{
-                      container: {
-                        width: "100%",
-                        maxWidth: 350,
-                        margin: "0 auto",
-                        borderRadius: 12,
-                        overflow: "hidden",
-                      },
-                      video: {
-                        borderRadius: 12,
-                      },
-                    }}
-                    components={{
-                      torch: true,
-                    }}
-                  />
-                  <p className={styles.cameraNote}>
-                    Point camera at ticket QR code
-                  </p>
-                </div>
-              ) : (
-                <div className={styles.cameraPlaceholder}>
-                  <span className={styles.cameraIcon}>
-                    {scanState.status === "scanning" ? "⏳" : "✅"}
-                  </span>
-                  <p>
-                    {scanState.status === "scanning"
-                      ? "Verifying ticket..."
-                      : "Ticket scanned"}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className={styles.manualEntry}>
-              <div className={styles.inputGroup}>
-                <label>QR Code Data</label>
-                <textarea
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  placeholder="Paste the QR code data here (JSON format from ticket)"
-                  disabled={scanState.status === "scanning"}
-                />
+          <div className={styles.cameraScanner}>
+            {cameraError ? (
+              <div className={styles.cameraPlaceholder}>
+                <span className={styles.cameraIcon}>⚠️</span>
+                <p>{cameraError}</p>
+                <button
+                  className={styles.resetButton}
+                  onClick={() => {
+                    setCameraError(null);
+                    setCameraEnabled(true);
+                  }}
+                  style={{ marginTop: 12 }}
+                >
+                  Try Again
+                </button>
               </div>
-              <button
-                className={styles.scanButton}
-                onClick={handleScan}
-                disabled={
-                  !manualInput.trim() || scanState.status === "scanning"
-                }
-              >
-                {scanState.status === "scanning"
-                  ? "Verifying..."
-                  : "Verify Ticket"}
-              </button>
-            </div>
-          )}
+            ) : cameraEnabled && scanState.status !== "success" ? (
+              <div className={styles.cameraContainer}>
+                <Scanner
+                  onScan={(result) => {
+                    if (result?.[0]?.rawValue) {
+                      handleCameraScan(result[0].rawValue);
+                    }
+                  }}
+                  onError={(error) => {
+                    console.error("Camera error:", error);
+                    const errorMessage =
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to access camera. Please check permissions.";
+                    setCameraError(errorMessage);
+                  }}
+                  constraints={{
+                    facingMode: "environment",
+                  }}
+                  styles={{
+                    container: {
+                      width: "100%",
+                      maxWidth: 350,
+                      margin: "0 auto",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                    },
+                    video: {
+                      borderRadius: 12,
+                    },
+                  }}
+                  components={{
+                    torch: true,
+                  }}
+                />
+                <p className={styles.cameraNote}>
+                  Point camera at ticket QR code
+                </p>
+              </div>
+            ) : (
+              <div className={styles.cameraPlaceholder}>
+                <span className={styles.cameraIcon}>
+                  {scanState.status === "scanning" ? "⏳" : "✅"}
+                </span>
+                <p>
+                  {scanState.status === "scanning"
+                    ? "Verifying ticket..."
+                    : "Ticket scanned"}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Scan result */}
           {scanState.status !== "idle" && scanState.status !== "scanning" && (

@@ -654,12 +654,420 @@ router.get("/gig/:gigId", async (req: Request, res: Response) => {
         status: t.status,
         usedAt: t.usedAt,
         createdAt: t.createdAt,
+        tierName: t.tierName,
+        seatAssignments: t.seatAssignments,
+        isComped: t.totalPaid === 0 && t.pricePerTicket === 0,
+        issuedByHost: (t as any).issuedByHost ?? false,
       })),
       stats,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("GET /tickets/gig/:gigId error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Issue/send tickets to a specific email (host/admin only)
+// POST /api/tickets/issue
+// Use cases:
+// 1. Send comp tickets (free tickets for VIPs, sponsors, etc.)
+// 2. Generate one-time tickets for walk-ins/special guests
+// 3. Transfer tickets to a specific person by email
+router.post("/issue", async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const {
+      gigId,
+      email,
+      holderName,
+      quantity = 1,
+      tierId,
+      seatIds,
+      sendEmail: shouldSendEmail = true,
+      note,
+      isComp = false,
+    } = req.body as {
+      gigId: string;
+      email: string;
+      holderName: string;
+      quantity?: number;
+      tierId?: string;
+      seatIds?: string[];
+      sendEmail?: boolean;
+      note?: string;
+      isComp?: boolean;
+    };
+
+    // Validate inputs
+    if (!gigId || !email || !holderName) {
+      return res
+        .status(400)
+        .json({ message: "Missing required fields: gigId, email, holderName" });
+    }
+
+    const qty = Number(quantity) || 1;
+    if (qty < 1 || qty > 50) {
+      return res
+        .status(400)
+        .json({ message: "Quantity must be between 1 and 50" });
+    }
+
+    // Find the gig
+    const gig = await Gig.findById(gigId).exec();
+    if (!gig) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if user has permission (must be event creator or admin)
+    const user = await User.findById(userId).exec();
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const isOwner = gig.createdByUserId.toString() === userId;
+    const isAdmin = user.roles.includes("admin");
+
+    if (!isOwner && !isAdmin) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Permission denied. Only the event host or admin can issue tickets.",
+        });
+    }
+
+    // Look up recipient user by email (optional - they may not have an account)
+    const recipientUser = await User.findOne({
+      email: email.toLowerCase().trim(),
+    }).exec();
+
+    let pricePerTicket = isComp ? 0 : (gig.ticketPrice ?? 0);
+    let tier = null;
+    let tierName: string | undefined;
+
+    // Handle tiered pricing
+    if (tierId) {
+      tier = await TicketTier.findById(tierId).exec();
+      if (!tier) {
+        return res.status(404).json({ message: "Ticket tier not found" });
+      }
+      if (String(tier.gigId) !== gigId) {
+        return res
+          .status(400)
+          .json({ message: "Tier does not belong to this event" });
+      }
+      if (!tier.available) {
+        return res
+          .status(400)
+          .json({ message: "This ticket tier is not available" });
+      }
+      if (tier.sold + qty > tier.capacity) {
+        return res.status(400).json({
+          message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
+        });
+      }
+      pricePerTicket = isComp ? 0 : tier.price;
+      tierName = tier.name;
+    }
+
+    // Handle reserved seating
+    let seatAssignments: Array<{
+      seatId: string;
+      section: string;
+      row: string;
+      seatNumber: string;
+    }> = [];
+
+    if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+      if (seatIds && seatIds.length > 0) {
+        if (seatIds.length !== qty) {
+          return res.status(400).json({
+            message: `Please select exactly ${qty} seat(s) for reserved seating`,
+          });
+        }
+
+        const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+        if (!layout) {
+          return res.status(500).json({ message: "Seating layout not found" });
+        }
+
+        const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+
+        // Check for already sold seats
+        const existingTickets = await Ticket.find({
+          gigId: gig._id,
+          status: { $in: ["valid", "used"] },
+          "seatAssignments.seatId": { $in: seatIds },
+        }).exec();
+
+        if (existingTickets.length > 0) {
+          return res.status(400).json({
+            message: "One or more selected seats are no longer available",
+          });
+        }
+
+        for (const seatId of seatIds) {
+          const seat = seatMap.get(seatId);
+          if (!seat) {
+            return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+          }
+          if (!seat.isAvailable) {
+            return res.status(400).json({
+              message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+            });
+          }
+          seatAssignments.push({
+            seatId: seat.seatId,
+            section: seat.section,
+            row: seat.row,
+            seatNumber: seat.seatNumber,
+          });
+        }
+      }
+    }
+
+    // Create the ticket
+    const ticket = await (Ticket as any).createTicket({
+      gigId: new Types.ObjectId(gigId),
+      userId: recipientUser ? recipientUser._id : null,
+      email: email.toLowerCase().trim(),
+      holderName,
+      quantity: qty,
+      pricePerTicket,
+    });
+
+    // Set total paid to 0 for comped tickets
+    if (isComp) {
+      ticket.totalPaid = 0;
+    }
+
+    // Mark as issued by host
+    (ticket as any).issuedByHost = true;
+    (ticket as any).issuedByUserId = new Types.ObjectId(userId);
+    (ticket as any).issueNote = note || undefined;
+
+    // Add tier and seat information if applicable
+    if (tier) {
+      ticket.tierId = tier._id;
+      ticket.tierName = tierName;
+      // Increment sold count
+      tier.sold += qty;
+      await tier.save();
+    }
+    if (seatAssignments.length > 0) {
+      ticket.seatAssignments = seatAssignments;
+    }
+    await ticket.save();
+
+    // Get location for email
+    const location = gig.locationId
+      ? await Location.findById(gig.locationId).exec()
+      : null;
+
+    // Send email notification if requested
+    if (shouldSendEmail) {
+      const { sendIssuedTicketEmail } = await import("../lib/email");
+      await sendIssuedTicketEmail({
+        ticket,
+        gig,
+        locationName: location?.name,
+        issuedByName: user.name,
+        note,
+        isComp,
+      });
+    }
+
+    return res.status(201).json({
+      ticket: {
+        id: ticket.id,
+        confirmationCode: ticket.confirmationCode,
+        gigId: ticket.gigId,
+        quantity: ticket.quantity,
+        pricePerTicket: ticket.pricePerTicket,
+        totalPaid: ticket.totalPaid,
+        status: ticket.status,
+        holderName: ticket.holderName,
+        email: ticket.email,
+        tierId: ticket.tierId ? String(ticket.tierId) : null,
+        tierName: ticket.tierName,
+        seatAssignments: ticket.seatAssignments,
+        isComp,
+        createdAt: ticket.createdAt,
+      },
+      emailSent: shouldSendEmail,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("POST /tickets/issue error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Cancel a ticket (host/admin only)
+// POST /api/tickets/:id/cancel
+router.post("/:id/cancel", async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { id } = req.params as { id: string };
+    const { reason, sendEmail: shouldSendEmail = true } = req.body as {
+      reason?: string;
+      sendEmail?: boolean;
+    };
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ticket ID format" });
+    }
+
+    const ticket = await Ticket.findById(id).exec();
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    // Get the gig to check permissions
+    const gig = await Gig.findById(ticket.gigId).exec();
+    if (!gig) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if user has permission
+    const user = await User.findById(userId).exec();
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const isOwner = gig.createdByUserId.toString() === userId;
+    const isAdmin = user.roles.includes("admin");
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: "Permission denied" });
+    }
+
+    if (ticket.status === "cancelled") {
+      return res.status(400).json({ message: "Ticket is already cancelled" });
+    }
+
+    if (ticket.status === "used") {
+      return res.status(400).json({ message: "Cannot cancel a used ticket" });
+    }
+
+    // If the ticket has a tier, decrement the sold count
+    if (ticket.tierId) {
+      const tier = await TicketTier.findById(ticket.tierId).exec();
+      if (tier) {
+        tier.sold = Math.max(0, tier.sold - ticket.quantity);
+        await tier.save();
+      }
+    }
+
+    // Cancel the ticket
+    ticket.status = "cancelled";
+    await ticket.save();
+
+    // Send cancellation email if requested
+    if (shouldSendEmail) {
+      const location = gig.locationId
+        ? await Location.findById(gig.locationId).exec()
+        : null;
+      const { sendTicketCancellationEmail } = await import("../lib/email");
+      await sendTicketCancellationEmail({
+        ticket,
+        gig,
+        locationName: location?.name,
+        reason,
+      });
+    }
+
+    return res.json({
+      success: true,
+      ticket: {
+        id: ticket.id,
+        confirmationCode: ticket.confirmationCode,
+        status: ticket.status,
+      },
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("POST /tickets/:id/cancel error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Resend ticket email (host/admin only)
+// POST /api/tickets/:id/resend
+router.post("/:id/resend", async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { id } = req.params as { id: string };
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ticket ID format" });
+    }
+
+    const ticket = await Ticket.findById(id).exec();
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    // Get the gig
+    const gig = await Gig.findById(ticket.gigId).exec();
+    if (!gig) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if user has permission
+    const user = await User.findById(userId).exec();
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const isOwner = gig.createdByUserId.toString() === userId;
+    const isAdmin = user.roles.includes("admin");
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: "Permission denied" });
+    }
+
+    if (ticket.status === "cancelled") {
+      return res
+        .status(400)
+        .json({ message: "Cannot resend a cancelled ticket" });
+    }
+
+    // Get location for email
+    const location = gig.locationId
+      ? await Location.findById(gig.locationId).exec()
+      : null;
+
+    // Send the confirmation email
+    await sendTicketConfirmationEmail({
+      ticket,
+      gig,
+      locationName: location?.name,
+    });
+
+    return res.json({
+      success: true,
+      message: `Ticket email resent to ${ticket.email}`,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("POST /tickets/:id/resend error", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
