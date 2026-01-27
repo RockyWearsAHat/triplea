@@ -140,6 +140,22 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className={ui.input}
           />
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              fontSize: 13,
+              color: "var(--gold)",
+              cursor: "pointer",
+              alignSelf: "flex-end",
+              marginTop: 4,
+            }}
+          >
+            Forgot password?
+          </button>
         </div>
         {error && <p className={ui.error}>{error}</p>}
         {user && (
@@ -267,6 +283,270 @@ function RegisterPage() {
           onClick={() => navigate("/login")}
         >
           Back to login
+        </Button>
+      </form>
+    </AppShell>
+  );
+}
+
+function ForgotPasswordPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
+
+  const api = useMemo(() => createApiClient(), []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      await api.requestPasswordReset(email);
+      setSuccess(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <AppShell title="Check your email" centered>
+        <div
+          style={{
+            maxWidth: 400,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>📧</div>
+          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+            If an account exists for <strong>{email}</strong>, you'll receive an
+            email with instructions to reset your password.
+          </p>
+          <p className={ui.help}>
+            Didn't receive the email? Check your spam folder or try again.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.sm,
+              marginTop: spacing.md,
+            }}
+          >
+            <Button onClick={() => setSuccess(false)} variant="ghost">
+              Try a different email
+            </Button>
+            <Button onClick={() => navigate("/login")}>Back to sign in</Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title="Reset your password" centered>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          maxWidth: 360,
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <p className={ui.help}>
+          Enter your email address and we'll send you a link to reset your
+          password.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={ui.input}
+            autoFocus
+          />
+        </div>
+
+        {error && <p className={ui.error}>{error}</p>}
+
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Sending..." : "Send reset link"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/login")}
+        >
+          Back to sign in
+        </Button>
+      </form>
+    </AppShell>
+  );
+}
+
+function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [newPassword, setNewPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
+
+  const api = useMemo(() => createApiClient(), []);
+
+  if (!token) {
+    return (
+      <AppShell title="Invalid link" centered>
+        <div
+          style={{
+            maxWidth: 400,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>⚠️</div>
+          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+            This password reset link is invalid or has expired.
+          </p>
+          <p className={ui.help}>Please request a new password reset link.</p>
+          <Button onClick={() => navigate("/forgot-password")}>
+            Request new link
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await api.resetPassword(token!, newPassword);
+      setSuccess(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <AppShell title="Password reset" centered>
+        <div
+          style={{
+            maxWidth: 400,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>✅</div>
+          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+            Your password has been reset successfully.
+          </p>
+          <p className={ui.help}>You can now sign in with your new password.</p>
+          <Button onClick={() => navigate("/login")}>Sign in</Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title="Create new password" centered>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          maxWidth: 360,
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <p className={ui.help}>Enter your new password below.</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>New password</label>
+          <input
+            type="password"
+            required
+            minLength={8}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className={ui.input}
+            autoFocus
+          />
+          <p className={ui.help}>Minimum 8 characters</p>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 13 }}>Confirm password</label>
+          <input
+            type="password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className={ui.input}
+          />
+        </div>
+
+        {error && <p className={ui.error}>{error}</p>}
+
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Resetting..." : "Reset password"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/login")}
+        >
+          Back to sign in
         </Button>
       </form>
     </AppShell>
@@ -1932,6 +2212,8 @@ function App() {
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
               <Route

@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User";
 import { Invite } from "../models/Invite";
 import { deriveDefaultPermissions } from "../lib/access";
+import { sendPasswordResetEmail } from "../lib/email";
 
 const router: Router = express.Router();
 
@@ -21,7 +22,7 @@ function getJwtSecret(): string {
 
 function issueAuthCookie(
   res: Response,
-  user: { id: string; email: string; roles: string[] }
+  user: { id: string; email: string; roles: string[] },
 ) {
   const token = jwt.sign(
     {
@@ -30,7 +31,7 @@ function issueAuthCookie(
       roles: user.roles,
     },
     getJwtSecret(),
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
 
   res.cookie(JWT_COOKIE, token, {
@@ -120,7 +121,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
     const ok = await bcrypt.compare(
       password,
-      user?.passwordHash ?? DUMMY_BCRYPT_HASH
+      user?.passwordHash ?? DUMMY_BCRYPT_HASH,
     );
     if (!user || !ok) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -268,6 +269,112 @@ router.get("/me", async (req: Request, res: Response) => {
     // eslint-disable-next-line no-console
     console.error("/me error", err);
     return res.status(200).json({ user: null });
+  }
+});
+
+// Request password reset - sends an email with a reset link
+router.post("/request-password-reset", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body as { email: string };
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).exec();
+
+    // Always return success to prevent email enumeration attacks
+    if (!user) {
+      return res.json({
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
+      });
+    }
+
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Token expires in 1 hour
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Save the hashed token to the user
+    user.passwordResetToken = resetTokenHash;
+    user.passwordResetExpires = resetExpires;
+    await user.save();
+
+    // Send the email with the plain token (user will use this in the URL)
+    await sendPasswordResetEmail({
+      email: user.email,
+      resetToken,
+      userName: user.name,
+    });
+
+    return res.json({
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("/request-password-reset error", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Reset password using the token from email
+router.post("/reset-password", async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body as {
+      token: string;
+      newPassword: string;
+    };
+
+    if (!token || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Token and new password are required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 8 characters" });
+    }
+
+    // Hash the token to compare with stored hash
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user with matching token that hasn't expired
+    const user = await User.findOne({
+      passwordResetToken: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    }).exec();
+
+    if (!user) {
+      return res.status(400).json({
+        message:
+          "Invalid or expired reset link. Please request a new password reset.",
+      });
+    }
+
+    // Update the password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = passwordHash;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return res.json({
+      message: "Password has been reset successfully. You can now log in.",
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("/reset-password error", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 

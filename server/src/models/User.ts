@@ -8,6 +8,8 @@ export interface IUser extends Document {
   roles: string[];
   permissions: Permission[];
   employeeRoles: EmployeeRole[];
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -18,8 +20,10 @@ const UserSchema = new Schema<IUser>(
     roles: { type: [String], default: ["customer"] },
     permissions: { type: [String], default: [] },
     employeeRoles: { type: [String], default: [] },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const User = model<IUser>("User", UserSchema);

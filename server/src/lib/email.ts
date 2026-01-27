@@ -46,6 +46,101 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
   return true;
 }
 
+export async function sendPasswordResetEmail(params: {
+  email: string;
+  resetToken: string;
+  userName: string;
+}): Promise<boolean> {
+  const { email, resetToken, userName } = params;
+
+  // Determine the base URL from environment or use a default
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
+  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f5f5f7; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #1C276E 0%, #4E238B 100%); color: #fff; padding: 32px; text-align: center; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .header p { margin: 0; opacity: 0.9; }
+    .content { padding: 32px; }
+    .message { color: #1d1d1f; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+    .cta-button { display: block; background: #E59D0D; color: #fff; text-decoration: none; padding: 16px 32px; border-radius: 8px; text-align: center; font-weight: 600; margin: 24px 0; }
+    .cta-button:hover { background: #d18c0c; }
+    .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 24px 0; color: #856404; font-size: 14px; }
+    .link-fallback { color: #666; font-size: 14px; word-break: break-all; margin-top: 16px; }
+    .footer { background: #f8f9fa; padding: 24px; text-align: center; font-size: 14px; color: #666; }
+    .footer a { color: #1C276E; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔐 Password Reset Request</h1>
+      <p>Triple A Music</p>
+    </div>
+    
+    <div class="content">
+      <p class="message">
+        Hi ${userName},<br><br>
+        We received a request to reset the password for your Triple A account. Click the button below to create a new password.
+      </p>
+      
+      <a href="${resetUrl}" class="cta-button">Reset Password</a>
+      
+      <div class="warning">
+        ⚠️ This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.
+      </div>
+      
+      <p class="link-fallback">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${resetUrl}">${resetUrl}</a>
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p>Triple A Music</p>
+      <p><a href="${baseUrl}">tripleamusic.org</a></p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  const text = `
+Password Reset Request
+
+Hi ${userName},
+
+We received a request to reset the password for your Triple A account.
+
+Click this link to reset your password:
+${resetUrl}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email.
+
+---
+Triple A Music
+tripleamusic.org
+`;
+
+  return sendEmail({
+    to: email,
+    subject: "🔐 Reset your Triple A password",
+    html,
+    text,
+  });
+}
+
 export async function sendTicketConfirmationEmail(params: {
   ticket: ITicket;
   gig: IGig;

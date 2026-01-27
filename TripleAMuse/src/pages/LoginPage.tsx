@@ -1,7 +1,7 @@
 import React from "react";
 import { AppShell, Button, spacing, useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { MUSIC_ORIGIN, MUSICIAN_ORIGIN } from "../lib/urls";
 
 export function LoginPage() {
@@ -97,6 +97,18 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className={ui.input}
           />
+          <Link
+            to="/forgot-password"
+            style={{
+              fontSize: 13,
+              color: "var(--gold)",
+              textDecoration: "none",
+              alignSelf: "flex-end",
+              marginTop: 4,
+            }}
+          >
+            Forgot password?
+          </Link>
         </div>
 
         {error && <p className={ui.error}>{error}</p>}

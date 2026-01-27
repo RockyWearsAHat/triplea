@@ -19,6 +19,8 @@ import { EmployeeDashboardPage } from "./pages/EmployeeDashboardPage";
 import { AccountPage } from "./pages/AccountPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { InviteOnboardingPage } from "./pages/InviteOnboardingPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 
 function App() {
   return (
@@ -81,6 +83,8 @@ function App() {
             <Route path="/account" element={<AccountPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/invite" element={<InviteOnboardingPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Routes>
         </div>
       </div>

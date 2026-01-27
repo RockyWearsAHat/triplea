@@ -178,6 +178,23 @@ export class TripleAApiClient {
     await this.request<void>("/auth/logout", { method: "POST" });
   }
 
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>("/auth/request-password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   async getCurrentUser(): Promise<User | null> {
     const data = await this.request<{
       user: {

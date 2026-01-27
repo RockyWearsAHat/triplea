@@ -22,37 +22,6 @@ interface MusicianProfile {
   acceptsDirectRequests?: boolean;
 }
 
-const ROLE_INFO: Record<
-  string,
-  { label: string; description: string; color: string }
-> = {
-  admin: {
-    label: "Administrator",
-    description: "Full platform access",
-    color: "var(--error)",
-  },
-  musician: {
-    label: "Musician",
-    description: "Performer profile & gigs",
-    color: "var(--taa-purple-400)",
-  },
-  customer: {
-    label: "Host",
-    description: "Post events & manage bookings",
-    color: "var(--taa-blue-200)",
-  },
-  teacher: {
-    label: "Teacher",
-    description: "Offer lessons & coaching",
-    color: "var(--success)",
-  },
-  rental_provider: {
-    label: "Employee",
-    description: "Internal operations",
-    color: "var(--warning)",
-  },
-};
-
 function ProfileAvatar({ name, size = 72 }: { name: string; size?: number }) {
   const initials = name
     .split(" ")
@@ -67,28 +36,6 @@ function ProfileAvatar({ name, size = 72 }: { name: string; size?: number }) {
       style={{ width: size, height: size, fontSize: size * 0.35 }}
     >
       {initials}
-    </div>
-  );
-}
-
-function RoleBadge({ role }: { role: string }) {
-  const info = ROLE_INFO[role] ?? {
-    label: role,
-    description: "",
-    color: "var(--text-muted)",
-  };
-  return (
-    <div
-      className={styles.roleBadge}
-      style={{ "--role-color": info.color } as React.CSSProperties}
-    >
-      <span className={styles.roleDot} />
-      <div>
-        <span className={styles.roleLabel}>{info.label}</span>
-        {info.description && (
-          <span className={styles.roleDesc}>{info.description}</span>
-        )}
-      </div>
     </div>
   );
 }
@@ -199,22 +146,25 @@ export function ProfilePage() {
   const linkedApps = [
     {
       name: "Triple A Musician",
-      role: "musician",
+      description: "Performer dashboard",
       url: "/",
       active: true,
       current: true,
+      needsRegistration: false,
     },
     {
       name: "Triple A Music",
-      role: "customer",
+      description: "Browse events & buy tickets",
       url: "https://tripleamusic.org",
-      active: user.role.includes("customer"),
+      active: true,
+      needsRegistration: false,
     },
     {
-      name: "Triple A Muse",
-      role: null,
-      url: "https://tripleamuse.org",
-      active: true,
+      name: "Host",
+      description: "Post events & manage venues",
+      url: "https://tripleamusic.org/host",
+      active: user.role.includes("customer"),
+      needsRegistration: !user.role.includes("customer"),
     },
   ];
 
@@ -240,17 +190,6 @@ export function ProfilePage() {
                   </span>
                 </div>
               )}
-            </div>
-          </div>
-
-          <div className={ui.divider} />
-
-          <div className={styles.rolesSection}>
-            <h3 className={styles.sectionLabel}>Your roles</h3>
-            <div className={styles.rolesList}>
-              {user.role.map((r) => (
-                <RoleBadge key={r} role={r} />
-              ))}
             </div>
           </div>
         </div>
@@ -458,15 +397,13 @@ export function ProfilePage() {
                 </div>
                 <div className={styles.appInfo}>
                   <span className={styles.appName}>{app.name}</span>
-                  {app.current ? (
-                    <span className={styles.appRole}>You're here</span>
-                  ) : app.role ? (
-                    <span className={styles.appRole}>
-                      {app.active
-                        ? `Active as ${ROLE_INFO[app.role]?.label ?? app.role}`
-                        : "Not activated"}
-                    </span>
-                  ) : null}
+                  <span className={styles.appRole}>
+                    {app.current
+                      ? "You're here"
+                      : app.needsRegistration
+                        ? "Not activated"
+                        : app.description}
+                  </span>
                 </div>
                 {!app.current && <span className={styles.appArrow}>→</span>}
               </a>
