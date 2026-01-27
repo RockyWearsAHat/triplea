@@ -12,12 +12,12 @@
   h1 {
     font-size: 24px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
     margin: 0 0 8px 0;
   }
 
   p {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 14px;
     margin: 0;
   }
@@ -34,7 +34,7 @@
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-bottom: 8px;
   }
 
@@ -44,7 +44,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg);
-    color: var(--text-primary);
+    color: var(--text);
     font-size: 14px;
     cursor: pointer;
 
@@ -60,7 +60,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: var(--surface-secondary);
+  background: var(--surface);
   border-radius: 8px;
   margin-top: 12px;
 
@@ -74,13 +74,13 @@
     h3 {
       font-size: 14px;
       font-weight: 600;
-      color: var(--text-primary);
+      color: var(--text);
       margin: 0 0 4px 0;
     }
 
     p {
       font-size: 12px;
-      color: var(--text-secondary);
+      color: var(--text-muted);
       margin: 0;
     }
   }
@@ -105,17 +105,17 @@
   background: none;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    background: var(--surface-secondary);
+    background: var(--surface);
   }
 
   &.active {
     color: var(--accent);
-    background: var(--surface-secondary);
+    background: var(--surface);
   }
 }
 
@@ -131,7 +131,7 @@
     aspect-ratio: 1;
     max-width: 300px;
     margin: 0 auto 16px;
-    background: var(--surface-secondary);
+    background: var(--surface);
     border: 2px dashed var(--border);
     border-radius: 12px;
     display: flex;
@@ -146,7 +146,7 @@
     }
 
     p {
-      color: var(--text-secondary);
+      color: var(--text-muted);
       font-size: 14px;
       margin: 0;
     }
@@ -154,7 +154,7 @@
 
   .cameraNote {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: var(--text-muted);
   }
 }
 
@@ -166,7 +166,7 @@
       display: block;
       font-size: 13px;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: var(--text-muted);
       margin-bottom: 6px;
     }
 
@@ -176,7 +176,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       background: var(--bg);
-      color: var(--text-primary);
+      color: var(--text);
       font-size: 14px;
       font-family: monospace;
       resize: vertical;
@@ -188,7 +188,7 @@
       }
 
       &::placeholder {
-        color: var(--text-secondary);
+        color: var(--text-muted);
         opacity: 0.6;
       }
     }
@@ -198,8 +198,8 @@
 .scanButton {
   width: 100%;
   padding: 14px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-contrast);
   border: none;
   border-radius: 8px;
   font-size: 15px;
@@ -224,13 +224,13 @@
   text-align: center;
 
   &.success {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
   }
 
   &.error {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
   }
 }
 
@@ -245,17 +245,17 @@
   margin: 0 0 8px 0;
 
   .success & {
-    color: #22c55e;
+    color: var(--success);
   }
 
   .error & {
-    color: #ef4444;
+    color: var(--error);
   }
 }
 
 .resultMessage {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin: 0 0 16px 0;
 }
 
@@ -269,7 +269,7 @@
   h4 {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
     margin: 0 0 12px 0;
   }
 
@@ -284,11 +284,11 @@
     }
 
     .label {
-      color: var(--text-secondary);
+      color: var(--text-muted);
     }
 
     .value {
-      color: var(--text-primary);
+      color: var(--text);
       font-weight: 500;
     }
   }
@@ -302,8 +302,8 @@
 
 .admitButton {
   padding: 12px 24px;
-  background: #22c55e;
-  color: #fff;
+  background: var(--success);
+  color: var(--bg);
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -312,7 +312,7 @@
   transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: #16a34a;
+    opacity: 0.9;
   }
 
   &:disabled {
@@ -323,8 +323,8 @@
 
 .resetButton {
   padding: 12px 24px;
-  background: var(--surface-secondary);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 14px;
@@ -333,7 +333,7 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: var(--surface);
+    background: var(--surface-2);
   }
 }
 
@@ -354,12 +354,12 @@
   .statValue {
     font-size: 24px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text);
   }
 
   .statLabel {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-top: 4px;
   }
 }
@@ -369,7 +369,7 @@
   align-items: center;
   justify-content: center;
   min-height: 40vh;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .errorState {
@@ -378,12 +378,12 @@
 
   h2 {
     font-size: 18px;
-    color: var(--text-primary);
+    color: var(--text);
     margin: 0 0 8px 0;
   }
 
   p {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin: 0;
   }
 }

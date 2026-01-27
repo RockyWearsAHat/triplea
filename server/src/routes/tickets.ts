@@ -8,6 +8,7 @@ import { User } from "../models/User";
 import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
+import type { AuthenticatedRequest } from "../middleware/auth";
 
 const router: Router = express.Router();
 
@@ -54,8 +55,9 @@ router.post("/purchase", async (req: Request, res: Response) => {
     }
 
     // Get user if authenticated
-    const userId = (req as any).userId
-      ? new Types.ObjectId((req as any).userId)
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id
+      ? new Types.ObjectId(authReq.authUser.id)
       : null;
 
     let pricePerTicket = gig.ticketPrice ?? 0;
@@ -276,7 +278,8 @@ router.post("/:id/qr", async (req: Request, res: Response) => {
     }
 
     // Verify ownership if user is logged in
-    const userId = (req as any).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
     if (userId && ticket.userId && ticket.userId.toString() !== userId) {
       // If logged in user doesn't own this ticket, require confirmation code
       if (!confirmationCode || confirmationCode !== ticket.confirmationCode) {
@@ -315,7 +318,8 @@ router.post("/:id/qr", async (req: Request, res: Response) => {
 // GET /api/tickets/mine
 router.get("/mine", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -383,7 +387,8 @@ router.get("/mine", async (req: Request, res: Response) => {
 // POST /api/tickets/scan
 router.post("/scan", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -464,7 +469,8 @@ router.post("/scan", async (req: Request, res: Response) => {
 // POST /api/tickets/:id/use
 router.post("/:id/use", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -524,7 +530,8 @@ router.post("/:id/use", async (req: Request, res: Response) => {
 // GET /api/tickets/gig/:gigId
 router.get("/gig/:gigId", async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id;
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }

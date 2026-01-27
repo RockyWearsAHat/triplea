@@ -10,14 +10,14 @@
   gap: 6px;
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 14px;
   cursor: pointer;
   padding: 8px 0;
   margin-bottom: 16px;
 
   &:hover {
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
@@ -31,8 +31,12 @@
 }
 
 .ticketHeader {
-  background: linear-gradient(135deg, #1c276e 0%, #4e238b 100%);
-  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--taa-blue-900) 0%,
+    var(--taa-purple-900) 100%
+  );
+  color: var(--taa-white);
   padding: 24px;
   text-align: center;
 
@@ -82,7 +86,7 @@
 
 .qrWrapper {
   display: inline-block;
-  background: #fff;
+  background: var(--taa-white);
   padding: 16px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -94,7 +98,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--taa-white);
 
   canvas,
   svg {
@@ -106,7 +110,7 @@
 .qrExpiry {
   margin-top: 12px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 
   .countdown {
     font-weight: 600;
@@ -130,18 +134,18 @@
   margin-bottom: 16px;
 
   &.valid {
-    background: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
   }
 
   &.used {
-    background: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
+    background: var(--surface);
+    color: var(--text-muted);
   }
 
   &.cancelled {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: color-mix(in srgb, var(--error) 15%, transparent);
+    color: var(--error);
   }
 }
 
@@ -154,7 +158,7 @@
   h2 {
     margin: 0 0 12px 0;
     font-size: 18px;
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
@@ -163,7 +167,7 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 14px;
 
   &:last-child {
@@ -176,7 +180,7 @@
 }
 
 .orderDetails {
-  background: var(--surface-secondary);
+  background: var(--surface);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -185,7 +189,7 @@
     margin: 0 0 12px 0;
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
@@ -193,7 +197,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin-bottom: 8px;
 
   &.total {
@@ -201,14 +205,14 @@
     padding-top: 12px;
     margin-top: 12px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
 .holderName {
   text-align: center;
   padding: 12px;
-  background: var(--surface-secondary);
+  background: var(--surface);
   border-radius: 8px;
   margin-bottom: 16px;
 
@@ -216,25 +220,25 @@
     display: block;
     font-size: 11px;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-bottom: 4px;
   }
 
   span {
     font-size: 16px;
     font-weight: 500;
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
 .instructions {
   text-align: center;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   line-height: 1.5;
 
   strong {
-    color: var(--text-primary);
+    color: var(--text);
   }
 }
 
@@ -261,11 +265,11 @@
   h2 {
     margin: 16px 0 8px 0;
     font-size: 20px;
-    color: var(--text-primary);
+    color: var(--text);
   }
 
   p {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-bottom: 20px;
   }
 }
@@ -281,7 +285,7 @@
     transform: translate(-50%, -50%) rotate(-15deg);
     font-size: 48px;
     font-weight: 900;
-    color: rgba(107, 114, 128, 0.3);
+    color: color-mix(in srgb, var(--text-muted) 30%, transparent);
     pointer-events: none;
   }
 }

@@ -8,6 +8,7 @@ import { Location } from "../models/Location";
 import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
+import type { AuthenticatedRequest } from "../middleware/auth";
 
 const router: Router = express.Router();
 
@@ -544,8 +545,9 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
     const seatIds = seatIdsJson ? JSON.parse(seatIdsJson) : [];
 
     // Get user if authenticated
-    const userId = (req as any).userId
-      ? new Types.ObjectId((req as any).userId)
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.authUser?.id
+      ? new Types.ObjectId(authReq.authUser.id)
       : null;
 
     // Build seat assignments if applicable

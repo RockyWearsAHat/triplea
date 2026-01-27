@@ -27,7 +27,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "gigs", label: "My Gigs", icon: <Ticket size={16} /> },
   { id: "venues", label: "Venues", icon: <MapPin size={16} /> },
   { id: "staff", label: "Staff", icon: <Users size={16} /> },
-  { id: "scanner", label: "Scanner", icon: <ScanLine size={16} /> },
+  { id: "scanner", label: "Ticket Scanner", icon: <ScanLine size={16} /> },
 ];
 
 function Section({
@@ -142,24 +142,27 @@ export default function ManagePage() {
           <div className={styles.quickActions}>
             <Button
               variant="primary"
+              size="sm"
               onClick={() => navigate("/my-gigs")}
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <Plus size={16} /> Post a Gig
+              <Plus size={14} /> Post a Gig
             </Button>
             <Button
               variant="secondary"
+              size="sm"
               onClick={() => setActiveTab("venues")}
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <MapPin size={16} /> Add Venue
+              <MapPin size={14} /> Add Venue
             </Button>
             <Button
               variant="secondary"
+              size="sm"
               onClick={() => setActiveTab("scanner")}
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <ScanLine size={16} /> Scan Tickets
+              <ScanLine size={14} /> Scan Tickets
             </Button>
           </div>
         </Section>
@@ -210,13 +213,10 @@ export default function ManagePage() {
                   style={{ cursor: "pointer" }}
                 >
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 12 }}
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
                   >
                     <div className={styles.avatarPlaceholder}>🎵</div>
                     <div>
-                      <p className={styles.miniCardTitle}>
-                        {r.musician.userId}
-                      </p>
                       <p className={styles.miniCardMeta}>
                         ${r.priceEstimate}/hr estimate
                       </p>
@@ -360,15 +360,12 @@ export default function ManagePage() {
     return (
       <div className={styles.staffTab}>
         <Section title="Event Staff">
-          <p className={ui.help} style={{ marginBottom: spacing.md }}>
-            Assign staff members who can scan tickets at your events. Add their
-            email addresses below.
+          <p className={ui.help} style={{ marginBottom: spacing.sm }}>
+            Assign staff members who can scan tickets at your events.
           </p>
 
           <div className={[ui.card, ui.cardPad].join(" ")}>
-            <p className={styles.comingSoon}>
-              Staff management coming soon. You'll be able to:
-            </p>
+            <p className={styles.comingSoon}>Staff management coming soon:</p>
             <ul className={styles.featureList}>
               <li>Add staff by email address</li>
               <li>Assign staff to specific events</li>
@@ -385,15 +382,16 @@ export default function ManagePage() {
     return (
       <div className={styles.scannerTab}>
         <Section title="Ticket Scanner">
-          <p className={ui.help} style={{ marginBottom: spacing.md }}>
+          <p className={ui.help} style={{ marginBottom: spacing.sm }}>
             Use the scanner to validate tickets at your events.
           </p>
           <Button
             variant="primary"
+            size="sm"
             onClick={() => navigate("/scan-tickets")}
-            style={{ display: "flex", alignItems: "center", gap: 8 }}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            <ScanLine size={18} /> Open Full Scanner
+            <ScanLine size={14} /> Open Full Scanner
           </Button>
         </Section>
       </div>
