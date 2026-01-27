@@ -1,3 +1,8 @@
+---
+name: "Copilot Instructions"
+applyTo: "**"
+---
+
 # Triple A Apps – Project Instructions
 
 This document is a living brief. Keep it updated as product decisions are made.
@@ -340,6 +345,44 @@ These items are directly supported by `.github/discord-chat-history.md` and shou
 - Avoid multi-thousand-line React files.
   - Prefer `src/pages/*` for route-level screens and `src/components/*` for reusable UI.
   - Prefer small hooks/utilities (`src/lib/*`, `src/hooks/*`) over repeating logic inline.
+
+## Agent Workflow (IMPORTANT)
+
+This project uses specialized agents for different tasks. **Always delegate to the appropriate agent** rather than doing everything inline.
+
+### Style Agent (for all CSS/SCSS work)
+
+**When to use:** Any task involving `.module.scss` files, styling changes, layout fixes, responsive design, or visual polish.
+
+**Workflow:**
+
+1. **Plan first** — Analyze what styling changes are needed (which files, what problems to solve, what tokens to use).
+2. **Delegate to Style agent** — Send a detailed prompt describing:
+   - The file(s) to edit
+   - The specific styling goals
+   - Any constraints (must use `--primary` for buttons, use `gap` not margins, etc.)
+   - Reference to existing primitives if they should be composed
+
+**Example delegation prompt:**
+
+```
+Update TripleAMuse/src/pages/HomePage.module.scss:
+- Replace the hero section layout with CSS Grid (2 columns on desktop, stack on mobile)
+- Use intrinsic sizing with clamp() for padding
+- Compose from primitives.module.scss .card class for the feature cards
+- Ensure all interactive elements have :focus-visible styles
+- Use project tokens: --surface for backgrounds, --border for borders, --primary only for CTAs
+```
+
+**Never do inline:** Don't write raw `.module.scss` edits yourself — always send to the Style agent for Kevin Powell-style modern CSS.
+
+### Plan Agent (for complex multi-step work)
+
+**When to use:** Research, architecture decisions, multi-file refactors, or when you need to understand the codebase before making changes.
+
+### Audit Agent (for security review)
+
+**When to use:** Before shipping auth flows, payment integrations, or any user data handling.
 
 ## UI Implementation Guidelines (working rules)
 
