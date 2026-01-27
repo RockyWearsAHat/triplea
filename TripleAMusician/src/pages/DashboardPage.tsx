@@ -1,5 +1,4 @@
-import { spacing, Button } from "@shared";
-import ui from "@shared/styles/primitives.module.scss";
+import { Button } from "@shared";
 import styles from "./DashboardPage.module.scss";
 import StatusCard from "@shared/components/StatusCard";
 
