@@ -3,7 +3,9 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(() => ({
+  // Use /music/ base path on Netlify (unified deployment), / locally
+  base: process.env.NETLIFY ? "/music/" : "/",
   plugins: [react()],
   envDir: path.resolve(__dirname, ".."),
   server: {
@@ -15,4 +17,4 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "../packages/shared/src"),
     },
   },
-});
+}));

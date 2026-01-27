@@ -2,10 +2,14 @@
 # Single site with host-based subdomain routing
 #
 # Deploy domains:
+#   - tripleaevents.netlify.app (current Netlify domain)
 #   - muse.tripleamusic.org  → /muse/*
 #   - music.tripleamusic.org → /music/*
 #   - musician.tripleamusic.org → /musician/*
 #   - tripleamusic.org (root) → /music/* (default)
+#
+# Note: Subdomain routing (music.tripleaevents.netlify.app) requires
+# custom domain setup in Netlify. Use the main domain for testing.
 
 [build]
   publish = "dist"
@@ -14,6 +18,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+  NETLIFY = "true"
 
 # Netlify Functions configuration (shared API)
 [functions]
@@ -48,7 +53,7 @@
   to = "/muse/:splat"
   status = 200
   force = true
-  conditions = {Host = ["muse.tripleamusic.org", "muse.tripleamusic.com", "muse.triplea.netlify.app"]}
+  conditions = {Host = ["muse.tripleamusic.org", "muse.tripleamusic.com", "muse.triplea.netlify.app", "muse.tripleaevents.netlify.app"]}
 
 # MUSICIAN subdomain → /musician/*
 [[redirects]]
@@ -56,7 +61,7 @@
   to = "/musician/:splat"
   status = 200
   force = true
-  conditions = {Host = ["musician.tripleamusic.org", "musician.tripleamusic.com", "musician.triplea.netlify.app"]}
+  conditions = {Host = ["musician.tripleamusic.org", "musician.tripleamusic.com", "musician.triplea.netlify.app", "musician.tripleaevents.netlify.app"]}
 
 # MUSIC subdomain → /music/*
 [[redirects]]
@@ -64,7 +69,7 @@
   to = "/music/:splat"
   status = 200
   force = true
-  conditions = {Host = ["music.tripleamusic.org", "music.tripleamusic.com", "music.triplea.netlify.app"]}
+  conditions = {Host = ["music.tripleamusic.org", "music.tripleamusic.com", "music.triplea.netlify.app", "music.tripleaevents.netlify.app"]}
 
 # ============================================
 # DEFAULT / ROOT DOMAIN → MUSIC (fallback)
