@@ -72,9 +72,32 @@
   conditions = {Host = ["music.tripleamusic.org", "music.tripleamusic.com", "music.triplea.netlify.app", "music.tripleaevents.netlify.app"]}
 
 # ============================================
+# SPA FALLBACK RULES (per-app)
+# These ensure client-side routing works for each app
+# ============================================
+
+# MUSE app SPA fallback
+[[redirects]]
+  from = "/muse/*"
+  to = "/muse/index.html"
+  status = 200
+
+# MUSICIAN app SPA fallback
+[[redirects]]
+  from = "/musician/*"
+  to = "/musician/index.html"
+  status = 200
+
+# MUSIC app SPA fallback
+[[redirects]]
+  from = "/music/*"
+  to = "/music/index.html"
+  status = 200
+
+# ============================================
 # DEFAULT / ROOT DOMAIN → MUSIC (fallback)
 # ============================================
 [[redirects]]
   from = "/*"
-  to = "/music/:splat"
+  to = "/music/index.html"
   status = 200
