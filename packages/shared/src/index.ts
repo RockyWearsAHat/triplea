@@ -4,7 +4,14 @@ export * from "./components/Button";
 export * from "./layout/AppFrame";
 export * from "./layout/AppShell";
 export * from "./auth/AuthContext";
-export * from "./auth/RequireAuth";
+export {
+  RequireAuth,
+  RequireRole,
+  RequireAnyRole,
+  RequirePermission,
+  useAuthGuard,
+  AuthLoadingScreen,
+} from "./auth/RequireAuth";
 export * from "./api/client";
 export * from "./chat/ChatInbox";
 export * from "./animation/useScrollReveal";

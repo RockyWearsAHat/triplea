@@ -8,6 +8,7 @@ import { createApiClient } from "../lib/urls";
 /* ────────────────────────────────────────────────────────────────────────────
    Profile Page — Triple A Musician
    Professional musician account & profile management
+   Note: This page is wrapped by RequireRole which handles auth loading/redirect
    ──────────────────────────────────────────────────────────────────────────── */
 
 interface MusicianProfile {
@@ -98,11 +99,9 @@ export function ProfilePage() {
 
   const api = createApiClient();
 
+  // Note: Auth loading/redirect is handled by RequireRole wrapper
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) return;
 
     // Fetch musician profile
     async function fetchProfile() {
@@ -115,8 +114,9 @@ export function ProfilePage() {
     }
 
     fetchProfile();
-  }, [user, navigate]);
+  }, [user]);
 
+  // If no user yet (shouldn't happen because of RequireRole wrapper, but safety)
   if (!user) {
     return null;
   }

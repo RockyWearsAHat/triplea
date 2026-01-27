@@ -17,11 +17,9 @@ export default function MyTicketsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>("upcoming");
 
+  // Note: This page is wrapped by RequireRole which handles auth loading/redirect
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) return;
 
     let cancelled = false;
     setLoading(true);
@@ -48,7 +46,7 @@ export default function MyTicketsPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, user, navigate]);
+  }, [api, user]);
 
   // Filter tickets based on tab
   const filteredTickets = useMemo(() => {

@@ -7,10 +7,44 @@ type RequireBaseProps = {
   fallback?: ReactNode;
 };
 
+/**
+ * AuthGuard - Use this hook in pages that need auth verification before rendering.
+ * Returns { isReady, isAuthenticated, user } - wait for isReady before making decisions.
+ */
+export function useAuthGuard() {
+  const { user, loading } = useAuth();
+  return {
+    isReady: !loading,
+    isAuthenticated: !!user,
+    user,
+  };
+}
+
+/**
+ * AuthLoadingScreen - Minimal loading indicator shown while verifying auth.
+ * Designed to be non-intrusive and not flash content.
+ */
+export function AuthLoadingScreen() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "200px",
+        color: "var(--text-muted)",
+        fontSize: 14,
+      }}
+    >
+      <span>Verifying session…</span>
+    </div>
+  );
+}
+
 export function RequireAuth({ children, fallback }: RequireBaseProps) {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <AuthLoadingScreen />;
   if (!user) {
     return (
       <>
@@ -33,7 +67,7 @@ export function RequireRole({
 }: RequireBaseProps & { role: UserRole }) {
   const { hasRole, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <AuthLoadingScreen />;
   if (!hasRole(role)) {
     return (
       <>
@@ -56,7 +90,7 @@ export function RequireAnyRole({
 }: RequireBaseProps & { roles: UserRole[] }) {
   const { hasAnyRole, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <AuthLoadingScreen />;
   if (!hasAnyRole(roles)) {
     return (
       <>
@@ -79,7 +113,7 @@ export function RequirePermission({
 }: RequireBaseProps & { permission: Permission }) {
   const { hasPermission, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <AuthLoadingScreen />;
   if (!hasPermission(permission)) {
     return (
       <>

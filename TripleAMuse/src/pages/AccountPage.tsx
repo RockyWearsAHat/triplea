@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { AppShell, Button, useAuth } from "@shared";
+import React, { useState, useEffect } from "react";
+import {
+  AppShell,
+  Button,
+  useAuthGuard,
+  AuthLoadingScreen,
+  useAuth,
+} from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./AccountPage.module.scss";
@@ -54,7 +60,8 @@ function SettingRow({
 }
 
 export function AccountPage() {
-  const { user, logout } = useAuth();
+  const { isReady, isAuthenticated, user } = useAuthGuard();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [showingPasswordSection, setShowingPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -63,13 +70,19 @@ export function AccountPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  // If not logged in, redirect to login
-  React.useEffect(() => {
-    if (!user) {
+  // Wait for auth to be verified, then redirect if not authenticated
+  useEffect(() => {
+    if (isReady && !isAuthenticated) {
       navigate("/login");
     }
-  }, [user, navigate]);
+  }, [isReady, isAuthenticated, navigate]);
 
+  // Show loading screen while verifying auth
+  if (!isReady) {
+    return <AuthLoadingScreen />;
+  }
+
+  // After ready, if not authenticated, show nothing (redirect is happening)
   if (!user) {
     return null;
   }
