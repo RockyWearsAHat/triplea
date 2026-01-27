@@ -1140,6 +1140,20 @@ export class TripleAApiClient {
     );
   }
 
+  async updateStaffInviteEmail(
+    id: string,
+    email: string,
+  ): Promise<{ success: boolean; email: string; expiresAt: string }> {
+    return await this.request<{
+      success: boolean;
+      email: string;
+      expiresAt: string;
+    }>(`/staff/${encodeURIComponent(id)}/email`, {
+      method: "PATCH",
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async getStaffInviteInfo(token: string): Promise<{
     invite: {
       email: string;

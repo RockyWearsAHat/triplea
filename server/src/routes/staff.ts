@@ -298,6 +298,129 @@ router.post(
   },
 );
 
+// Update invitation email address
+// PATCH /api/staff/:id/email
+// This invalidates the old invite token and sends a new invite to the new email
+router.patch(
+  "/:id/email",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { email } = req.body as { email: string };
+      const hostUserId = new Types.ObjectId(req.authUser!.id);
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const normalizedEmail = String(email).trim().toLowerCase();
+
+      const staffRecord = await StaffInvite.findOne({
+        _id: id,
+        hostUserId,
+        status: "pending",
+      }).exec();
+
+      if (!staffRecord) {
+        return res.status(404).json({ message: "Pending invite not found" });
+      }
+
+      // If email is the same, just resend
+      if (staffRecord.email === normalizedEmail) {
+        // Generate new token and resend
+        const token = crypto.randomBytes(32).toString("base64url");
+        const tokenHash = crypto
+          .createHash("sha256")
+          .update(token)
+          .digest("hex");
+
+        staffRecord.tokenHash = tokenHash;
+        staffRecord.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await staffRecord.save();
+
+        const existingUser = await User.findOne({
+          email: normalizedEmail,
+        }).exec();
+        const host = await User.findById(hostUserId).exec();
+
+        await sendStaffInviteEmail({
+          to: normalizedEmail,
+          hostName: host?.name || "A Triple A Music host",
+          token,
+          isExistingUser: !!existingUser,
+        });
+
+        return res.json({
+          success: true,
+          email: staffRecord.email,
+          expiresAt: staffRecord.expiresAt,
+        });
+      }
+
+      // Check if there's already an invite for the NEW email from this host
+      const existingInvite = await StaffInvite.findOne({
+        hostUserId,
+        email: normalizedEmail,
+        status: "pending",
+        _id: { $ne: id }, // exclude current record
+      }).exec();
+
+      if (existingInvite) {
+        return res.status(409).json({
+          message: "An invite is already pending for this email",
+        });
+      }
+
+      // Check if someone with this email is already staff
+      const existingStaff = await StaffInvite.findOne({
+        hostUserId,
+        email: normalizedEmail,
+        status: "accepted",
+      }).exec();
+
+      if (existingStaff) {
+        return res.status(409).json({
+          message: "This person is already on your staff",
+        });
+      }
+
+      // Generate new token (this invalidates the old one)
+      const token = crypto.randomBytes(32).toString("base64url");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+      // Update email and token
+      staffRecord.email = normalizedEmail;
+      staffRecord.tokenHash = tokenHash;
+      staffRecord.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await staffRecord.save();
+
+      // Check if new user exists
+      const existingUser = await User.findOne({
+        email: normalizedEmail,
+      }).exec();
+      const host = await User.findById(hostUserId).exec();
+
+      // Send invite to new email
+      await sendStaffInviteEmail({
+        to: normalizedEmail,
+        hostName: host?.name || "A Triple A Music host",
+        token,
+        isExistingUser: !!existingUser,
+      });
+
+      return res.json({
+        success: true,
+        email: staffRecord.email,
+        expiresAt: staffRecord.expiresAt,
+      });
+    } catch (err) {
+      console.error("PATCH /staff/:id/email error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
 // ===== Public routes for accepting invites =====
 
 // Get invite details by token (public, for the join page)

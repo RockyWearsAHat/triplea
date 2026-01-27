@@ -14,6 +14,7 @@ import {
   Check,
   Clock,
   X,
+  Pencil,
 } from "lucide-react";
 
 const PERMISSION_LABELS: Record<StaffPermission, string> = {
@@ -53,6 +54,12 @@ export function StaffPage() {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPermissions, setEditPermissions] = useState<StaffPermission[]>([]);
+
+  // Edit email state (for pending invites)
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -114,6 +121,36 @@ export function StaffPage() {
       await loadStaff();
     } catch {
       // Handle error
+    }
+  };
+
+  const handleStartEditEmail = (member: StaffMember) => {
+    setEditingEmailId(member.id);
+    setEditEmail(member.email);
+    setEditEmailError(null);
+  };
+
+  const handleCancelEditEmail = () => {
+    setEditingEmailId(null);
+    setEditEmail("");
+    setEditEmailError(null);
+  };
+
+  const handleSaveEmail = async (id: string) => {
+    if (!editEmail.trim()) return;
+    try {
+      setSavingEmail(true);
+      setEditEmailError(null);
+      await api.updateStaffInviteEmail(id, editEmail.trim());
+      setEditingEmailId(null);
+      setEditEmail("");
+      await loadStaff();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update email";
+      setEditEmailError(message);
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -270,7 +307,64 @@ export function StaffPage() {
                       <p className={styles.staffName}>
                         {member.staffName || member.email}
                       </p>
-                      <p className={styles.staffEmail}>{member.email}</p>
+                      {editingEmailId === member.id ? (
+                        <div className={styles.editEmailForm}>
+                          <input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="new@email.com"
+                            className={ui.input}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveEmail(member.id);
+                              } else if (e.key === "Escape") {
+                                handleCancelEditEmail();
+                              }
+                            }}
+                          />
+                          {editEmailError && (
+                            <p className={ui.error} style={{ marginTop: 4 }}>
+                              {editEmailError}
+                            </p>
+                          )}
+                          <div className={styles.editEmailActions}>
+                            <button
+                              className={styles.iconButton}
+                              onClick={() => handleSaveEmail(member.id)}
+                              title="Save"
+                              type="button"
+                              disabled={savingEmail}
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              className={styles.iconButton}
+                              onClick={handleCancelEditEmail}
+                              title="Cancel"
+                              type="button"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className={styles.staffEmail}>
+                            {member.email}
+                            <button
+                              className={styles.inlineEditButton}
+                              onClick={() => handleStartEditEmail(member)}
+                              title="Edit email"
+                              type="button"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          </p>
+                        </>
+                      )}
                       <p className={styles.staffMeta}>
                         Expires:{" "}
                         {member.expiresAt

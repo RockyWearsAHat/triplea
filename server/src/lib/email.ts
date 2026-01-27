@@ -1,6 +1,8 @@
 // Email service for sending ticket confirmations and other notifications
-// In production, integrate with a service like SendGrid, AWS SES, or Resend
+// Uses nodemailer with SMTP for free email sending
 
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 import type { ITicket } from "../models/Ticket";
 import type { IGig } from "../models/Gig";
 
@@ -26,6 +28,31 @@ const COLORS = {
 // Email service configuration
 const EMAIL_FROM = process.env.EMAIL_FROM ?? "noreply@tripleamusic.org";
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
+
+// SMTP Configuration
+const SMTP_HOST = process.env.SMTP_HOST ?? "";
+const SMTP_PORT = parseInt(process.env.SMTP_PORT ?? "587", 10);
+const SMTP_SECURE = process.env.SMTP_SECURE === "true"; // true for 465, false for other ports
+const SMTP_USER = process.env.SMTP_USER ?? "";
+const SMTP_PASS = process.env.SMTP_PASS ?? "";
+
+// Create reusable transporter (lazy initialization)
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  }
+  return transporter;
+}
 
 // Common email styles using brand colors
 function getEmailStyles(): string {
@@ -61,7 +88,7 @@ function getEmailStyles(): string {
 }
 
 // In development/demo mode, we just log emails
-// In production, this would integrate with a real email provider
+// In production, uses nodemailer with SMTP
 async function sendEmail(params: EmailParams): Promise<boolean> {
   if (!EMAIL_ENABLED) {
     // eslint-disable-next-line no-console
@@ -75,20 +102,24 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
     return true;
   }
 
-  // Production email sending would go here
-  // Example with Resend:
-  // const resend = new Resend(process.env.RESEND_API_KEY);
-  // await resend.emails.send({
-  //   from: EMAIL_FROM,
-  //   to: params.to,
-  //   subject: params.subject,
-  //   html: params.html,
-  //   text: params.text,
-  // });
+  try {
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: EMAIL_FROM,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+    });
 
-  // eslint-disable-next-line no-console
-  console.log(`📧 Email sent to ${params.to}: ${params.subject}`);
-  return true;
+    // eslint-disable-next-line no-console
+    console.log(`📧 Email sent to ${params.to}: ${params.subject}`);
+    return true;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("📧 Failed to send email:", error);
+    return false;
+  }
 }
 
 export async function sendPasswordResetEmail(params: {
@@ -322,9 +353,9 @@ export async function sendStaffInviteEmail(params: {
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
   const joinUrl = `${baseUrl}/staff/join/${token}`;
 
-  const actionText = isExistingUser
-    ? "Click the button below to accept the invitation and link your existing account."
-    : "Click the button below to create your account and join the team.";
+  const actionButtonText = isExistingUser
+    ? "Accept Invitation"
+    : "Create Account & Join";
 
   const html = `
 <!DOCTYPE html>
@@ -332,43 +363,66 @@ export async function sendStaffInviteEmail(params: {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>You're Invited to Join a Team</title>
-  <style>${getEmailStyles()}</style>
+  <title>You're Invited to Join ${hostName}'s Team</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: ${COLORS.black}; -webkit-font-smoothing: antialiased; }
+    .wrapper { padding: 40px 20px; }
+    .container { max-width: 520px; margin: 0 auto; background: ${COLORS.white}; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, ${COLORS.darkBlue} 0%, ${COLORS.darkPurple} 100%); padding: 40px 32px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 600; color: ${COLORS.white}; letter-spacing: -0.5px; }
+    .header p { margin: 8px 0 0 0; font-size: 14px; color: ${COLORS.lightBlue}; }
+    .content { padding: 32px; }
+    .intro { font-size: 16px; line-height: 1.6; color: ${COLORS.grayNeutral}; margin: 0 0 24px 0; }
+    .intro strong { color: ${COLORS.black}; }
+    .highlight-box { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; border-left: 4px solid ${COLORS.gold}; }
+    .highlight-box p { margin: 0; font-size: 15px; color: ${COLORS.black}; line-height: 1.5; }
+    .cta-button { display: block; background: ${COLORS.gold}; color: ${COLORS.white} !important; text-decoration: none; padding: 16px 32px; border-radius: 8px; text-align: center; font-weight: 600; font-size: 16px; margin: 24px 0; transition: opacity 0.2s; }
+    .cta-button:hover { opacity: 0.9; }
+    .expiry-note { background: #FEF3CD; border-radius: 6px; padding: 12px 16px; margin: 20px 0; display: flex; align-items: center; gap: 10px; }
+    .expiry-note .icon { font-size: 18px; }
+    .expiry-note p { margin: 0; font-size: 14px; color: #664D03; }
+    .link-fallback { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e9ecef; }
+    .link-fallback p { font-size: 13px; color: ${COLORS.grayNeutral}; margin: 0 0 8px 0; }
+    .link-fallback a { font-size: 12px; color: ${COLORS.darkBlue}; word-break: break-all; text-decoration: none; }
+    .footer { background: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e9ecef; }
+    .footer .brand { font-weight: 600; color: ${COLORS.black}; font-size: 14px; margin: 0 0 4px 0; }
+    .footer .link { font-size: 13px; color: ${COLORS.grayNeutral}; text-decoration: none; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>You're Invited!</h1>
-      <p>Triple A Music</p>
-    </div>
-    
-    <div class="content">
-      <p class="message">
-        <strong>${hostName}</strong> has invited you to join their event staff on Triple A Music.<br><br>
-        As a staff member, you'll be able to help manage their events and operations.
-      </p>
-      
-      <div class="info-box">
-        ${actionText}
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>You're Invited!</h1>
+        <p>Triple A Music</p>
       </div>
       
-      <a href="${joinUrl}" class="cta-button">
-        ${isExistingUser ? "Accept Invitation" : "Create Account & Join"}
-      </a>
-      
-      <div class="warning">
-        <strong>Note:</strong> This invitation will expire in 7 days.
+      <div class="content">
+        <p class="intro">
+          <strong>${hostName}</strong> has invited you to join their event staff on Triple A Music.
+        </p>
+        
+        <div class="highlight-box">
+          <p>As a staff member, you'll be able to help manage their events and operations.</p>
+        </div>
+        
+        <a href="${joinUrl}" class="cta-button">${actionButtonText}</a>
+        
+        <div class="expiry-note">
+          <span class="icon">⏰</span>
+          <p>This invitation will expire in <strong>7 days</strong>.</p>
+        </div>
+        
+        <div class="link-fallback">
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <a href="${joinUrl}">${joinUrl}</a>
+        </div>
       </div>
       
-      <p class="link-fallback">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${joinUrl}">${joinUrl}</a>
-      </p>
-    </div>
-    
-    <div class="footer">
-      <p><strong>Triple A Music</strong></p>
-      <p><a href="${baseUrl}">tripleamusic.org</a></p>
+      <div class="footer">
+        <p class="brand">Triple A Music</p>
+        <a href="${baseUrl}" class="link">tripleamusic.org</a>
+      </div>
     </div>
   </div>
 </body>
@@ -380,13 +434,12 @@ export async function sendStaffInviteEmail(params: {
 
 ${hostName} has invited you to join their event staff on Triple A Music.
 
-${actionText}
+As a staff member, you'll be able to help manage their events and operations.
 
-JOIN THE TEAM
--------------
+${actionButtonText.toUpperCase()}
 ${joinUrl}
 
-This invitation will expire in 7 days.
+⏰ This invitation will expire in 7 days.
 
 ---
 Triple A Music
