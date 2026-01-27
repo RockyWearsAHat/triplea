@@ -36,6 +36,11 @@
   color: var(--text);
 }
 
+.tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .tabActive {
   color: var(--primary);
   border-bottom-color: var(--primary);
@@ -54,14 +59,8 @@
 
 .statsRow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100px, 100%), 1fr));
   gap: 10px;
-}
-
-@media (max-width: 600px) {
-  .statsRow {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 
 .statCard {
@@ -125,6 +124,11 @@
 
 .viewAllLink:hover {
   text-decoration: underline;
+}
+
+.viewAllLink:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* Card List */
@@ -270,4 +274,144 @@
   padding: 32px 16px;
   text-align: center;
   color: var(--text-muted);
+}
+
+/* Gigs Tab */
+.gigsTab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
+  padding-block: clamp(0.5rem, 2vw, 1rem);
+}
+
+.gigFormGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+/* Gig Cards */
+.gigCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.gigCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.gigCardHeader:hover {
+  background-color: color-mix(in srgb, var(--surface) 95%, var(--text) 5%);
+}
+
+.gigCardHeader:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.gigCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.gigCardTitle {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.gigCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.gigCardActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.gigCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  padding-top: 0;
+  font-size: var(--text-sm);
+}
+
+.gigCardBudget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--surface) 50%, var(--bg) 50%);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.gigCardBudget strong {
+  color: var(--text);
+}
+
+.gigCardButtonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Inline Link */
+.inlineLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  font-size: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.inlineLink:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.inlineLink:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Form Actions */
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gigCard,
+  .gigCardHeader,
+  .inlineLink {
+    transition: none;
+  }
 }

@@ -1,7 +1,31 @@
-.statusCard { display:block; }
-.header { display:flex; align-items:center }
-.indicator { width:12px; height:12px; border-radius:999px; }
-.indicator[data-status='active']{ background: var(--success); }
-.indicator[data-status='busy']{ background: var(--warning); }
-.indicator[data-status='idle']{ background: var(--taa-gray-600); }
-.metric { font-size: var(--text-2xl); font-weight:700 }
+.statusCard {
+  display: block;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+}
+
+.indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.indicator[data-status="active"] {
+  background: var(--success);
+}
+
+.indicator[data-status="busy"] {
+  background: var(--warning);
+}
+
+.indicator[data-status="idle"] {
+  background: var(--taa-gray-600);
+}
+
+.metric {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}

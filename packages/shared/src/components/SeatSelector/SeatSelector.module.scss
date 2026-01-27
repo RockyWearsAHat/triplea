@@ -3,8 +3,8 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -13,25 +13,25 @@
   align-items: center;
   justify-content: center;
   padding: 12px 24px;
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.1em;
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
   text-transform: uppercase;
 
   &[data-position="top"] {
     order: -1;
     border-radius: 4px 4px 0 0;
-    border-bottom: 2px solid var(--color-gold);
+    border-bottom: 2px solid var(--primary);
   }
 
   &[data-position="bottom"] {
     order: 999;
     border-radius: 0 0 4px 4px;
-    border-top: 2px solid var(--color-gold);
+    border-top: 2px solid var(--primary);
   }
 }
 
@@ -40,7 +40,7 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .legendItem {
@@ -48,7 +48,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
 }
 
 .legendSwatch {
@@ -75,7 +75,7 @@
 .sectionName {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--text);
   margin: 0 0 8px 0;
 }
 
@@ -95,7 +95,7 @@
   width: 24px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
   text-align: right;
 }
 
@@ -113,9 +113,7 @@
   font-weight: 600;
   color: white;
   cursor: pointer;
-  transition:
-    transform 0.1s ease,
-    opacity 0.1s ease;
+  transition: transform 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,28 +122,39 @@
     transform: scale(1.1);
   }
 
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
   &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }
 
   &[data-status="sold"] {
-    background: var(--color-surface-tertiary) !important;
-    color: var(--color-text-secondary);
+    background: var(--surface-3) !important;
+    color: var(--text-muted);
     cursor: not-allowed;
   }
 
   &[data-status="unavailable"] {
-    background: var(--color-surface-tertiary) !important;
+    background: var(--surface-3) !important;
     cursor: not-allowed;
   }
 
   &[data-status="selected"] {
-    background: var(--color-gold) !important;
-    color: var(--color-text-on-gold, #000);
+    background: var(--primary) !important;
+    color: var(--primary-contrast);
     box-shadow:
-      0 0 0 2px var(--color-gold),
-      0 0 8px var(--color-gold);
+      0 0 0 2px var(--primary),
+      0 0 8px var(--primary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat:hover:not(:disabled) {
+    transform: none;
   }
 }
 
@@ -154,8 +163,8 @@
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -167,19 +176,19 @@
   font-size: 13px;
   font-weight: 600;
   margin: 0;
-  color: var(--color-text);
+  color: var(--text);
 }
 
 .tooltipPrice {
   font-size: 12px;
   margin: 4px 0 0 0;
-  color: var(--color-gold);
+  color: var(--primary);
 }
 
 .tooltipSold {
   font-size: 12px;
   margin: 4px 0 0 0;
-  color: var(--color-error);
+  color: var(--error);
 }
 
 .summary {
@@ -187,14 +196,14 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background: var(--color-surface-secondary);
+  background: var(--surface-2);
   border-radius: 6px;
 }
 
 .summaryCount {
   font-size: 13px;
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
 }
 
 .selectedList {
@@ -206,10 +215,10 @@
 .summaryTotal {
   font-size: 14px;
   margin: 8px 0 0 0;
-  color: var(--color-text);
+  color: var(--text);
 
   strong {
-    color: var(--color-gold);
+    color: var(--primary);
   }
 }
 

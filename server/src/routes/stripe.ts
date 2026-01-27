@@ -9,11 +9,27 @@ import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
 import type { AuthenticatedRequest } from "../middleware/auth";
+import { checkoutLimiter } from "../middleware/rateLimiter";
 
 const router: Router = express.Router();
 
-// Initialize Stripe with API key from environment
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+// Initialize Stripe with validated API key
+function getStripeClient(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY is not configured");
+  }
+  return new Stripe(secretKey);
+}
+
+// Lazy initialization - only throw when actually needed
+let stripeClient: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!stripeClient) {
+    stripeClient = getStripeClient();
+  }
+  return stripeClient;
+}
 
 /**
  * Parse a fee value from environment variable.
@@ -134,7 +150,7 @@ async function estimateTaxCents(params: {
   }
 
   try {
-    const calculation = await (stripe as any).tax.calculations.create({
+    const calculation = await (getStripe() as any).tax.calculations.create({
       currency: params.currency,
       customer_details: {
         address: params.address,
@@ -253,227 +269,235 @@ export function calculateFees(
  * Create a checkout session / payment intent
  * POST /api/stripe/create-checkout
  */
-router.post("/create-checkout", async (req: Request, res: Response) => {
-  try {
-    const { gigId, quantity, email, holderName, tierId, seatIds } =
-      req.body as {
-        gigId: string;
-        quantity: number;
-        email: string;
-        holderName: string;
-        tierId?: string;
-        seatIds?: string[];
-      };
+router.post(
+  "/create-checkout",
+  checkoutLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { gigId, quantity, email, holderName, tierId, seatIds } =
+        req.body as {
+          gigId: string;
+          quantity: number;
+          email: string;
+          holderName: string;
+          tierId?: string;
+          seatIds?: string[];
+        };
 
-    // Validate inputs
-    if (!gigId || !email || !holderName) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    if (!email.trim() || !email.includes("@")) {
-      return res.status(400).json({ message: "Valid email is required" });
-    }
-
-    const qty = Number(quantity) || 1;
-    if (qty < 1 || qty > 10) {
-      return res
-        .status(400)
-        .json({ message: "Quantity must be between 1 and 10" });
-    }
-
-    // Find the gig/concert
-    const gig = await Gig.findById(gigId).exec();
-    if (!gig) {
-      return res.status(404).json({ message: "Concert not found" });
-    }
-
-    if (gig.gigType !== "public-concert") {
-      return res.status(400).json({ message: "This is not a ticketed event" });
-    }
-
-    if (!gig.openForTickets) {
-      return res
-        .status(400)
-        .json({ message: "Tickets are not available for this event" });
-    }
-
-    let pricePerTicket = gig.ticketPrice ?? 0;
-    let tier = null;
-    let tierName: string | undefined;
-
-    // Handle tiered pricing
-    if (tierId) {
-      tier = await TicketTier.findById(tierId).exec();
-      if (!tier) {
-        return res.status(404).json({ message: "Ticket tier not found" });
+      // Validate inputs
+      if (!gigId || !email || !holderName) {
+        return res.status(400).json({ message: "Missing required fields" });
       }
-      if (String(tier.gigId) !== gigId) {
+
+      if (!email.trim() || !email.includes("@")) {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
+
+      const qty = Number(quantity) || 1;
+      if (qty < 1 || qty > 10) {
         return res
           .status(400)
-          .json({ message: "Tier does not belong to this event" });
+          .json({ message: "Quantity must be between 1 and 10" });
       }
-      if (!tier.available) {
+
+      // Find the gig/concert
+      const gig = await Gig.findById(gigId).exec();
+      if (!gig) {
+        return res.status(404).json({ message: "Concert not found" });
+      }
+
+      if (gig.gigType !== "public-concert") {
         return res
           .status(400)
-          .json({ message: "This ticket tier is not available" });
-      }
-      if (tier.sold + qty > tier.capacity) {
-        return res.status(400).json({
-          message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
-        });
-      }
-      pricePerTicket = tier.price;
-      tierName = tier.name;
-    }
-
-    // Validate reserved seating
-    if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
-      if (!seatIds || seatIds.length !== qty) {
-        return res.status(400).json({
-          message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
-        });
+          .json({ message: "This is not a ticketed event" });
       }
 
-      const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
-      if (!layout) {
-        return res.status(500).json({ message: "Seating layout not found" });
+      if (!gig.openForTickets) {
+        return res
+          .status(400)
+          .json({ message: "Tickets are not available for this event" });
       }
 
-      // Verify all seats exist
-      const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
-      for (const seatId of seatIds) {
-        const seat = seatMap.get(seatId);
-        if (!seat) {
-          return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+      let pricePerTicket = gig.ticketPrice ?? 0;
+      let tier = null;
+      let tierName: string | undefined;
+
+      // Handle tiered pricing
+      if (tierId) {
+        tier = await TicketTier.findById(tierId).exec();
+        if (!tier) {
+          return res.status(404).json({ message: "Ticket tier not found" });
         }
-        if (!seat.isAvailable) {
+        if (String(tier.gigId) !== gigId) {
+          return res
+            .status(400)
+            .json({ message: "Tier does not belong to this event" });
+        }
+        if (!tier.available) {
+          return res
+            .status(400)
+            .json({ message: "This ticket tier is not available" });
+        }
+        if (tier.sold + qty > tier.capacity) {
           return res.status(400).json({
-            message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+            message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
+          });
+        }
+        pricePerTicket = tier.price;
+        tierName = tier.name;
+      }
+
+      // Validate reserved seating
+      if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+        if (!seatIds || seatIds.length !== qty) {
+          return res.status(400).json({
+            message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
+          });
+        }
+
+        const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+        if (!layout) {
+          return res.status(500).json({ message: "Seating layout not found" });
+        }
+
+        // Verify all seats exist
+        const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+        for (const seatId of seatIds) {
+          const seat = seatMap.get(seatId);
+          if (!seat) {
+            return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+          }
+          if (!seat.isAvailable) {
+            return res.status(400).json({
+              message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+            });
+          }
+        }
+
+        // Check for already sold seats
+        const existingTickets = await Ticket.find({
+          gigId: gig._id,
+          status: { $in: ["valid", "used"] },
+          "seatAssignments.seatId": { $in: seatIds },
+        }).exec();
+
+        if (existingTickets.length > 0) {
+          return res.status(400).json({
+            message: "One or more selected seats are no longer available",
           });
         }
       }
 
-      // Check for already sold seats
-      const existingTickets = await Ticket.find({
-        gigId: gig._id,
-        status: { $in: ["valid", "used"] },
-        "seatAssignments.seatId": { $in: seatIds },
-      }).exec();
-
-      if (existingTickets.length > 0) {
+      // For free events, skip Stripe
+      if (pricePerTicket === 0) {
         return res.status(400).json({
-          message: "One or more selected seats are no longer available",
+          message: "Free events do not require payment checkout",
         });
       }
-    }
 
-    // For free events, skip Stripe
-    if (pricePerTicket === 0) {
-      return res.status(400).json({
-        message: "Free events do not require payment checkout",
+      // Calculate amounts in cents
+      const subtotalCents = Math.round(pricePerTicket * 100 * qty);
+      const fees = calculateFees(subtotalCents, qty);
+
+      // Get location info for description and tax calculation
+      const location = gig.locationId
+        ? await Location.findById(gig.locationId).exec()
+        : null;
+
+      const locationAddress = parseUSAddressForStripe(
+        location?.address,
+        location?.city,
+      );
+
+      // Calculate tax on subtotal + service fee + payment processing fee
+      const taxCents = locationAddress
+        ? await estimateTaxCents({
+            currency: "usd",
+            address: locationAddress,
+            lineItems: [
+              { amountCents: subtotalCents, reference: "tickets" },
+              { amountCents: fees.serviceFee, reference: "service_fee" },
+              { amountCents: fees.stripeFee, reference: "payment_processing" },
+            ],
+          })
+        : 0;
+
+      // Create a PaymentIntent with automatic tax calculation if enabled
+      // Note: For Stripe Tax to work with PaymentIntents, you need to use
+      // stripe.tax.calculations.create() first, then apply the tax amount.
+      // For simplicity, we're using the calculated fees approach.
+      // To enable full Stripe Tax with automatic remittance, use Checkout Sessions instead.
+      const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
+        amount: fees.total + taxCents,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          gigId,
+          quantity: qty.toString(),
+          email,
+          holderName,
+          pricePerTicketCents: (pricePerTicket * 100).toString(),
+          subtotalCents: fees.subtotal.toString(),
+          serviceFeeCents: fees.serviceFee.toString(),
+          stripeFeeCents: fees.stripeFee.toString(),
+          tierId: tierId || "",
+          tierName: tierName || "",
+          seatIds: seatIds ? JSON.stringify(seatIds) : "",
+          locationAddress: locationAddress
+            ? JSON.stringify(locationAddress)
+            : "",
+          taxCents: taxCents.toString(),
+        },
+        receipt_email: email,
+        description: `${qty} ticket(s) to ${gig.title}${tierName ? ` (${tierName})` : ""}${location?.name ? ` at ${location.name}` : ""}`,
+      };
+
+      const paymentIntent =
+        await getStripe().paymentIntents.create(paymentIntentParams);
+
+      return res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        fees: {
+          subtotal: fees.subtotal / 100,
+          serviceFee: fees.serviceFee / 100,
+          stripeFee: fees.stripeFee / 100,
+          total: fees.total / 100,
+          serviceFeeDisplay: fees.serviceFeeDisplay,
+          feeChargeMode: fees.feeChargeMode,
+          tax: taxCents / 100,
+          totalWithTax: (fees.total + taxCents) / 100,
+        },
+        gig: {
+          id: gig.id,
+          title: gig.title,
+          date: gig.date,
+          time: gig.time,
+          seatingType: gig.seatingType,
+        },
+        location: location
+          ? {
+              id: location.id,
+              name: location.name,
+            }
+          : null,
+        tier: tier
+          ? {
+              id: tier.id,
+              name: tier.name,
+              price: tier.price,
+            }
+          : null,
       });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /stripe/create-checkout error", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    // Calculate amounts in cents
-    const subtotalCents = Math.round(pricePerTicket * 100 * qty);
-    const fees = calculateFees(subtotalCents, qty);
-
-    // Get location info for description and tax calculation
-    const location = gig.locationId
-      ? await Location.findById(gig.locationId).exec()
-      : null;
-
-    const locationAddress = parseUSAddressForStripe(
-      location?.address,
-      location?.city,
-    );
-
-    // Calculate tax on subtotal + service fee + payment processing fee
-    const taxCents = locationAddress
-      ? await estimateTaxCents({
-          currency: "usd",
-          address: locationAddress,
-          lineItems: [
-            { amountCents: subtotalCents, reference: "tickets" },
-            { amountCents: fees.serviceFee, reference: "service_fee" },
-            { amountCents: fees.stripeFee, reference: "payment_processing" },
-          ],
-        })
-      : 0;
-
-    // Create a PaymentIntent with automatic tax calculation if enabled
-    // Note: For Stripe Tax to work with PaymentIntents, you need to use
-    // stripe.tax.calculations.create() first, then apply the tax amount.
-    // For simplicity, we're using the calculated fees approach.
-    // To enable full Stripe Tax with automatic remittance, use Checkout Sessions instead.
-    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-      amount: fees.total + taxCents,
-      currency: "usd",
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        gigId,
-        quantity: qty.toString(),
-        email,
-        holderName,
-        pricePerTicketCents: (pricePerTicket * 100).toString(),
-        subtotalCents: fees.subtotal.toString(),
-        serviceFeeCents: fees.serviceFee.toString(),
-        stripeFeeCents: fees.stripeFee.toString(),
-        tierId: tierId || "",
-        tierName: tierName || "",
-        seatIds: seatIds ? JSON.stringify(seatIds) : "",
-        locationAddress: locationAddress ? JSON.stringify(locationAddress) : "",
-        taxCents: taxCents.toString(),
-      },
-      receipt_email: email,
-      description: `${qty} ticket(s) to ${gig.title}${tierName ? ` (${tierName})` : ""}${location?.name ? ` at ${location.name}` : ""}`,
-    };
-
-    const paymentIntent =
-      await stripe.paymentIntents.create(paymentIntentParams);
-
-    return res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      fees: {
-        subtotal: fees.subtotal / 100,
-        serviceFee: fees.serviceFee / 100,
-        stripeFee: fees.stripeFee / 100,
-        total: fees.total / 100,
-        serviceFeeDisplay: fees.serviceFeeDisplay,
-        feeChargeMode: fees.feeChargeMode,
-        tax: taxCents / 100,
-        totalWithTax: (fees.total + taxCents) / 100,
-      },
-      gig: {
-        id: gig.id,
-        title: gig.title,
-        date: gig.date,
-        time: gig.time,
-        seatingType: gig.seatingType,
-      },
-      location: location
-        ? {
-            id: location.id,
-            name: location.name,
-          }
-        : null,
-      tier: tier
-        ? {
-            id: tier.id,
-            name: tier.name,
-            price: tier.price,
-          }
-        : null,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("POST /stripe/create-checkout error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  },
+);
 
 /**
  * Confirm payment and create ticket
@@ -490,7 +514,8 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
     }
 
     // Retrieve the payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent =
+      await getStripe().paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== "succeeded") {
       return res.status(400).json({
@@ -758,7 +783,7 @@ router.post(
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      event = getStripe().webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("Webhook signature verification failed:", err);
@@ -859,7 +884,7 @@ router.post("/create-checkout-session", async (req: Request, res: Response) => {
     const fees = calculateFees(subtotalCents);
 
     // Create Stripe Checkout Session with automatic tax
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       customer_email: email,
       // Enable automatic tax calculation and remittance

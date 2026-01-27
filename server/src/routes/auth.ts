@@ -7,6 +7,18 @@ import { User } from "../models/User";
 import { Invite } from "../models/Invite";
 import { deriveDefaultPermissions } from "../lib/access";
 import { sendPasswordResetEmail } from "../lib/email";
+import {
+  authLimiter,
+  registrationLimiter,
+  passwordResetLimiter,
+} from "../middleware/rateLimiter";
+import {
+  registerSchema,
+  loginSchema,
+  passwordSchema,
+  validateBody,
+  formatZodErrors,
+} from "../lib/validation";
 
 const router: Router = express.Router();
 
@@ -42,75 +54,74 @@ function issueAuthCookie(
   });
 }
 
-router.post("/register", async (req: Request, res: Response) => {
+router.post(
+  "/register",
+  registrationLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const validation = validateBody(registerSchema, req.body);
+      if (!validation.success) {
+        return res
+          .status(400)
+          .json({ message: formatZodErrors(validation.errors) });
+      }
+
+      const { name, email, password, roles } = validation.data;
+
+      const existing = await User.findOne({ email }).exec();
+      if (existing) {
+        return res.status(409).json({ message: "Email already in use" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const resolvedRoles = roles && roles.length ? roles : ["customer"];
+      if (resolvedRoles.length !== 1) {
+        return res
+          .status(400)
+          .json({ message: "Public registration supports exactly one role" });
+      }
+
+      const role = resolvedRoles[0];
+
+      // Enforce canonical roles server-side; do not trust the client.
+      const canonicalRoles = [role];
+      const defaultPermissions = deriveDefaultPermissions(canonicalRoles);
+
+      const user = await User.create({
+        name,
+        email,
+        passwordHash,
+        roles: canonicalRoles,
+        permissions: defaultPermissions,
+      });
+
+      return res.status(201).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        permissions: user.permissions,
+        employeeRoles: user.employeeRoles,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("/register error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+router.post("/login", authLimiter, async (req: Request, res: Response) => {
   try {
-    const { name, email, password, roles } = req.body as {
-      name: string;
-      email: string;
-      password: string;
-      roles?: string[];
-    };
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const existing = await User.findOne({ email }).exec();
-    if (existing) {
-      return res.status(409).json({ message: "Email already in use" });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const resolvedRoles = roles && roles.length ? roles : ["customer"];
-    if (resolvedRoles.length !== 1) {
+    const validation = validateBody(loginSchema, req.body);
+    if (!validation.success) {
       return res
         .status(400)
-        .json({ message: "Public registration supports exactly one role" });
+        .json({ message: formatZodErrors(validation.errors) });
     }
 
-    const role = resolvedRoles[0];
-    if (role !== "customer" && role !== "musician") {
-      return res.status(403).json({
-        message:
-          "This account type cannot be registered publicly. Contact support if you were invited.",
-      });
-    }
-
-    // Enforce canonical roles server-side; do not trust the client.
-    const canonicalRoles = [role];
-    const defaultPermissions = deriveDefaultPermissions(canonicalRoles);
-
-    const user = await User.create({
-      name,
-      email,
-      passwordHash,
-      roles: canonicalRoles,
-      permissions: defaultPermissions,
-    });
-
-    return res.status(201).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      roles: user.roles,
-      permissions: user.permissions,
-      employeeRoles: user.employeeRoles,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("/register error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-router.post("/login", async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body as { email: string; password: string };
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Missing email or password" });
-    }
+    const { email, password } = validation.data;
 
     const user = await User.findOne({ email }).exec();
 
@@ -273,109 +284,119 @@ router.get("/me", async (req: Request, res: Response) => {
 });
 
 // Request password reset - sends an email with a reset link
-router.post("/request-password-reset", async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body as { email: string };
+router.post(
+  "/request-password-reset",
+  passwordResetLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body as { email: string };
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail }).exec();
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const user = await User.findOne({ email: normalizedEmail }).exec();
 
-    // Always return success to prevent email enumeration attacks
-    if (!user) {
+      // Always return success to prevent email enumeration attacks
+      if (!user) {
+        return res.json({
+          message:
+            "If an account with that email exists, a password reset link has been sent.",
+        });
+      }
+
+      // Generate a secure reset token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenHash = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+      // Token expires in 1 hour
+      const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Save the hashed token to the user
+      user.passwordResetToken = resetTokenHash;
+      user.passwordResetExpires = resetExpires;
+      await user.save();
+
+      // Send the email with the plain token (user will use this in the URL)
+      await sendPasswordResetEmail({
+        email: user.email,
+        resetToken,
+        userName: user.name,
+      });
+
       return res.json({
         message:
           "If an account with that email exists, a password reset link has been sent.",
       });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("/request-password-reset error", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    // Generate a secure reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenHash = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-
-    // Token expires in 1 hour
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
-
-    // Save the hashed token to the user
-    user.passwordResetToken = resetTokenHash;
-    user.passwordResetExpires = resetExpires;
-    await user.save();
-
-    // Send the email with the plain token (user will use this in the URL)
-    await sendPasswordResetEmail({
-      email: user.email,
-      resetToken,
-      userName: user.name,
-    });
-
-    return res.json({
-      message:
-        "If an account with that email exists, a password reset link has been sent.",
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("/request-password-reset error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  },
+);
 
 // Reset password using the token from email
-router.post("/reset-password", async (req: Request, res: Response) => {
-  try {
-    const { token, newPassword } = req.body as {
-      token: string;
-      newPassword: string;
-    };
+router.post(
+  "/reset-password",
+  passwordResetLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body as {
+        token: string;
+        newPassword: string;
+      };
 
-    if (!token || !newPassword) {
-      return res
-        .status(400)
-        .json({ message: "Token and new password are required" });
-    }
+      if (!token || !newPassword) {
+        return res
+          .status(400)
+          .json({ message: "Token and new password are required" });
+      }
 
-    if (newPassword.length < 8) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 8 characters" });
-    }
+      // Validate password with Zod schema (12 char minimum)
+      const passwordValidation = passwordSchema.safeParse(newPassword);
+      if (!passwordValidation.success) {
+        return res
+          .status(400)
+          .json({ message: passwordValidation.error.issues[0].message });
+      }
 
-    // Hash the token to compare with stored hash
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      // Hash the token to compare with stored hash
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find user with matching token that hasn't expired
-    const user = await User.findOne({
-      passwordResetToken: tokenHash,
-      passwordResetExpires: { $gt: new Date() },
-    }).exec();
+      // Find user with matching token that hasn't expired
+      const user = await User.findOne({
+        passwordResetToken: tokenHash,
+        passwordResetExpires: { $gt: new Date() },
+      }).exec();
 
-    if (!user) {
-      return res.status(400).json({
-        message:
-          "Invalid or expired reset link. Please request a new password reset.",
+      if (!user) {
+        return res.status(400).json({
+          message:
+            "Invalid or expired reset link. Please request a new password reset.",
+        });
+      }
+
+      // Update the password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      user.passwordHash = passwordHash;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      return res.json({
+        message: "Password has been reset successfully. You can now log in.",
       });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("/reset-password error", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    // Update the password
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    user.passwordHash = passwordHash;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-
-    return res.json({
-      message: "Password has been reset successfully. You can now log in.",
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("/reset-password error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  },
+);
 
 export default router;

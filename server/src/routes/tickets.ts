@@ -9,8 +9,50 @@ import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
 import type { AuthenticatedRequest } from "../middleware/auth";
+import {
+  scanTicketSchema,
+  validateBody,
+  formatZodErrors,
+} from "../lib/validation";
 
 const router: Router = express.Router();
+
+/**
+ * Helper to check if user can scan tickets for a given gig
+ * Returns true if user is admin, employee, or the gig creator
+ */
+async function canScanTicketsForGig(
+  user: { roles: string[]; employeeRoles: string[] },
+  userId: string,
+  gigId: string | undefined,
+): Promise<boolean> {
+  // Admins can always scan
+  if (user.roles.includes("admin")) {
+    return true;
+  }
+
+  // Employees can scan
+  if (user.employeeRoles.length > 0) {
+    return true;
+  }
+
+  // If no gigId specified, only admins/employees can scan
+  if (!gigId) {
+    return false;
+  }
+
+  // Check if user is the event creator (host)
+  if (!Types.ObjectId.isValid(gigId)) {
+    return false;
+  }
+
+  const gig = await Gig.findById(gigId).exec();
+  if (!gig) {
+    return false;
+  }
+
+  return String(gig.createdByUserId) === userId;
+}
 
 // Purchase tickets for a concert
 // POST /api/tickets/purchase
@@ -393,28 +435,35 @@ router.post("/scan", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Verify user has permission to scan tickets (host, admin, or employee)
+    // Validate input
+    const validation = validateBody(scanTicketSchema, req.body);
+    if (!validation.success) {
+      return res
+        .status(400)
+        .json({ message: formatZodErrors(validation.errors) });
+    }
+
+    const { qrPayload, gigId } = validation.data;
+
+    // Verify user exists
     const user = await User.findById(userId).exec();
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    const hasPermission =
-      user.roles.includes("admin") ||
-      user.roles.includes("customer") || // Hosts are customers who create events
-      user.employeeRoles.length > 0;
+    // Check permission - must be admin, employee, or event creator
+    const hasPermission = await canScanTicketsForGig(
+      { roles: user.roles, employeeRoles: user.employeeRoles },
+      userId,
+      gigId,
+    );
 
     if (!hasPermission) {
-      return res.status(403).json({ message: "Permission denied" });
-    }
-
-    const { qrPayload, gigId } = req.body as {
-      qrPayload: string;
-      gigId?: string;
-    };
-
-    if (!qrPayload) {
-      return res.status(400).json({ message: "QR payload is required" });
+      return res.status(403).json({
+        message: gigId
+          ? "Permission denied. You can only scan tickets for your own events."
+          : "Permission denied. Select an event to scan tickets.",
+      });
     }
 
     // Verify the QR payload
@@ -475,26 +524,40 @@ router.post("/:id/use", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Verify user has permission
+    // Validate ObjectId format
+    const { id } = req.params as { id: string };
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ticket ID format" });
+    }
+
+    // Verify user exists
     const user = await User.findById(userId).exec();
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    const hasPermission =
-      user.roles.includes("admin") ||
-      user.roles.includes("customer") ||
-      user.employeeRoles.length > 0;
-
-    if (!hasPermission) {
-      return res.status(403).json({ message: "Permission denied" });
-    }
-
-    const { id } = req.params as { id: string };
     const ticket = await Ticket.findById(id).exec();
-
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    // Check permission - must be admin, employee, or event creator
+    const hasPermission = await canScanTicketsForGig(
+      { roles: user.roles, employeeRoles: user.employeeRoles },
+      userId,
+      String(ticket.gigId),
+    );
+
+    if (!hasPermission) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Permission denied. You can only scan tickets for your own events.",
+        });
+    }
+
+    if (ticket.status !== "valid") {
     }
 
     if (ticket.status !== "valid") {

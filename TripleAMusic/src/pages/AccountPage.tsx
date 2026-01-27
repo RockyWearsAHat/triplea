@@ -250,19 +250,23 @@ export function AccountPage() {
             <div className={styles.actionsList}>
               <Link to="/manage" className={styles.actionLink}>
                 <span className={styles.actionIcon}>📋</span>
-                <span>Manage events</span>
+                <span>Dashboard</span>
               </Link>
-              <Link to="/my-gigs" className={styles.actionLink}>
+              <Link to="/manage?tab=gigs" className={styles.actionLink}>
                 <span className={styles.actionIcon}>🎤</span>
-                <span>Your gig postings</span>
+                <span>My Gigs</span>
+              </Link>
+              <Link to="/manage?tab=venues" className={styles.actionLink}>
+                <span className={styles.actionIcon}>🏛️</span>
+                <span>Venues</span>
+              </Link>
+              <Link to="/manage?tab=scanner" className={styles.actionLink}>
+                <span className={styles.actionIcon}>📱</span>
+                <span>Ticket Scanner</span>
               </Link>
               <Link to="/my-tickets" className={styles.actionLink}>
                 <span className={styles.actionIcon}>🎫</span>
-                <span>Purchased tickets</span>
-              </Link>
-              <Link to="/scan-tickets" className={styles.actionLink}>
-                <span className={styles.actionIcon}>📱</span>
-                <span>Scan tickets</span>
+                <span>My Tickets</span>
               </Link>
               <Link to="/messages" className={styles.actionLink}>
                 <span className={styles.actionIcon}>💬</span>

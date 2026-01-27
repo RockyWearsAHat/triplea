@@ -5,15 +5,21 @@ import { Conversation } from "../models/Conversation";
 import { Message } from "../models/Message";
 import { User } from "../models/User";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
+import {
+  createConversationSchema,
+  createMessageSchema,
+  validateBody,
+  formatZodErrors,
+} from "../lib/validation";
 
 const router: Router = express.Router();
 
 function isParticipant(
   conversation: { participantIds: any[] },
-  userId: string
+  userId: string,
 ): boolean {
   return conversation.participantIds.some(
-    (id) => String(id) === String(userId)
+    (id) => String(id) === String(userId),
   );
 }
 
@@ -56,7 +62,7 @@ router.post(
       participantIds: conversation.participantIds.map((p) => String(p)),
       updatedAt: conversation.updatedAt,
     });
-  }
+  },
 );
 
 router.get(
@@ -80,7 +86,7 @@ router.get(
         updatedAt: c.updatedAt,
       })),
     });
-  }
+  },
 );
 
 router.post(
@@ -88,13 +94,26 @@ router.post(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.authUser!.id;
-    const { participantIds, title } = req.body as {
-      participantIds: string[];
-      title?: string;
-    };
 
-    if (!participantIds || participantIds.length === 0) {
-      return res.status(400).json({ message: "participantIds is required" });
+    // Validate input
+    const validation = validateBody(createConversationSchema, req.body);
+    if (!validation.success) {
+      return res
+        .status(400)
+        .json({ message: formatZodErrors(validation.errors) });
+    }
+
+    const { participantIds, title } = validation.data;
+
+    // Verify all participants exist before creating conversation
+    const validUsers = await User.find({ _id: { $in: participantIds } })
+      .select("_id")
+      .exec();
+
+    if (validUsers.length !== participantIds.length) {
+      return res
+        .status(400)
+        .json({ message: "One or more participant IDs are invalid" });
     }
 
     const uniq = Array.from(new Set([userId, ...participantIds]));
@@ -110,7 +129,7 @@ router.post(
       participantIds: conversation.participantIds.map((p) => String(p)),
       updatedAt: conversation.updatedAt,
     });
-  }
+  },
 );
 
 router.get(
@@ -146,7 +165,7 @@ router.get(
         createdAt: m.createdAt,
       })),
     });
-  }
+  },
 );
 
 router.post(
@@ -155,11 +174,16 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.authUser!.id;
     const { id } = req.params as { id: string };
-    const { body } = req.body as { body: string };
 
-    if (!body || !body.trim()) {
-      return res.status(400).json({ message: "Message body is required" });
+    // Validate message body
+    const validation = validateBody(createMessageSchema, req.body);
+    if (!validation.success) {
+      return res
+        .status(400)
+        .json({ message: formatZodErrors(validation.errors) });
     }
+
+    const { body } = validation.data;
 
     const conversation = await Conversation.findById(id).exec();
     if (!conversation) {
@@ -190,7 +214,7 @@ router.post(
       body: msg.body,
       createdAt: msg.createdAt,
     });
-  }
+  },
 );
 
 export default router;

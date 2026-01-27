@@ -9,10 +9,12 @@ import {
   RequireRole,
   useScrollReveal,
   useAuth,
+  useSafeBack,
 } from "@shared";
 import {
   Route,
   Routes,
+  Navigate,
   useNavigate,
   useLocation,
   useParams,
@@ -27,6 +29,9 @@ import TicketConfirmationPage from "./pages/TicketConfirmationPage";
 import MyTicketsPage from "./pages/MyTicketsPage";
 import TicketScannerPage from "./pages/TicketScannerPage";
 import ManagePage from "./pages/ManagePage";
+import MyGigsPage from "./pages/MyGigsPage";
+import VenuesPage from "./pages/VenuesPage";
+import StaffPage from "./pages/StaffPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
 import AccountPage from "./pages/AccountPage";
@@ -756,153 +761,7 @@ function RatingsPage() {
   );
 }
 
-type TicketMode = "general_admission" | "assigned_seating";
-
-type TicketSettings = {
-  openForTickets: boolean;
-  mode: TicketMode;
-};
-
-function TicketsPage() {
-  const [settings, setSettings] = useState<Record<string, TicketSettings>>(
-    () => {
-      try {
-        const raw = localStorage.getItem("taa.music.ticketSettings");
-        if (!raw) return {};
-        return JSON.parse(raw) as Record<string, TicketSettings>;
-      } catch {
-        return {};
-      }
-    },
-  );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "taa.music.ticketSettings",
-        JSON.stringify(settings),
-      );
-    } catch {
-      // ignore (storage may be unavailable)
-    }
-  }, [settings]);
-
-  function get(eventId: string): TicketSettings {
-    return (
-      settings[eventId] ?? {
-        openForTickets: false,
-        mode: "general_admission",
-      }
-    );
-  }
-
-  function update(eventId: string, next: Partial<TicketSettings>) {
-    setSettings((prev) => ({
-      ...prev,
-      [eventId]: { ...get(eventId), ...next },
-    }));
-  }
-
-  return (
-    <AppShell
-      title="Tickets"
-      subtitle="Turn ticket sales on per event. Inventory derives from venue seat capacity."
-    >
-      <div
-        className={[ui.stack].join(" ")}
-        style={{ "--stack-gap": "14px" } as React.CSSProperties}
-      >
-        <div className={ui.empty}>
-          Seat capacity is set by the venue/location listing. Ticket inventory
-          is derived from that capacity (not set by the performer). Assigned
-          seating is supported as a higher-complexity mode once layouts exist.
-        </div>
-
-        <Section title="Events">
-          <div className={[ui.grid, ui.gridCards].join(" ")}>
-            {events.map((e) => {
-              const s = get(e.id);
-              return (
-                <div
-                  key={e.id}
-                  className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                  style={{ "--stack-gap": "12px" } as React.CSSProperties}
-                >
-                  <div>
-                    <p className={ui.cardTitle}>{e.title}</p>
-                    <p className={ui.cardText}>
-                      {e.date} · {e.time} · {e.venue}
-                    </p>
-                  </div>
-
-                  <div className={ui.divider} />
-
-                  <div className={ui.rowBetween}>
-                    <div
-                      className={ui.stack}
-                      style={{ "--stack-gap": "4px" } as React.CSSProperties}
-                    >
-                      <p style={{ fontWeight: 650, fontSize: 13 }}>
-                        Open For Tickets
-                      </p>
-                      <p className={ui.help} style={{ fontSize: 13 }}>
-                        Enable attendee ticket sales for this event.
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={s.openForTickets}
-                      onChange={(ev) =>
-                        update(e.id, { openForTickets: ev.target.checked })
-                      }
-                      aria-label={`Open tickets for ${e.title}`}
-                    />
-                  </div>
-
-                  <div
-                    className={ui.stack}
-                    style={{ "--stack-gap": "6px" } as React.CSSProperties}
-                  >
-                    <label style={{ fontSize: 13, fontWeight: 650 }}>
-                      Ticket mode
-                    </label>
-                    <select
-                      className={ui.input}
-                      value={s.mode}
-                      onChange={(ev) =>
-                        update(e.id, { mode: ev.target.value as TicketMode })
-                      }
-                      disabled={!s.openForTickets}
-                    >
-                      <option value="general_admission">
-                        General admission (at the door)
-                      </option>
-                      <option value="assigned_seating">
-                        Assigned seating (layout required)
-                      </option>
-                    </select>
-                    <p className={ui.help} style={{ fontSize: 13 }}>
-                      Capacity: set by venue · Tickets remaining: derived
-                    </p>
-                  </div>
-
-                  <div className={ui.rowBetween}>
-                    <span className={ui.chip}>
-                      {s.openForTickets ? "Tickets live" : "Tickets off"}
-                    </span>
-                    <Button variant="secondary" disabled={!s.openForTickets}>
-                      View attendee link
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-      </div>
-    </AppShell>
-  );
-}
+/* TicketsPage, EventsPage, and MyGigsPage removed - functionality consolidated into ManagePage */
 
 // Removed unused AccountPage
 
@@ -1315,169 +1174,12 @@ function MusicianDetailsPage() {
   );
 }
 
-function EventsPage() {
-  return (
-    <AppShell
-      title="Operations"
-      subtitle="Bookings, comms, and ticket settings — run the event cleanly."
-    >
-      <div
-        className={ui.stack}
-        style={{ "--stack-gap": "16px" } as React.CSSProperties}
-      >
-        <div className={ui.empty}>
-          This is the host operations hub. Next up: per-event timelines,
-          staffing notes, and a public ticket link when ticketing is enabled.
-        </div>
-
-        <Section title="Upcoming">
-          <div className={[ui.grid, ui.gridCards].join(" ")}>
-            {events.map((e) => (
-              <div
-                key={e.id}
-                className={[ui.card, ui.cardPad, ui.stack].join(" ")}
-                style={{ "--stack-gap": "12px" } as React.CSSProperties}
-              >
-                <div>
-                  <p className={ui.cardTitle}>{e.title}</p>
-                  <p className={ui.cardText}>
-                    {e.date} · {e.time} · {e.venue}
-                  </p>
-                </div>
-                <div className={ui.rowBetween}>
-                  <span className={ui.chip}>Booking</span>
-                  <Button
-                    variant="secondary"
-                    onClick={() => (window.location.href = "/tickets")}
-                  >
-                    Tickets
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-      </div>
-    </AppShell>
-  );
-}
-
-function MyGigsPage() {
-  const api = useMemo(() => createApiClient(), []);
-  const navigate = useNavigate();
-
-  const [gigs, setGigs] = useState<Gig[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    api
-      .listMyGigs()
-      .then((data) => {
-        if (cancelled) return;
-        setGigs(data);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api]);
-
-  return (
-    <AppShell
-      title="My gigs"
-      subtitle="Manage gigs you posted and review applicants."
-    >
-      {loading ? (
-        <p className={ui.help} style={{ fontSize: 14 }}>
-          Loading...
-        </p>
-      ) : error ? (
-        <p className={ui.error}>{error}</p>
-      ) : gigs.length === 0 ? (
-        <p className={ui.help} style={{ fontSize: 14 }}>
-          No gigs yet.
-        </p>
-      ) : (
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-        >
-          {gigs.map((g) => (
-            <div
-              key={g.id}
-              className={[ui.card, ui.cardPad].join(" ")}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: spacing.lg,
-                alignItems: "center",
-              }}
-            >
-              <div style={{ minWidth: 240 }}>
-                <h3 style={{ fontWeight: 600 }}>{g.title}</h3>
-                <p
-                  style={{
-                    marginTop: spacing.xs,
-                    fontSize: 14,
-                  }}
-                  className={ui.help}
-                >
-                  {g.date}
-                  {g.time ? ` · ${g.time}` : ""} · Status: {g.status}
-                </p>
-                <p
-                  style={{
-                    marginTop: spacing.xs,
-                    fontSize: 13,
-                  }}
-                  className={ui.help}
-                >
-                  Seating:{" "}
-                  {g.seatingType === "reserved"
-                    ? "Reserved"
-                    : "General Admission"}
-                  {g.seatCapacity ? ` · ${g.seatCapacity} seats` : ""}
-                  {g.hasTicketTiers ? " · Tiered pricing" : ""}
-                </p>
-              </div>
-              <div
-                style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}
-              >
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate(`/gigs/${g.id}/seating`)}
-                >
-                  Configure seating
-                </Button>
-                <Button onClick={() => navigate(`/gigs/${g.id}/applicants`)}>
-                  Review applicants
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </AppShell>
-  );
-}
-
 /** Host seating configuration page */
 function GigSeatingConfigPage() {
   const api = useMemo(() => createApiClient(), []);
   const { id } = useParams();
   const gigId = id ?? "";
-  const navigate = useNavigate();
+  const goBack = useSafeBack("/my-gigs");
 
   const [gig, setGig] = useState<Gig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1661,8 +1363,8 @@ function GigSeatingConfigPage() {
     return (
       <AppShell title="Configure seating" subtitle="Error">
         <p className={ui.error}>{error || "Gig not found"}</p>
-        <Button variant="secondary" onClick={() => navigate("/my-gigs")}>
-          Back to my gigs
+        <Button variant="secondary" onClick={goBack}>
+          ← Back
         </Button>
       </AppShell>
     );
@@ -1995,8 +1697,8 @@ function GigSeatingConfigPage() {
           {saveError && <span className={ui.error}>{saveError}</span>}
         </div>
 
-        <Button variant="ghost" onClick={() => navigate("/my-gigs")}>
-          ← Back to my gigs
+        <Button variant="ghost" onClick={goBack}>
+          ← Back
         </Button>
       </div>
     </AppShell>
@@ -2007,7 +1709,7 @@ function GigApplicantsPage() {
   const api = useMemo(() => createApiClient(), []);
   const { id } = useParams();
   const gigId = id ?? "";
-  const navigate = useNavigate();
+  const goBack = useSafeBack("/my-gigs");
 
   const [gig, setGig] = useState<Gig | null>(null);
   const [applications, setApplications] = useState<GigApplication[]>([]);
@@ -2079,8 +1781,8 @@ function GigApplicantsPage() {
       title="Applicants"
       subtitle={gig ? gig.title : "Review applications"}
     >
-      <Button variant="ghost" onClick={() => navigate("/my-gigs")}>
-        Back to my gigs
+      <Button variant="ghost" onClick={goBack}>
+        ← Back
       </Button>
 
       {loading ? (
@@ -2233,22 +1935,39 @@ function App() {
                   </RequireRole>
                 }
               />
+              {/* Host dashboard section pages */}
               <Route
-                path="/events"
+                path="/my-gigs"
                 element={
                   <RequireRole role="customer">
-                    <EventsPage />
+                    <MyGigsPage />
                   </RequireRole>
                 }
               />
-
               <Route
-                path="/tickets"
+                path="/venues"
                 element={
                   <RequireRole role="customer">
-                    <TicketsPage />
+                    <VenuesPage />
                   </RequireRole>
                 }
+              />
+              <Route
+                path="/staff"
+                element={
+                  <RequireRole role="customer">
+                    <StaffPage />
+                  </RequireRole>
+                }
+              />
+              {/* Legacy routes */}
+              <Route
+                path="/events"
+                element={<Navigate to="/my-gigs" replace />}
+              />
+              <Route
+                path="/tickets"
+                element={<Navigate to="/my-gigs" replace />}
               />
               <Route
                 path="/my-tickets"
@@ -2284,24 +2003,7 @@ function App() {
                   </RequireRole>
                 }
               />
-              {/*
-              <Route
-                path="/post-gig"
-                element={
-                  <RequireRole role="customer">
-                    <PostGigPage />
-                  </RequireRole>
-                }
-              />
-              */}
-              <Route
-                path="/my-gigs"
-                element={
-                  <RequireRole role="customer">
-                    <MyGigsPage />
-                  </RequireRole>
-                }
-              />
+
               <Route
                 path="/gigs/:id/applicants"
                 element={

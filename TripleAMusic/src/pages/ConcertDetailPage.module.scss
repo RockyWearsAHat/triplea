@@ -23,6 +23,11 @@
   color: var(--text);
 }
 
+.backButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .loadingState,
 .errorState {
   display: flex;

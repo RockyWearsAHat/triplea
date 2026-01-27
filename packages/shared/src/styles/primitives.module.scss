@@ -597,7 +597,7 @@
 /* Path cards - large clickable destinations */
 .pathGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 20px;
   width: 100%;
   max-width: 900px;
@@ -612,15 +612,22 @@
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition:
-    border-color 150ms ease,
-    background 150ms ease;
+  transition: border-color 150ms ease;
   text-align: left;
 }
 
 .pathCard:hover {
   border-color: var(--border-strong);
-  background: var(--surface-2);
+}
+
+.pathCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pathCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .pathCardTitle {
@@ -656,10 +663,16 @@
   transform: translateX(4px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .pathCard:hover .pathCardAction::after {
+    transform: none;
+  }
+}
+
 /* Product card row - grid layout */
 .productRow {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 16px;
   width: 100%;
 }
@@ -730,7 +743,7 @@
 
 .statGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 12px;
 }
 

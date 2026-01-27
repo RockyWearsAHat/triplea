@@ -30,6 +30,13 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--text-muted);
+  }
+}
+
 .errorState h2 {
   margin: 0;
   font-size: 24px;
@@ -41,6 +48,7 @@
   margin: 0 auto;
   display: grid;
   gap: 32px;
+  grid-template-columns: 1fr;
 }
 
 @media (min-width: 768px) {
@@ -185,6 +193,11 @@
 .infoButton:hover {
   background: var(--surface-2, #2a2a2a);
   border-color: var(--text-muted);
+}
+
+.infoButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .tooltip {

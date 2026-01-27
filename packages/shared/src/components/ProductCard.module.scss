@@ -13,6 +13,11 @@
   border-color: var(--border-strong);
 }
 
+.productCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .media {
   position: relative;
   aspect-ratio: 16/10;
@@ -30,17 +35,22 @@
 .primary {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
-  background: var(--gold);
+  background: var(--primary);
   color: var(--primary-contrast);
   font-size: 13px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: opacity 150ms ease;
+  transition: background-color 150ms ease;
 }
 
 .primary:hover {
-  opacity: 0.9;
+  background: color-mix(in srgb, var(--primary) 88%, #000);
+}
+
+.primary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .featured {

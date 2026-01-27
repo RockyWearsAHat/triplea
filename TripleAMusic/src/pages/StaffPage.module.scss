@@ -1,0 +1,35 @@
+/* StaffPage.module.scss — Staff management styles */
+
+.staffTab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* Section */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.comingSoon {
+  font-weight: 600;
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.featureList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}

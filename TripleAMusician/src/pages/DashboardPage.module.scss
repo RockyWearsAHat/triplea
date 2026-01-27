@@ -31,27 +31,21 @@
 
 .statsRow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .statsRow {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Main Grid */
 .grid {
   display: grid;
   gap: 24px;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 900px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 280px;
   }
 }
 
@@ -86,7 +80,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--primary);
-  color: var(--on-primary, #fff);
+  color: var(--primary-contrast);
   font-size: 11px;
   font-weight: 700;
 }

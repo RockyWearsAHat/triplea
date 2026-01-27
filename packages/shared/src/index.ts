@@ -16,6 +16,7 @@ export * from "./api/client";
 export * from "./chat/ChatInbox";
 export * from "./animation/useScrollReveal";
 export * from "./hooks/useGeolocation";
+export * from "./hooks/useSafeBack";
 export * from "./lib/cx";
 export * from "./lib/env";
 export * from "./components/FormField";

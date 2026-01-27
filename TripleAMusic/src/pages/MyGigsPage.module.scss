@@ -1,0 +1,177 @@
+/* MyGigsPage.module.scss — Gig management styles */
+
+.gigsTab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
+}
+
+.gigFormGrid {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+/* Section */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Card List */
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Form Row */
+.formRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.formRow input,
+.formRow select {
+  flex: 1;
+  min-width: 120px;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Gig Cards */
+.gigCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.gigCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.gigCardHeader:hover {
+  background-color: color-mix(in srgb, var(--surface) 95%, var(--text) 5%);
+}
+
+.gigCardHeader:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.gigCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.gigCardTitle {
+  margin: 0;
+  font-size: var(--text-base, 14px);
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.gigCardMeta {
+  margin: 0;
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
+}
+
+.gigCardActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.gigCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  padding-top: 0;
+  font-size: var(--text-sm, 13px);
+  border-top: 1px solid var(--border);
+}
+
+.gigCardBudget {
+  margin: 0;
+  font-size: var(--text-sm, 13px);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.gigCardButtonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* Inline Link */
+.inlineLink {
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+.inlineLink:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gigCard,
+  .gigCardHeader {
+    transition: none;
+  }
+}

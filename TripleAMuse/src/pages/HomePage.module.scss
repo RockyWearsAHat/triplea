@@ -26,7 +26,7 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .heroTitle {
@@ -38,7 +38,7 @@
 }
 
 .heroHighlight {
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .heroSubtitle {
@@ -88,25 +88,29 @@
 
 .servicesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 16px;
 }
 
 .serviceCard {
   display: flex;
   flex-direction: column;
-  padding: 28px 24px;
+  padding: clamp(20px, 3vw, 28px) clamp(18px, 2.5vw, 24px);
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 200ms ease;
+  transition: border-color 150ms ease;
   text-align: left;
 }
 
 .serviceCard:hover {
-  border-color: var(--gold);
-  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.serviceCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .serviceIcon {
@@ -116,8 +120,8 @@
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
-  color: var(--gold);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  color: var(--primary);
   margin-bottom: 16px;
 }
 
@@ -141,7 +145,7 @@
   gap: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .serviceCard:hover .serviceCta {
@@ -162,7 +166,7 @@
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 24px;
   max-width: var(--max-width);
   margin: 0 auto;
@@ -181,8 +185,8 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--gold) 12%, var(--bg));
-  color: var(--gold);
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg));
+  color: var(--primary);
   flex-shrink: 0;
 }
 
@@ -304,6 +308,12 @@
   background: var(--surface-2);
 }
 
+.eventChip:focus-visible,
+.performerChip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .chipSelected {
   background: color-mix(in srgb, var(--primary) 15%, var(--surface));
   border-color: var(--primary);
@@ -352,6 +362,11 @@
   color: var(--text);
 }
 
+.genreChip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .genreChip.chipSelected {
   background: color-mix(in srgb, var(--primary) 15%, var(--surface));
   border-color: var(--primary);
@@ -363,7 +378,7 @@
    ───────────────────────────────────────────────────────────────────────── */
 .packageGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -375,12 +390,17 @@
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: border-color 150ms ease;
   text-align: left;
 }
 
 .packageCard:hover {
   border-color: var(--border-strong);
+}
+
+.packageCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .packageSelected {
@@ -413,20 +433,8 @@
    ───────────────────────────────────────────────────────────────────────── */
 .venueGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 14px;
-}
-
-@media (max-width: 900px) {
-  .venueGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 500px) {
-  .venueGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .venueCard {
@@ -436,7 +444,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: border-color 150ms ease;
   overflow: hidden;
   text-align: left;
   height: 100%;
@@ -444,6 +452,12 @@
 
 .venueCard:hover {
   border-color: var(--border-strong);
+}
+
+.venueCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 }
 
 .venueSelected {
