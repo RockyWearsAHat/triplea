@@ -6,9 +6,12 @@ import "./index.css";
 import App from "./App.tsx";
 import { AuthProvider } from "@shared";
 
+// Use /musician/ basename on Netlify, / locally
+const basename = import.meta.env.PROD ? "/musician" : "/";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
         <App />
       </AuthProvider>
