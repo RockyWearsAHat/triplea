@@ -16,6 +16,7 @@ import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { createApiClient, getAssetUrl, getMusicOrigin } from "./lib/urls";
 
 function Section({
@@ -700,44 +701,6 @@ function GigDetailPage() {
           </Section>
         </div>
       )}
-    </AppShell>
-  );
-}
-
-function ProfilePage() {
-  const { user, logout } = useAuth();
-
-  return (
-    <AppShell
-      title="Musician account"
-      subtitle="Manage your account and security settings."
-    >
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-      >
-        {user ? (
-          <>
-            <p>
-              Signed in as <strong>{user.name}</strong> ({user.email})
-            </p>
-            <p className={ui.help}>Roles: {user.role.join(", ")}</p>
-            <Button
-              variant="secondary"
-              onClick={logout}
-              style={{ alignSelf: "flex-start" }}
-            >
-              Sign out
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className={ui.help}>
-              You are not signed in. Use the Login link in the navigation to
-              access your musician dashboard.
-            </p>
-          </>
-        )}
-      </div>
     </AppShell>
   );
 }

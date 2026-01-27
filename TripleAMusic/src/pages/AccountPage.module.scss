@@ -1,0 +1,319 @@
+/* AccountPage.module.scss — Professional account management layout */
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+@media (min-width: 720px) {
+  .accountGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profileCard {
+    grid-column: span 2;
+  }
+
+  .settingsCard {
+    grid-column: span 2;
+  }
+}
+
+/* Profile Card */
+.profileCard {
+  padding: 24px;
+}
+
+.profileHeader {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--taa-purple-900) 0%,
+    var(--taa-purple-400) 100%
+  );
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profileName {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 650;
+}
+
+.profileEmail {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.profileMeta {
+  margin: 4px 0 0;
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+/* Roles Section */
+.rolesSection {
+  margin-top: 20px;
+}
+
+.sectionLabel {
+  margin: 0 0 12px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.rolesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roleBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.roleDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--role-color, var(--text-muted));
+  flex-shrink: 0;
+}
+
+.roleLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.roleDesc {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Settings Card */
+.settingsCard {
+  padding: 20px;
+}
+
+.cardTitle {
+  margin: 0 0 16px;
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.settingsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+}
+
+.settingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settingLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settingValue {
+  font-size: var(--text-sm);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Password Form */
+.passwordForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Apps Card */
+.appsCard {
+  padding: 20px;
+}
+
+.appsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.appLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.appLink:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.appLinkActive {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+.appLinkCurrent {
+  background: var(--surface-2);
+  cursor: default;
+}
+
+.appLinkCurrent:hover {
+  background: var(--surface-2);
+}
+
+.appIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.appInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.appName {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.appRole {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.appArrow {
+  color: var(--text-subtle);
+  font-size: var(--text-base);
+  transition: transform 120ms ease;
+}
+
+.appLink:hover .appArrow {
+  transform: translateX(3px);
+  color: var(--primary);
+}
+
+/* Actions Card */
+.actionsCard {
+  padding: 20px;
+}
+
+.actionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.actionLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+  font-size: var(--text-sm);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.actionLink:hover {
+  background: var(--surface);
+  color: var(--primary);
+}
+
+.actionIcon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+/* Sign Out Section */
+.signOutSection {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-start;
+}

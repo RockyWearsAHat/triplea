@@ -29,6 +29,7 @@ import TicketScannerPage from "./pages/TicketScannerPage";
 import ManagePage from "./pages/ManagePage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
+import AccountPage from "./pages/AccountPage";
 import { CartProvider } from "./context/CartContext";
 import { createApiClient } from "./lib/urls";
 
@@ -1931,6 +1932,7 @@ function App() {
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/account" element={<AccountPage />} />
               <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
               <Route
                 path="/manage"

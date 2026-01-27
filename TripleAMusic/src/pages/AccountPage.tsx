@@ -5,8 +5,8 @@ import { useNavigate, Link } from "react-router-dom";
 import styles from "./AccountPage.module.scss";
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Account Page — Professional, visual-first account management
-   Sections: Profile, Security, Roles, Linked Apps, Notifications
+   Account Page — Triple A Music
+   Professional account management for hosts and ticket buyers
    ──────────────────────────────────────────────────────────────────────────── */
 
 const ROLE_INFO: Record<
@@ -127,6 +127,8 @@ export function AccountPage() {
     return null;
   }
 
+  const isHost = user.role.includes("customer");
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -142,7 +144,6 @@ export function AccountPage() {
     }
 
     // TODO: Implement actual password change API call
-    // For now, show success message
     setPasswordSuccess(true);
     setShowingPasswordSection(false);
     setCurrentPassword("");
@@ -154,8 +155,9 @@ export function AccountPage() {
     {
       name: "Triple A Music",
       role: "customer",
-      url: "https://tripleamusic.org",
-      active: user.role.includes("customer"),
+      url: "/",
+      active: true,
+      current: true,
     },
     {
       name: "Triple A Musician",
@@ -172,7 +174,7 @@ export function AccountPage() {
   ];
 
   return (
-    <AppShell title="Account" subtitle="Manage your profile and settings">
+    <AppShell title="Account" subtitle="Manage your host profile and settings">
       <div className={styles.accountGrid}>
         {/* Profile Card */}
         <div className={`${ui.card} ${styles.profileCard}`}>
@@ -283,6 +285,36 @@ export function AccountPage() {
           )}
         </div>
 
+        {/* Quick Actions for Hosts */}
+        {isHost && (
+          <div className={`${ui.card} ${styles.actionsCard}`}>
+            <h3 className={styles.cardTitle}>Host actions</h3>
+
+            <div className={styles.actionsList}>
+              <Link to="/manage" className={styles.actionLink}>
+                <span className={styles.actionIcon}>📋</span>
+                <span>Manage events</span>
+              </Link>
+              <Link to="/my-gigs" className={styles.actionLink}>
+                <span className={styles.actionIcon}>🎤</span>
+                <span>Your gig postings</span>
+              </Link>
+              <Link to="/my-tickets" className={styles.actionLink}>
+                <span className={styles.actionIcon}>🎫</span>
+                <span>Purchased tickets</span>
+              </Link>
+              <Link to="/scan-tickets" className={styles.actionLink}>
+                <span className={styles.actionIcon}>📱</span>
+                <span>Scan tickets</span>
+              </Link>
+              <Link to="/messages" className={styles.actionLink}>
+                <span className={styles.actionIcon}>💬</span>
+                <span>Messages</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Linked Apps Card */}
         <div className={`${ui.card} ${styles.appsCard}`}>
           <h3 className={styles.cardTitle}>Triple A apps</h3>
@@ -293,66 +325,34 @@ export function AccountPage() {
               <a
                 key={app.name}
                 href={app.url}
-                className={`${styles.appLink} ${app.active ? styles.appLinkActive : ""}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                className={`${styles.appLink} ${app.active ? styles.appLinkActive : ""} ${app.current ? styles.appLinkCurrent : ""}`}
+                target={app.current ? undefined : "_blank"}
+                rel={app.current ? undefined : "noopener noreferrer"}
               >
                 <div className={styles.appIcon}>
                   {app.name.split(" ").pop()?.charAt(0)}
                 </div>
                 <div className={styles.appInfo}>
                   <span className={styles.appName}>{app.name}</span>
-                  {app.role && (
+                  {app.current ? (
+                    <span className={styles.appRole}>You're here</span>
+                  ) : app.role ? (
                     <span className={styles.appRole}>
                       {app.active
                         ? `Active as ${ROLE_INFO[app.role]?.label ?? app.role}`
                         : "Not activated"}
                     </span>
-                  )}
+                  ) : null}
                 </div>
-                <span className={styles.appArrow}>→</span>
+                {!app.current && <span className={styles.appArrow}>→</span>}
               </a>
             ))}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className={`${ui.card} ${styles.actionsCard}`}>
-          <h3 className={styles.cardTitle}>Quick actions</h3>
-
-          <div className={styles.actionsList}>
-            {user.role.includes("musician") && (
-              <Link to="/dashboard" className={styles.actionLink}>
-                <span className={styles.actionIcon}>🎵</span>
-                <span>View musician dashboard</span>
-              </Link>
-            )}
-            {user.role.includes("customer") && (
-              <Link to="/dashboard" className={styles.actionLink}>
-                <span className={styles.actionIcon}>📅</span>
-                <span>Manage your events</span>
-              </Link>
-            )}
-            <Link to="/messages" className={styles.actionLink}>
-              <span className={styles.actionIcon}>💬</span>
-              <span>Messages</span>
-            </Link>
-            {(user.role.includes("admin") ||
-              user.role.includes("rental_provider")) && (
-              <Link to="/admin" className={styles.actionLink}>
-                <span className={styles.actionIcon}>⚙️</span>
-                <span>Admin dashboard</span>
-              </Link>
-            )}
-          </div>
-
-          <div className={ui.divider} style={{ margin: "16px 0" }} />
-
-          <Button
-            variant="secondary"
-            onClick={logout}
-            style={{ width: "100%" }}
-          >
+        {/* Sign Out */}
+        <div className={styles.signOutSection}>
+          <Button variant="secondary" onClick={logout}>
             Sign out
           </Button>
         </div>
@@ -360,3 +360,5 @@ export function AccountPage() {
     </AppShell>
   );
 }
+
+export default AccountPage;
