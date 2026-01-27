@@ -8,10 +8,11 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import type { CheckoutSession, FeeCalculationResult } from "@shared";
-import { TripleAApiClient, useAuth } from "@shared";
+import { useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./CheckoutPage.module.scss";
 import { useCart } from "../context/CartContext";
+import { createApiClient } from "../lib/urls";
 
 // Initialize Stripe with your publishable key
 const stripePromise = loadStripe(
@@ -33,10 +34,7 @@ function CheckoutForm({
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,10 +144,7 @@ export default function CheckoutPage() {
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   // Pre-fill form if user is logged in
   useEffect(() => {

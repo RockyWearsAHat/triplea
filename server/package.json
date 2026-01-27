@@ -16,6 +16,7 @@
     "express": "^4.19.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
+    "serverless-http": "^3.2.0",
     "stripe": "^20.2.0"
   },
   "devDependencies": {

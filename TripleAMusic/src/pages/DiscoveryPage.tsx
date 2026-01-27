@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { MusicianProfile } from "@shared";
-import { spacing, TripleAApiClient, useScrollReveal } from "@shared";
+import { spacing, useScrollReveal } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { SearchBar } from "@shared";
 import CategoryBar from "@shared/components/CategoryBar";
 import ProductCard from "@shared/components/ProductCard";
+import { createApiClient } from "../lib/urls";
 
 interface DiscoveryResult {
   musician: MusicianProfile;
@@ -13,10 +14,7 @@ interface DiscoveryResult {
 }
 
 export function DiscoveryPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   const [results, setResults] = useState<DiscoveryResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

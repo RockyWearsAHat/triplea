@@ -4,11 +4,12 @@ import { TripleAApiClient } from "../api/client";
 import type { ChatConversation, ChatMessage } from "../types";
 import { Button } from "../components/Button";
 import { useAuth } from "../auth/AuthContext";
+import { getApiBaseUrl } from "../lib/env";
 
 export function ChatInbox() {
   const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    []
+    () => new TripleAApiClient({ baseUrl: getApiBaseUrl() }),
+    [],
   );
   const { user } = useAuth();
 

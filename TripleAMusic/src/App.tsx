@@ -12,7 +12,6 @@ import {
   AppShell,
   Button,
   spacing,
-  TripleAApiClient,
   RequireAnyRole,
   RequireRole,
   useScrollReveal,
@@ -37,6 +36,7 @@ import TicketScannerPage from "./pages/TicketScannerPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
 import { CartProvider } from "./context/CartContext";
+import { createApiClient, getAssetUrl } from "./lib/urls";
 
 import { ChatInbox } from "@shared";
 
@@ -299,10 +299,7 @@ function RegisterPage() {
   );
 }
 function CustomerDashboardPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const { user } = useAuth();
 
@@ -355,7 +352,7 @@ function CustomerDashboardPage() {
   function apiImageUrl(pathname?: string): string | undefined {
     if (!pathname) return undefined;
     if (/^https?:\/\//i.test(pathname)) return pathname;
-    return `http://localhost:4000${pathname}`;
+    return getAssetUrl(pathname);
   }
 
   useEffect(() => {
@@ -841,10 +838,7 @@ function CustomerDashboardPage() {
 function BrowsePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   // Removed unused state: query, city, when
   const [gigs, setGigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1201,10 +1195,7 @@ function MusicianDetailsPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1654,10 +1645,7 @@ function EventsPage() {
 }
 
 function MyGigsPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   const navigate = useNavigate();
 
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -1768,10 +1756,7 @@ function MyGigsPage() {
 
 /** Host seating configuration page */
 function GigSeatingConfigPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   const { id } = useParams();
   const gigId = id ?? "";
   const navigate = useNavigate();
@@ -2303,10 +2288,7 @@ function GigSeatingConfigPage() {
 }
 
 function GigApplicantsPage() {
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   const { id } = useParams();
   const gigId = id ?? "";
   const navigate = useNavigate();

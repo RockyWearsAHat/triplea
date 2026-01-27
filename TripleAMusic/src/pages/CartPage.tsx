@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FeeCalculationResult } from "@shared";
-import { Button, TripleAApiClient } from "@shared";
+import { Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./CartPage.module.scss";
 import { useCart } from "../context/CartContext";
+import { createApiClient, getAssetUrl } from "../lib/urls";
 import {
   ShoppingCart,
   Calendar,
@@ -27,10 +28,7 @@ export default function CartPage() {
   const [fees, setFees] = useState<FeeCalculationResult | null>(null);
   const [taxLoading, setTaxLoading] = useState(false);
 
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   // Client-side fee calculation (instant, no loading)
   // Triple A Fee: $1/ticket (flat) - this is the platform service fee
@@ -156,7 +154,9 @@ export default function CartPage() {
               <div className={styles.itemImage}>
                 {item.locationId ? (
                   <img
-                    src={`http://localhost:4000/api/public/locations/${item.locationId}/images/0`}
+                    src={getAssetUrl(
+                      `/api/public/locations/${item.locationId}/images/0`,
+                    )}
                     alt=""
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";

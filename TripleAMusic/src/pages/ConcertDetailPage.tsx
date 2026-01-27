@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Gig, TicketTier } from "@shared";
-import { TripleAApiClient, Button, SeatSelector } from "@shared";
+import { Button, SeatSelector } from "@shared";
 import type { SeatInfo, SectionInfo, TierInfo } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertDetailPage.module.scss";
 import { useCart, type CartItem } from "../context/CartContext";
+import { createApiClient, getAssetUrl } from "../lib/urls";
 import {
   ChevronLeft,
   Calendar,
@@ -23,10 +24,7 @@ export default function ConcertDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addItem, updateQuantity, items } = useCart();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const [concert, setConcert] = useState<Gig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,7 +213,9 @@ export default function ConcertDetailPage() {
         <div className={styles.heroImage}>
           {concert.location?.id ? (
             <img
-              src={`http://localhost:4000/api/public/locations/${concert.location.id}/images/0`}
+              src={getAssetUrl(
+                `/api/public/locations/${concert.location.id}/images/0`,
+              )}
               alt=""
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";

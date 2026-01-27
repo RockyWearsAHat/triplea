@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { GigWithDistance, ConcertSearchParams } from "@shared";
-import { TripleAApiClient, useGeolocation, useScrollReveal } from "@shared";
+import { useGeolocation, useScrollReveal } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./ConcertMarketplacePage.module.scss";
+import { createApiClient, getAssetUrl } from "../lib/urls";
 
 export default function ConcertMarketplacePage() {
   const navigate = useNavigate();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const geo = useGeolocation(); // Auto-requests location on mount
 
@@ -94,7 +92,9 @@ export default function ConcertMarketplacePage() {
                 <div className={styles.cardImage}>
                   {c.location?.id ? (
                     <img
-                      src={`http://localhost:4000/api/public/locations/${c.location!.id}/images/0`}
+                      src={getAssetUrl(
+                        `/api/public/locations/${c.location!.id}/images/0`,
+                      )}
                       alt=""
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";

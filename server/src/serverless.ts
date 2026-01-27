@@ -1,9 +1,14 @@
+/**
+ * Serverless entry point for Netlify Functions.
+ * Wraps the Express app with serverless-http for AWS Lambda compatibility.
+ */
 import dotenv from "dotenv";
 import path from "node:path";
 
 // Load .env from root directory
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
+import serverless from "serverless-http";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -32,22 +37,15 @@ const getAllowedOrigins = (): string[] => {
 
   if (netlifyUrl) {
     // Extract base domain from Netlify URL
-    try {
-      const url = new URL(netlifyUrl);
-      const baseDomain = url.hostname.replace(
-        /^(muse\.|music\.|musician\.)/,
-        "",
-      );
-      return [
-        `https://muse.${baseDomain}`,
-        `https://music.${baseDomain}`,
-        `https://musician.${baseDomain}`,
-        `https://${baseDomain}`,
-        netlifyUrl,
-      ];
-    } catch {
-      // Fallback if URL parsing fails
-    }
+    const url = new URL(netlifyUrl);
+    const baseDomain = url.hostname.replace(/^(muse\.|music\.|musician\.)/, "");
+    return [
+      `https://muse.${baseDomain}`,
+      `https://music.${baseDomain}`,
+      `https://musician.${baseDomain}`,
+      `https://${baseDomain}`,
+      netlifyUrl,
+    ];
   }
 
   // Local development
@@ -70,17 +68,19 @@ app.use(
         if (process.env.NETLIFY && origin?.includes("netlify")) {
           callback(null, true);
         } else {
-          callback(null, true); // For now, allow all in development
+          callback(new Error("Not allowed by CORS"));
         }
       }
     },
     credentials: true,
   }),
 );
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(attachUser);
 
+// Mount routes - note: serverless-http handles the base path
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
@@ -95,32 +95,47 @@ app.use("/api/tickets", ticketsRoutes);
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/seating", seatingRoutes);
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const MONGO_URI = process.env.MONGO_URI ?? "";
+// Health check
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", env: process.env.NETLIFY ? "netlify" : "local" });
+});
 
-async function start() {
+// MongoDB connection (reuse across invocations)
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) return;
+
+  const MONGO_URI = process.env.MONGO_URI;
   if (!MONGO_URI) {
-    // eslint-disable-next-line no-console
-    console.error("MONGO_URI is not set in environment");
-    process.exit(1);
+    throw new Error("MONGO_URI is not set in environment");
   }
 
   try {
     await mongoose.connect(MONGO_URI);
-    // eslint-disable-next-line no-console
+    isConnected = true;
     console.log("Connected to MongoDB");
 
+    // Seed demo data if enabled (only once)
     await seedDemoDataIfEnabled();
-
-    app.listen(PORT, () => {
-      // eslint-disable-next-line no-console
-      console.log(`API server listening on http://localhost:${PORT}`);
-    });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to start server", err);
-    process.exit(1);
+    console.error("Failed to connect to MongoDB", err);
+    throw err;
   }
-}
+};
 
-start();
+// Wrap with serverless-http
+const serverlessHandler = serverless(app, {
+  basePath: "/.netlify/functions/api",
+});
+
+// Export handler for Netlify Functions
+export const handler = async (event: any, context: any) => {
+  // Keep the connection alive between invocations
+  context.callbackWaitsForEmptyEventLoop = false;
+
+  await connectDB();
+  return serverlessHandler(event, context);
+};
+
+export default app;

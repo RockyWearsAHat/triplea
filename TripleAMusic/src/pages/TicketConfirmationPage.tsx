@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Ticket } from "@shared";
-import { TripleAApiClient, Button } from "@shared";
+import { Button } from "@shared";
 import styles from "./TicketConfirmationPage.module.scss";
+import { createApiClient } from "../lib/urls";
 
 // QR Code library - we'll use a canvas-based approach
 function generateQRCodeSVG(data: string, size: number = 200): string {
@@ -16,10 +17,7 @@ function generateQRCodeSVG(data: string, size: number = 200): string {
 export default function TicketConfirmationPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [gig, setGig] = useState<Ticket["gig"] | null>(null);

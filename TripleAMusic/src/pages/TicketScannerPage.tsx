@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { Gig, TicketScanResult } from "@shared";
-import { TripleAApiClient, useAuth } from "@shared";
+import { useAuth } from "@shared";
 import styles from "./TicketScannerPage.module.scss";
+import { createApiClient } from "../lib/urls";
 
 type ScanMode = "camera" | "manual";
 
@@ -13,10 +14,7 @@ interface ScanState {
 
 export default function TicketScannerPage() {
   const { user } = useAuth();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const [myGigs, setMyGigs] = useState<Gig[]>([]);
   const [selectedGigId, setSelectedGigId] = useState<string>("");

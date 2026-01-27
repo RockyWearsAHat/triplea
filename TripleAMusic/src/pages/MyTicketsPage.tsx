@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Ticket } from "@shared";
-import { TripleAApiClient, Button, useAuth } from "@shared";
+import { Button, useAuth } from "@shared";
 import styles from "./MyTicketsPage.module.scss";
+import { createApiClient, getAssetUrl } from "../lib/urls";
 
 type TabFilter = "upcoming" | "past" | "all";
 
 export default function MyTicketsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const api = useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = useMemo(() => createApiClient(), []);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,7 +170,9 @@ export default function MyTicketsPage() {
                   <div className={styles.ticketImage}>
                     {ticket.location?.id ? (
                       <img
-                        src={`http://localhost:4000/api/public/locations/${ticket.location.id}/images/0`}
+                        src={getAssetUrl(
+                          `/api/public/locations/${ticket.location.id}/images/0`,
+                        )}
                         alt=""
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";

@@ -5,7 +5,6 @@ import {
   AppShell,
   Button,
   spacing,
-  TripleAApiClient,
   useScrollReveal,
   useAuth,
   RequireAnyRole,
@@ -17,6 +16,7 @@ import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
 import { DashboardPage } from "./pages/DashboardPage";
+import { createApiClient, getAssetUrl, getMusicOrigin } from "./lib/urls";
 
 function Section({
   title,
@@ -33,7 +33,7 @@ function Section({
   );
 }
 
-const MUSIC_ORIGIN = "http://localhost:5174";
+const MUSIC_ORIGIN = getMusicOrigin();
 
 function LoginPage() {
   const { login, user } = useAuth();
@@ -309,10 +309,7 @@ function PerksPage() {
   );
 }
 function RentalsPage() {
-  const api = React.useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = React.useMemo(() => createApiClient(), []);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   const [instruments, setInstruments] = React.useState<
@@ -367,7 +364,7 @@ function RentalsPage() {
   function apiImageUrl(pathname?: string): string | undefined {
     if (!pathname) return undefined;
     if (/^https?:\/\//i.test(pathname)) return pathname;
-    return `http://localhost:4000${pathname}`;
+    return getAssetUrl(pathname);
   }
 
   return (
@@ -454,10 +451,7 @@ function RentalsPage() {
   );
 }
 function BrowseGigsPage() {
-  const api = React.useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = React.useMemo(() => createApiClient(), []);
   const navigate = useNavigate();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   const [gigs, setGigs] = React.useState<Gig[]>([]);
@@ -549,10 +543,7 @@ function BrowseGigsPage() {
 }
 
 function GigDetailPage() {
-  const api = React.useMemo(
-    () => new TripleAApiClient({ baseUrl: "http://localhost:4000/api" }),
-    [],
-  );
+  const api = React.useMemo(() => createApiClient(), []);
   const params = useParams();
   const gigId = params.id ?? "";
   const navigate = useNavigate();

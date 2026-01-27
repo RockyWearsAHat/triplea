@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Permission, User, UserRole } from "../types";
 import { TripleAApiClient } from "../api/client";
+import { getApiBaseUrl } from "../lib/env";
 
 interface AuthState {
   user: User | null;
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const api = new TripleAApiClient({
-    baseUrl: "http://localhost:4000/api",
+    baseUrl: getApiBaseUrl(),
   });
 
   useEffect(() => {

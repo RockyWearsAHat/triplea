@@ -1,0 +1,38 @@
+# Triple A Apps - Netlify Configuration
+# This is the main Netlify config for the monorepo.
+# Each app (muse, music, musician) should be deployed as a separate Netlify site
+# with their own netlify.toml files in their directories.
+
+[build]
+  # The main site doesn't need to build anything - each app builds separately
+  publish = "dist"
+  command = "echo 'Deploy individual apps as separate sites'"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Netlify Functions configuration
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["mongoose"]
+
+# Headers for all sites
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Redirect API calls to the serverless function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/functions/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

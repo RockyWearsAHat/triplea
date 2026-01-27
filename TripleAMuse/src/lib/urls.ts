@@ -1,31 +1,31 @@
-export const SERVER_ORIGIN = "http://localhost:4000";
-export const API_BASE_URL = `${SERVER_ORIGIN}/api`;
+/**
+ * URL utilities for Triple A Muse.
+ * Re-exports from shared env module for environment-aware URLs.
+ */
+export {
+  getServerOrigin as SERVER_ORIGIN_FN,
+  getApiBaseUrl as API_BASE_URL_FN,
+  getMusicOrigin as MUSIC_ORIGIN_FN,
+  getMusicianOrigin as MUSICIAN_ORIGIN_FN,
+  getMuseOrigin as MUSE_ORIGIN_FN,
+  apiAssetUrl,
+  openExternal,
+  openMusic,
+  openMusician,
+  openMuse,
+  openMusicRegister,
+  openMusicianRegister,
+} from "@shared/lib/env";
 
-export const MUSIC_ORIGIN = "http://localhost:5174";
-export const MUSICIAN_ORIGIN = "http://localhost:5175";
+import {
+  getServerOrigin,
+  getApiBaseUrl,
+  getMusicOrigin,
+  getMusicianOrigin,
+} from "@shared/lib/env";
 
-export function openExternal(url: string) {
-  window.open(url, "_blank", "noreferrer");
-}
-
-export function openMusic() {
-  openExternal(MUSIC_ORIGIN);
-}
-
-export function openMusician() {
-  openExternal(MUSICIAN_ORIGIN);
-}
-
-export function openMusicRegister() {
-  openExternal(`${MUSIC_ORIGIN}/register`);
-}
-
-export function openMusicianRegister() {
-  openExternal(`${MUSICIAN_ORIGIN}/register`);
-}
-
-export function apiAssetUrl(pathname?: string): string | undefined {
-  if (!pathname) return undefined;
-  if (/^https?:\/\//i.test(pathname)) return pathname;
-  return `${SERVER_ORIGIN}${pathname}`;
-}
+// Legacy exports for backwards compatibility
+export const SERVER_ORIGIN = getServerOrigin();
+export const API_BASE_URL = getApiBaseUrl();
+export const MUSIC_ORIGIN = getMusicOrigin();
+export const MUSICIAN_ORIGIN = getMusicianOrigin();

@@ -1,0 +1,42 @@
+# Triple A Music - Netlify Configuration
+# Deploy as: music.<your-site>.netlify.app
+
+[build]
+  base = "TripleAMusic"
+  publish = "dist"
+  command = "cd .. && npm install && npm run build --prefix TripleAMusic"
+
+[build.environment]
+  NODE_VERSION = "20"
+  VITE_NETLIFY = "true"
+
+# Include shared functions
+[functions]
+  directory = "../netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["mongoose"]
+  included_files = ["../server/**", "../packages/**"]
+
+# API redirects to serverless function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/functions/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA routing - send all requests to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
