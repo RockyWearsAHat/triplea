@@ -413,8 +413,20 @@
    ───────────────────────────────────────────────────────────────────────── */
 .venueGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .venueGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .venueGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .venueCard {
@@ -427,6 +439,7 @@
   transition: all 150ms ease;
   overflow: hidden;
   text-align: left;
+  height: 100%;
 }
 
 .venueCard:hover {
@@ -541,9 +554,25 @@
 
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-top: 16px;
+}
+
+.productGrid > * {
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .productGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .productGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .viewAllRow {
