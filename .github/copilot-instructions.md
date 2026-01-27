@@ -51,23 +51,51 @@ This project contains a suite of three related apps built with Vite and TypeScri
 - **Triple A Muse** – the **front door** for the Triple A Music brand: a clean overview + routing hub that funnels users into Music (hosts) or Musician (performers).
   - Implementation note (current repo direction): Muse is an **in-between**. It can preview support offerings (rentals/services) and explain “what Triple A is”, but primary workflows live in Music (booking/tickets) and Musician (performer ops).
 
+### Product Analogy (from owner - Jan 2026 Discord)
+
+The owner made the following analogy that defines the product split:
+
+- **Uber** = the customer app (people ordering rides)
+- **Uber Driver** = the performer/driver app (people working)
+- **Uber Eats** = the premium marketplace (like McDonald's delivering)
+
+Applied to Triple A:
+
+| App                   | Analogy     | Purpose                                                                                                                                                                                           |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Triple A Muse**     | Uber (DIY)  | "Put together your own event" - Select event type (wedding, funeral, cruise, party), select performers (drummer, pianist, vocalist), select venue, select packages. Like building your own order. |
+| **Triple A Musician** | Uber Driver | "Work dashboard" - See incoming requests, accept/decline gigs, manage schedule, view earnings, track perks. Driver-app feel.                                                                      |
+| **Triple A Music**    | Uber Eats   | "Premium showcase" - Curated events, promoted artists, ticket sales. Like McDonald's menu - you see what's on offer and buy tickets. Owner hand-picks what's featured.                            |
+
+Key insight from owner: "Music is less important based on how it doesn't exist without Muse or Musician, but it's more important in that it will make more money than both of them combined based on the opportunities created by both of them."
+
+**Priority order**: Muse > Musician > Music (per owner: "Muse is basically the top priority, then musician, then music")
+
+**Brand meaning**: Triple A = **A**coustics, **A**capellas, **A**ccompaniments.
+
 ### Differentiation rules (must follow)
 
-- **Triple A Music (Hosts/Organizers)**
-  - Job: post stages/locations, create gigs, discover/request musicians, manage bookings.
-  - UI vibe: booking marketplace.
-  - Visual cues: stage/location imagery, performer cards, “post gig” and “manage gigs” CTAs.
+- **Triple A Music (Premium Marketplace / "Uber Eats")**
+  - Job: curated events, promoted artists, ticket sales for events the owner promotes.
+  - UI vibe: premium storefront - like McDonald's on Uber Eats ("see what's on the menu and buy").
+  - Visual cues: featured events, curated artist spotlights, ticket purchase flow.
+  - Key insight: "Music is where you get the Taco Bell delivered because you found the mainstream stuff you like."
+  - Not for: rentals, lessons, embroidery — those belong in Muse.
 
-- **Triple A Musician (Performers)**
+- **Triple A Musician (Work Dashboard / "Uber Driver")**
   - Job: see upcoming obligations, accept/decline, manage profile + direct-request settings, respond to inbound requests.
   - UI vibe: work dashboard.
-  - Visual cues: status cards, “today/this week” focus, requests inbox.
+  - Visual cues: status cards, "today/this week" focus, requests inbox.
+  - Potential future: musicians could "Rent Out Equipment on Muse" (community sourcing).
 
-- **Triple A Muse (Rentals & Services)**
-  - Job: **overview + routing** (start here, then enter the right app).
-  - UI vibe: brand front door (clean, visual-first).
-  - Visual cues: clear “Host” vs “Performer” funnels, plus lightweight previews of support offerings.
-  - Implementation note: keep Muse **overview + funnels** by default; avoid blurring responsibilities with Music (booking/tickets) or Musician (performer ops).
+- **Triple A Muse (DIY Event Coordinator / "Uber") — TOP PRIORITY**
+  - Job: **event coordinator flow** where users put together their own event.
+  - Flow: Select event type (wedding, funeral, cruise, party, graduation) → Select performers (drummer, pianist, vocalist, MC, etc.) → Select preferred genre → Select local venue options → Select event setup packages.
+  - UI vibe: step-by-step interactive form, like ordering a custom pizza.
+  - Key insight: "Muse is like an event coordinator" and "you could put together an assortment of musicians such as drummers, pianists, sax players, singers.. (so you can get an uber to Taco Bell, the gas station, and the train station)"
+  - Secondary features: instrument rentals, lessons.
+  - Note: Muse is NOT for tickets. Tickets live in Music. But users can book artists on Muse.
+  - Implementation: numbered steps with clear progression; keep explainer/mission copy at the BOTTOM.
 
 The repository is organized into three sub-projects:
 

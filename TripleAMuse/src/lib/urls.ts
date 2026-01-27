@@ -23,6 +23,27 @@ import {
   getMusicOrigin,
   getMusicianOrigin,
 } from "@shared/lib/env";
+import { TripleAApiClient } from "@shared";
+
+/**
+ * Create an API client instance with environment-aware base URL.
+ */
+export function createApiClient(): TripleAApiClient {
+  return new TripleAApiClient({ baseUrl: getApiBaseUrl() });
+}
+
+/**
+ * Get the full URL for an API asset path (e.g., instrument images).
+ */
+export function getAssetUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  const origin = getServerOrigin();
+  // On Netlify, origin is empty and we use relative paths
+  if (!origin) {
+    return path.startsWith("/api") ? path : `/api${path}`;
+  }
+  return `${origin}${path}`;
+}
 
 // Legacy exports for backwards compatibility
 export const SERVER_ORIGIN = getServerOrigin();

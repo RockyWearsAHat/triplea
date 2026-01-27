@@ -2,217 +2,288 @@ Rocky
 rockywearsahat
 Online
 
-Rocky — 1/2/26, 11:28 AM
-Hello Man, I have a quick guide for the bot for you, it has some features I believe you will find helpful
-Man — 1/2/26, 11:38 AM
-Rocky — 1/2/26, 11:54 AM
-The github page (with a front "README" file that is kinda an instruction manual)
-
-https://github.com/RockyWearsAHat/clash-royale-bot
-
-Just scroll down a bit and all the features are listed, but more for coders/people who may want to further develop the code.
-
-In summary
-
-You have access to different commands in each channel, each command is typed /command only the command in the chatbox and then you send the message to that channel to get the response to the command. The response is only visible to you normally but certain commands also have a "post publically" button at the end of the response so you can share it in the channel.
-GitHub
-GitHub - RockyWearsAHat/clash-royale-bot: A bot for clash royale pr...
-A bot for clash royale profile linking, stats & clan war tracking/notifications - RockyWearsAHat/clash-royale-bot
-GitHub - RockyWearsAHat/clash-royale-bot: A bot for clash royale pr...
-Rocky — 1/2/26, 12:03 PM
-Here are the commands you have, in #general (I will label all "channels" with a #) you have the /stats command, this simply pulls your stats or you can specify a name afterwards to get the stats of someone in the clan (autocorrected/referenced to closest mostly match) or a tag to get anyone's stats (not super useful but you can flex)
-These can be posted publically
-The more helpful commands you have access to are in the #war-logs channel
-You can use /warlogs or /warstats to pull the warlogs/stats of today (these are the same command just different names, I can update this if you want to only keep one)
-These commands can also take in an option argument afterwards (like the stats command, typed like /warlogs _day you want to look at_ => e.g. => /warlogs yesterday pulls yesterdays warlog snapshot from the end of the day
-These are comprehensive logs, labeled with the day, the date, the war day, points/fame, decks used that day, decks used for the total war & non-participants for that day
-Rocky — 1/2/26, 12:14 PM
-These can also be posted publicly with the button in the response.
-
-Finally you have access to an announcement command to ping users who have not used their decks yet, use this command in the #announcements channel, it's used /pingunuseddecks {announcement you want to send in channel}
-This will tag every player with decks remaining
-2 screenshots of the war logs being used, one without a day, the second one specifying /warlogs day:yesterday
-Image
-Image
-Rocky — 1/2/26, 12:23 PM
-Hope it works well, if you notice any issues or problems, or have any questions please let me know. & about developing an app, I figured out it's simpler than I thought except for publishing, that's a long process on iPhone for actual true inbuilt installable from the app store app, so I'm happy to start working on that if you still need, idk if you still need an app still but if you do need it let me know and like what is the purpose of it what is the main intention? What functionality do you need it to have? I remember you said you needed like a "scheduler" of a sort(?) but I don't think I ever really got into the functionality of it just did some scaffolding work.
-I still have a folder on my desktop called "ManApp" 😭
-Rocky — 1/2/26, 12:43 PM
-Oh, and I don't know if I mentioned this, but to use a command just go to the channel and type a forward slash (/), recommended commands that are available in that channel then appear, you can click them or type them directly, if you want to specify a parameter after the command you just type a space after the command then type whatever the argument is [these are labeled and should pop up after pressing space what it is for if available] (example imagine /callsign is a command, to use an argument you would type/callsign _THE ARGUMENT YOU WANT_)
-Man — 1/5/26, 9:58 AM
-Wow! Code master!!
-Rocky — 1/5/26, 10:11 PM
-bots been down a couple days I'm working on a more permanant hosting solution, I was just running it on my laptop and that's prone to dying and just not good to host, so I got distracted coding something else but the bot should be back up and running tonight I hope
-Rocky
-started a call that lasted a few seconds. — 1/8/26, 7:13 PM
-Rocky — 1/8/26, 7:14 PM
-whoops didn't know that hotkey sorry lol
-dude I never realized just how much you have to walk users through EVERYTHING with UI, like ik that sounds like a dumb remark like no shit it's the user interface, but I never realized how many people will just say something is going wrong because they're doing it wrong. Like because I didn't lock down viewing of every channel except the one you're supposed to put your tag in in discord, and even though it's labeled and at the top and literally right in front of you emani was like "it's not working" which like no foul to him it's my own bad I just never realized how like handholdy you have to be to get someone through setup/preliminary steps ig just a good lesson to me thought I'd share, I appreciate all the compliments you never let me know if you still needed that project or like what the purpose of it is. I stg it was like a scheduler you said like a mix of two apps but I just cannot remember it for the life of me, if you want me to work on it though I got through pretty much all the personal projects I needed to get through to actually run apps I've made previously (I can host my own server for websites & minecraft & the discord bot all at the same time 24/7 in the background [no extra windows] while my pc is on, I'm working on a private VPN rn (they have services for this but me being me) but that's out in the future bc I still need to do more research into the security of actually exposing it to being "publicly" accessible so I can use it for it's intended purpose), my point is, I have time, I have no projects, if you still need an app built let me know what it is in like a somewhat concise way and I'm happy to make it happen. The one shit thing about developing ios apps if I remember is I have to use xcode (apple's inbuilt ide) so my productivity is like 1/10thed, but I can make it work, I can probably link xcode's compiler to vs code somehow, and either way there are ways make pretty much any programming language into an app, so just lmk if you still are
-in need of a program for your needs
-idk if you are but if you do I need more portfolio projects & I'd be happy to help the best I can
-Man — 1/9/26, 9:06 PM
-You know Uber has 3 separate apps… I was thinking of something like that, but I couldnt remember if you said it was expensive?
-Yeah, you are extremely good at coding, so people often get lazy and rely completely on you for the quick fix rather than using their brain lol.. I appreciate you for putting so much effort into making this team official af bruv. You Rock (Pun intended lol)
-Rocky — 1/10/26, 1:10 PM
-lol thx dawg, and yea I do, it’s not expensive it’s expensive in time, depending on the service you need it’s really quite simple
-it gets more and more complex the more behaviors need to be handled, if payments need to be processed it’s another library, if you want google maps that’s an API, basically the building blocks already exist the simpler you can make the goal the better the agent is at sticking to building around that and the quicker it will be, but if you want a scheduler with payment processing and event handling so it only allows scheduling at open times and when you’re not already in an appointment or something the logic is simple enough but it is alot of logic, so like whatever you need don’t worry so much about the time or money, it’s free to code, the only thing I pay for is AI access so it’s not costing me more, I just need a clear goal of what the app(s) need to do, yes 3 interlinked apps is possible, 3 apps from the same base API (like all sharing a payment service) is as well, don’t worry so much about the logistics just what is needed if anything, if you need an app that is possible, if you need 3 apps also possible (idk how attainable for me as an individual in a reasonable amount of time, but possible)
-Rocky — 1/10/26, 1:18 PM
-basically if you can say I need it to do this is and this I can probably send you a website or dev environment that day doing those things, if you have a clearer goal for the project I can keep working and implementing things in tandem with that idea, whatever you need built can be built don’t worry so much about the logistics or how it can be done, that’s my specialty
-3 independent apps is a massive amount of time, but technically no different than 1 app with 3 different service tabs
-publishing is another story to get something on the app store is out of my control and in apple’s hands, so I could do something like a web app and a regular app until the regular app gets published so it’s functional, apparently doing something quick research though google says “90% of appd get reviewed within 24 hours” so it could be way quicker than I’m expecting, I’m just a realist and I know how some of these tech companies are with review times
-Man — 1/10/26, 4:31 PM
-Bro, you are extremely filthy. I never knew any of that, but you simplified it very well. I would definitely not feel right if down the line, the apps you made make me millions and you did it for free. If I start to make money off of this, I would be honored to work out a percentage plan, where you receive a certain percentage of the best 2 years of my sales. For example, if I make 20,000 first year if you got 5% you’d get 1,000, and the next year if it were 50,000, you’d get 2,500 more, total of 3,500z If there is a better year after the 2 years, you would get paid the difference between my worst year and that year. So basically if I make a million, you would receive $49,000 on 5% because of the difference between the worst year and the new top 2 years. If I made 2 million the next year, you would get 97,500. I dont have it perfected, but I feel that would be a respectful agreement, and after this, we would potentially negotiate partially ownership maybe, and/or partnership in new ideas.
-Rocky — 1/11/26, 1:58 AM
-absolutely, the money isn't the deciding factor for me, it's nice to have but I don't need it to do work, hell I've written atleast a million lines of code in the past year and not gotten paid a cent, it would be nice to get paid but also like 🤷‍♂️
-you could give me stock or we could work something out when the app is done and making money, up to that point don't worry about reembursement
-it helps my prospects of a job, and I just genuinely enjoy it, I just made my service manager live pull from github so my pc (which always runs) is able to get code from github and automatically run it 24/7, basically a "free" server, it's just fun to me, games are really damn difficult it's alot but possible and something I've been interested in, so idk if you got an idea let me know and I'd be happy to have a design partner
-game, application, whatever you need/want if it's software based lmk and I'll do it, if it's for in person services (like you're a handyman or an "uber" like service [although you'd get more business on uber]) then just pay me like $10-$300 and I'll be happy, you're working for your own money there what I do isn't necessarily important just helpful
-if it's a software you want to sell if it's a good idea that solves a problem I'm happy to make it but like 1% or 0.5% of the sales or if it goes public like stock would be cool, but again the money doesn't matter so much to me I'm fine living, it's helpful but let's talk project first before talking cuts, my only request is that even if not public I have access to the code to show potential employers, I wouldn't make it public especially if it needs to be secure, but just being able to still own what I write and I don't just have to hand it over exclusively and delete everything afterwards that'd be lit
-Rocky — 1/11/26, 2:09 AM
-and yea that "best of 2 years" is a good plan I do like that, however I don't want to cause more stress especially on a 5% cut, that'd be lit a 5% flat based upon what was made that year rather than having to match or do better than last year would be lit, even 2% at 1m in sales that's 20k which honestly after the service is made that's basically a free 20k I'm not doing much for, maybe some debugging/fixes or training/directing staff, but that's essentially 0 work 20k, so I almost feel bad with just that, if you had to match it every year I feel like it'd be more stressful than it needs to be this ain't a pension (as much as I do appreciate the offer) 😭😆
-we can talk money more as it comes to fruition, but for now if you can give me
-
-what the purpose?:
-
-what the UI (graphics) should look like?:
-
-what is the key idea of the program/what problem we're solving?:
-
-what does it actually need to do? is it a shop? a service? what is being sold? is there something being sold is it a donation bin? 😂 crypto?:
-
-just those 4 and I can get a pretty good idea of what needs to be done and actually have a direction to take it in from there I can send you updates and what's going on, and oh I actually kinda see what you mean with the payment, idk we can talk about it more don't worry so much about paying me I'm not that frugal, I'm happy on like a 1% flat tbh but we can work it out I wouldn't complain about 5% on that best of 2 years I am a little confused if you were to make 1m in the first year I'd get 50k, then if you made 2m the next year I'd also get 50k? bc 2nd year - 1st year = 50 then if you made 2m again the next year I'd get bumped to 100k? am I understanding?
-Man — 1/11/26, 12:45 PM
-You’d end up with 50K first year, and add 100K to that 50K for the 2million the next year, you’d have a total of 150K
-Man — 1/11/26, 12:47 PM
-I better get in while you still are doing coding like this!! Lol
-Man — 1/11/26, 12:50 PM
-The three apps would be “Triple A Musician” “Triple A Music” “Triple A Muse”.
-Triple A Musician would be similar to the “Uber Driver” app, in that, the musician can see their rating, their bookings, their obligations, and see the perks they get like: Embroidery for branding, or free instrument rental for being a 5 star performer
-Triple A Music would be like “Uber” would be for the customer, connecting them to musicians and locations to host events
-“Triple A Muse” would be like “Uber Eats” (editing this for better reference) both the performer and the costumer become the consumer, where they would rent the instruments, get lessons, look at places they’d like me to come and help them set up stages for their performance etc.
-Rocky — 1/12/26, 4:27 AM
-would you want possible “subcontractors”/employees that you could assign specific tasks to as well on your end of the Triple A Muse app? For now I can just make it applicable to you but so I’m not rewriting code it’s best to have the broad picture in mind as well, I’m assuming it would be helpful but not super necessary to start?
-And I like the plan, thx for laying it out so clearly, I’ll start ASAP, I’m trying to fix some issues with the clash bot but it’s just a headache bc of code reasons and my ability with my personal setup atm so I might just start
-would you prefer a containing app for all 3 and have each be like a “subapp” or do you want 3 truely individual but interconnected apps? this is mainly just for my own setup sake so I know if I should make 3 buildable executables/program files or if I should setup the project to make just one, this can be changed later pretty easily I’ll probably setup the project simularly either way but just curious as to the vision you have in mind? would you like it to be one app where then the user can go to “musician” “music” or “muse” or do you want 3 independant apps like “Triple A Musician™️” “Triple A Music©️” and “Triple A Muse📑”?
-Man — 1/12/26, 10:54 AM
-Yes, I would want that.
-Man — 1/12/26, 10:55 AM
-I’d like 3 truly individual apps. Basically 3 separate businesses.
-Man — 1/13/26, 4:55 PM
-Full name:
-William Anthony Moore III.
-
-My cellphone number:
-(253)-308-5140
-
-Personal Email: LifeLivedBetter@yahoo.com
-Rocky — 1/14/26, 12:25 AM
-tripleamusic.org muse and musician are all available domain names if you want a web interface as well, I’ll send you the git repo when I make it and the live site when it’s published, right now it’s just kinda a web app I’m bundling for phones and I can bundle for desktop as well
-& bet I’ll hit you up
-Man — 1/14/26, 1:12 AM
-.org is the domain that is available for all three but not “.com” right? I like org, just asking.
-That sounds great about the bundling
-Rocky — 1/14/26, 1:13 AM
-yea, .com tripleamusic isn't available at all just up for offer, which speaking from experience generally means they're looking for 20+ thousand
-which I assume is just like more than worth it for just launching the service
-Man — 1/14/26, 1:14 AM
-Lmao
-Rocky — 1/14/26, 1:14 AM
-it is a plausable investment but in my opinion money like that can be used for much better things
-the .orgs are all $7.50 a piece
-so $22 total
-for all 3
-Man — 1/14/26, 1:14 AM
-Im sure if the business is successful, I’ll have the 20K to make that investment, so I like org
-Rocky — 1/14/26, 1:15 AM
-I don't have to bundle it on the web either, I can just make a standalone app if you prefer, just for development though having a site you can view and comment on is easier bc it's live for both of us all the time rather than you having to download something or run it on a computer every time
-Man — 1/14/26, 1:15 AM
-Do you have a way I can transfer the funds to you for that?
-Bundle is fine
-Rocky — 1/14/26, 1:16 AM
-and yea, also you can keep the .org and just add the .com later on, it's basically just 4 values you gotta type in the right spot, and yea dw about that rn I doubt they'll be gone anytime soon, but if you want to zelle me and I can lock them down for a year my phone is 4357317654 or email alexwaldmann2004@gmail.com
-so like the .org and .com could point to the same location, just two different domains
-honestly I think .org sounds more professional like .organization, idk might just be me lol
-Man — 1/14/26, 1:17 AM
-I agree
-Rocky — 1/14/26, 1:17 AM
-Here actually can you just do it so you actually own the domain name and it doesn't fail if my card doesn't go through
-then you also have the ability to prolong subscriptions, auto renew all of that
-I don't want to make a full account for you like I did Nat bc passwords are a bit more personal info than I need 😭
-here
-https://www.namecheap.com/domains/registration/results/?domain=tripleamusic.org https://www.namecheap.com/domains/registration/results/?domain=tripleamuse.org
-https://www.namecheap.com/domains/registration/results/?domain=tripleamusician.org
-Sign up here
-https://www.namecheap.com/myaccount/signup/
-Once you've paid for them it'll be yours for a year, you can choose to autorenew so you don't lose it, I think renewal is like $10 each? idk it says in small text beneath the price
-I will only need some very small things from there and I'm sure you are more than able to set it up, plus if you do get the .coms in the future you already know how to set them up, don't feel like you need to do it tonight but just so it's actually tied to your name and you are the rightful legal owner of the domain you should buy it
-I could buy it for you but then technically it's in my name and my responsibility and honestly I already run 2 accounts with like 4 domains, I would prefer it to just be auto on your card given I'm a broke student and there's a 50/50 shot that renewal payment isn't going to be good 😆
-Rocky — 1/14/26, 1:42 AM
-Where do you want the admin page wired in? like admin.tripleamuse.com? any admin. prefix? no admin. prefix at all just a default login form for all users?
-Man — 1/14/26, 1:43 AM
-Image
-Rocky — 1/14/26, 1:43 AM
-sorry, admin login and also admin, it can really simply be like /admin (I'll do that for the time being) but if you prefer the admin. prefix I'm happy to change that
-Man — 1/14/26, 1:43 AM
-Password is “ROCK2026!”
-Username: 3AMYou
-Rocky — 1/14/26, 1:46 AM
-oh word, uhh ik this is a strange request but could you buy the domain names themselves? It'll let you 1) write it off as a business expense and 2) in case my autorenew fails (bc I'm broke as shit lol) it won't just remove the domain name from your presense, I'm happy to set it up for the time being but you should later on change the fallback card and prolly the password
-for now though I'll set it up if you want to reemburse me I can send the final reciept
-Man — 1/14/26, 1:46 AM
-I bought all the domain names under that password
-Rocky — 1/14/26, 1:47 AM
-OH BET
-ok lit, I will link the DNS/name servers in a bit
-Man — 1/14/26, 1:48 AM
-I dont understand this.. can you explain a little more what you mean?
-Rocky — 1/14/26, 1:48 AM
-I'll probably be changing some things around with my hosting setup later on, but for now atleast we can get a decent running result, I'll just set it up on Netlify for rn [can be expensive as time goes on but for testing it's great and free]. I'll send you the links when they're live, when I get the final hosting setup running I'll get you a VPN key and my VPN program
-Man — 1/14/26, 1:49 AM
-Great!
-Rocky — 1/14/26, 1:49 AM
-oh yea, sorry, DNS (domain name service) basically tells the webservers themselves (what stores the data and where) that that IP links to that name
-"name servers" are just another name
-basically without them every website would be like 12.124.248.12.32 (or whatever, just a bunch of numbers, "pure" IPs)
-Man — 1/14/26, 1:50 AM
-Admin prefix meaning “Admin” or “www”?
-Rocky — 1/14/26, 1:51 AM
-technically the full thing would be www.admin.domain.org but this can be configured so there is no www. prefix and such, it'd just show admin.domain.org in the URL
-it's just a slight amount of seperation between users and admins, it doesn't really add any security or anything just preference on how you want it to look, at the end of the day though if you're wanting apps it really doesn't matter how it's done
-Man — 1/14/26, 1:54 AM
-I believe in you guy!
-Rocky
-started a call that lasted an hour. — 1/14/26, 4:16 PM
-Rocky — 1/14/26, 5:04 PM
-https://www.w3schools.com/
-W3Schools offers free online tutorials, references and exercises in all the major languages of the web. Covering popular subjects like HTML, CSS, JavaScript, Python, SQL, Java, and many, many more.
-Image
-Rocky — 1/20/26, 1:32 PM
-Hey on the Music site do you want "customers" (not event hosts but like the people who would go to the event) to be able to login (or not login) into "Music" and place orders for tickets? You could be like a seatgeek or tix24 or whatever it is for these venues if they end up using your site, would that be of interest to you? There could be a flat like 1% fee for using the site and we can always discuss and change where you want to draw profits from but I think it'd be good if it's a one stop shop to cater to artists and hosts of events, having a place for hosts to easily sell entry into their event would probably get even more cash flowing through and it would be even more incentive to work with you, like they literally just go through a form of either uploading the venue and allowing people to apply, or they themselves as the host can request a certain artist on a certain day/time, and then tickets are literally just a checkbox if they want them sold, no other sites they have to go through and all the money associated with the business (outside of merch being sold for artists on the site which could later be implemented but isn't currently) is flowing through you, I think it'd be beneficial and it would incentivize more people to use your service, I could even look into ways that this could be implemented with these already existing ticket vendor sites so tickets don't get oversold and your site accurately reports the seatcount left to these external sites, it could even be like an integration when the host can link to these other vendors and then tickets get posted automatically there as well (or atleast I'm pretty sure as long as there's an API it's possible I'm sure)
-I'll send you the links to the sites later today I'll probably get them published to atleast a dev environment today, it might be on all one site just like music.whatever.com or muse.whatever.com for the time being given it's a monorepo and I don't want to split this into 3 repos/tinker with netlify for multiple days to get that to work, but however it's done I'll keep you posted, just would you be interested in also catering to people wanting to go to these events in/as the form of a/the ticket vendor for the event?
-Man — 1/20/26, 2:29 PM
-I love that! Maybe this would be a good option for the artist to turn an “Open For Tickets” setting on or off depending on if we have the layout for the venue or not (assigned seeting tickets would cost more than “at the door” tickets), if they just want their friends to watch them, or if they are a 4star performer or better. This may be difficult, because there are so many places to perform that arent duplicated in other states, for example: Mcdonald’s is in every state, so Uber Eats just copies and pastes the menu, but a “Club X” is like one of 5000 places to sing, so getting layouts would be a lot more work. But I agree with you, and would 100% want to develop this idea as a secret feature artists get surprised, and hyped by.
-And yes, I would like to be the ticket vendor
-Rocky — 1/20/26, 2:46 PM
-The venue itself would set the seat capacity and then users could link to 24tix or whatever it is, idk if there is a way to get affiliate links or whatever we could deal with that when we get to it. The venue itself as it lists will set the seating capacity, musicians could apply to the venue or the venue host themself could request an artist at their price/at an offered price. The tickets would solely be based on the capacity of the venue that was set by the host not by the artist or by you or anyone else, each type of user should be able to set up their profiles/events/links/whatever so the site itself handles most of the logistics, the artist basically has their schedule and a dashboard where they can request things from you, "hosts" can post new venues/events looking for talent, and you and your crew basically act as orchestrators for getting the event setup, or your profit simply comes from ticket sales or just being the facilitator, preferably low fees like $1-2 for each ticket and maybe like 1% max of $20 on the venue (I think that's fair and customers/hosts would be happy to pay that for the simplicity, but feel free to lmk) or if you are booked to help setup you would get your pay for that as well obviously bc that's active work, but as a marketplace those would be your fees then whatever services you want to offer I'll try to make a way for them to easily be setup, but each category/service initial setup will probably have to be coded rather than just having like a dynamic system. All items within these categories could be dynamic (like all your instrument rentals, your different packages for setting up venues, but these different views like "Rentals", "Bundles"... etc would have to be set up by hand but I'll think on it if there's a better way). Either way I'll get the system working as a marketplace facilitator for as much as I can, it's complex but not difficult just alot
-Man — 1/20/26, 3:56 PM
-I was interested in getting the layout of these places to be the exclusive ticket vendor. Uber Eats gets paid by the customer, and then pays McDonald’s. I was hoping to pay the Venue, and control everything over the top. I like the 24tix, I would just be unsure, because idk if they would sell tickets for a local lounge or something. I agree 100% with you, I just want to make sure I have everything covered.
-Rocky — 1/20/26, 10:29 PM
-"this exactly: Host (Music) = authoritative/operational, a place for people to browse upcoming events or post an event looking for an artist, Musician = crisp/work-dashboard, Muse = brand/front-door, “Apple service calm” vs more “Uber ops/dispatch” doesn't really make too much sense to me, but I want musicians to feel welcomed in and like they're joining the family, muse should be a clean concise and simple way for people to preview services offered and get to the proper dashboard for whatever they are trying to do, music should feel like a place for people to browse...?? (All upcoming events and concerts being offered??)"
-Man — 1/21/26, 12:56 PM
-Muse was to be more like “uber eats”
-Music is Uber, that matches “authoritative/operational imo
+Man — 1/21/26, 12:57 PM
 Musician is similar to “Uber Driver”
 I should’ve corrected this earlier!
 Man — 1/21/26, 1:16 PM
 The only one I would tell ai I want to be like is Muse (Uber Eats) and Musician (Uber Driver)… maybe Music (Uber)
-Man — 3:43 PM
+Man — 1/23/26, 3:43 PM
 I got a $23.04 refund from namecheap.com should I be aware of anything?
-Rocky — 10:05 PM
+Rocky — 1/23/26, 10:05 PM
 Uhhh?? No? I don't believe so?
 I'll look on the account to see what I can find if there is payment history or if you want to scour for it I'm sure you can figure out what it is, but idk that's strange?
 Maybe some configuration/registration thing where it charged you for some option or like not as a first time purchase and then the system caught up with what the offer actually was or smth?
 Honestly I'm not sure?
+Man — 1/24/26, 8:17 AM
+Okay, as long as you still have access to what you need, I dont have any worry about it.
+Rocky — Yesterday at 12:00 PM
+Image
+Image
+Image
+Image
+Image
+Image
+Getting there
+I'm going to work on getting seat reservations and venue setup are working in a bit, I'll do some UI redesigning as well so there's a clear direction the user is supposed to travel (like they can see some of the Concerts near you section below "Find live music")
+Also sorry for slacking in war this week, I was exhausted, if you want to demote me that is valid and I deserve it I didn't hold true to the rules & there are other people who did better, I'm happy to stay co but also like rules are rules so whatever you decide
+Man — Yesterday at 1:32 PM
+What would be interesting, is if one person booked an artist and paid all the tickets to have a private performance. This website is going to create so many experiences man. I love the progress bro, and Im impressed at how you articulate the clear direction youre traveling even if it doesnt resemble the journey you want the consumer to travel yet..
+Man — Yesterday at 1:33 PM
+Nah bruv. You still Co, only one co will be demoted in the same week, and Tris did less, you good bruv.. you might not get the vote by the Colosseum after this one, but that’s for the people to determine. In Legendary III we will have 5 Co-Leaders and I’ll promote you back up then if you dont get the vote.
+Rocky — Yesterday at 1:34 PM
+Thanks chief, I'm working to improve the things I've done and the site is coming along well, it's still not live but I've just been a little lazy I'll get it published soon, and maybe we'll see I just was sick and exhausted this week and ended up passing out 2 nights before doing any battles/my final battle, I'll do better in the colleseum
+Man — Yesterday at 1:41 PM
+Im in no rush, I wanna give you (The Artist) time to perfect his painting. I dont micromanage Rock; I love depth, intricacy, and all the bases covered for protection.
+
+(My wife was wondering if there was a way to have the rights to this model youre creating nationwide, so nobody can take this business idea, and pretend they came up with it. Im sure it would cost a fortune to do if it’s even possible. If it’s not possible, that’s fine too.)
+Rocky — Yesterday at 2:59 PM
+I mean yes but that's more a question for Nat she has a much better idea of financial law then I do, the service and the code itself is copyrighted and I can backdate a license so it covers everything, so legally yes it would be yours/mine but I sign rights over to you, about copyrighting/trademarking the actual service, I'm less sure about that, you can trademark aspects of it but that's more a question for a lawyer than me
+Man — Yesterday at 3:13 PM
+I appreciate it! Good to know. Thank you.
+Rocky — Yesterday at 4:05 PM
+basically the code and the proprietary software can be copyrighted and is automatically, the repository is private as well so it's not like people can easily access the source code, this is particularly important for the server they have to trial by fire to try and hack it instead of being able to analyze the code for flaws
+that is more security then copyright, I think portions of the service can be copywrighted/trademarked, but to what extent I'm unsure, possibly the premise of an "All in one" service but idk if that's trademarkable, plus trademarks and patents are expensive and lengthy to get, I'd say worry about getting the service up and running first then when you have some money get a good lawyer and figure out what to do from there, what is protectable, what should be done, how to register publically (if it ever grows to that size), etc
+Rocky — Yesterday at 4:12 PM
+I can't be a one man team if that's the vision, but I can absolutely get it up and working, as for the legal stuff though I'm less sure what is protected, but I do know noone can just copy and paste your code and it become theirs, it's my intellectual property and when we create a license it will be yours which you can choose what to do with, but as for the actual services offered you have to talk to a lawyer about that as I'm not particularly sure what can be protected and what is considered fair game and hard to make a case for, it will mainly be what you can argue to be innovations or creations of your own//original works, the code is already copy-written automatically just being written and published by me (nothing about me but that's how intellectual property works however without a license someone could fairly argue they didn't know but the code belongs to me and I can do what I want with it, I'll make a document to include you in the ownership and ensure that it is a non-commercial restricted with permission license and everyone else from any version will be prosecuted to the extent of the law)
+Man — Yesterday at 4:42 PM
+Yeah, Im not requesting you be a one man team lol.. I was just interested in seeing if you knew anything briefly about that. Dont worry any further about my earlier question. I put it in parentheses, because I knew it has nothing to do with what youre supposed to do, I was just seeing if you knew anything, especially because your work is really good!
+Rocky — Yesterday at 4:44 PM
+Namely just created/written works automatically get copyrighted, you can bring someone to court if you can prove you had it before them, business stuff gets kinda trivial though because you can't copyright things to ensure you have a monopoly on them essentailly, you have to talk to a lawyer for the real answers there
+Man — Yesterday at 4:44 PM
+Thank you, lawyer, perfect.
+Rocky — Yesterday at 4:45 PM
+\*Not legal advice lol
+Don't sue me por favor
+Man — Yesterday at 4:45 PM
+Couldnt imagine doing that bruv, I would see it the other way around if anything.
+Rocky — Yesterday at 4:46 PM
+Nah, I couldn't
+Don't have the money
+Man — Yesterday at 4:47 PM
+Lol smh glad that’s your #1 reason lol
+Rocky — Yesterday at 4:47 PM
+yea, I mean as long as I don't get done dirty I have nothing to sue over
+Man — Yesterday at 4:47 PM
+Likewise
+Rocky — Yesterday at 4:47 PM
+and most people online aren't trying to hack tbh, the most you'll have is probably copycats for awhile and hopefully by that time you have a better team
+👍
+Not that I'm bad just a multi state/national service I could not keep running and fixing and maintaining as one single person, I can try and if AI keeps improving it's possible but it's insanely difficult
+I can fix some things but if someone tried to bring it down with enough force they probably could, shitty thing about apps and security it's cat and mouse and you just gotta hope you can patch the holes before someone you don't want to find them finds them, I'll do my due dilligence but honestly as to what extent the buisness is protected I'd just research with google and chatgpt, maybe consult a copyright lawyer if you're really that serious bc they will know what is better
+Man — Yesterday at 4:50 PM
+Not worried about it.. even if someone stole the idea, it’s not a big deal.. just was speaking imaginatively.
+Rocky — Yesterday at 4:51 PM
+valid, yes the code technically belongs to me I'll update the repository to sign rights over to you as well with creation and limited rights for non-profit (e.g. I could show an employeer) outside of the salary I take from the company (I can't profit off the code myself) for myself, so it'll technically belong to you, maintained by me
+Man — Yesterday at 4:52 PM
+There would definitely need to be cemented agreements in place for there to be anything to sue over anyway… the best of 2 years on 5% would still need to explain the obligation you would have and for how long. I couldnt see you needing to be a one man team to prevent theft, I would more so see you as a partner, modifying the website aesthetically at most
+Rocky — Yesterday at 4:52 PM
+we could technically transfer the git repository to you as well if you want to technically "own" the code but that's your decision
+Man — Yesterday at 4:52 PM
+Idc about ownership.. it was my wife’s question.
+Rocky — Yesterday at 4:53 PM
+Yea we can figure it out, there are alot of controls that I tried to add to help you set up the business how you want, there are these site configs:
+
+# Fee Configuration
+
+# Platform service fee (Triple A Fee) - can be:
+
+# - Percentage: "1%" or "1.5%" (0-100 with up to 2 decimal places)
+
+# - Flat amount: "$1" or "$0.50" or "1" (in dollars, with or without $ sign)
+
+# Default: 1%
+
+PLATFORM_SERVICE_FEE=$1
+
+# Fee charge mode - controls whether the Triple A Fee is charged:
+
+# - "transaction" = once per checkout (regardless of ticket count)
+
+# - "ticket" = per ticket purchased (multiplied by quantity)
+
+# Default: transaction
+
+FEE_CHARGE_ON=ticket
+
+# Stripe processing fee (reference only - these are Stripe's actual fees)
+
+# Percentage component: 2.9%
+
+STRIPE_FEE_PERCENT=2.9%
+
+# Fixed component: $0.30
+
+STRIPE_FEE_FIXED=0.30
+
+# Enable Stripe Tax for automatic tax calculation and remittance
+
+# Set to "true" to enable (requires Stripe Tax to be set up in your Stripe dashboard)
+
+# When enabled, use the /api/stripe/create-checkout-session endpoint for hosted checkout
+
+STRIPE_TAX_ENABLED=true
+
+so you can modify those how you see fit
+that is for tickets, I'll add controls for artists booking and venue posting
+Man — Yesterday at 4:54 PM
+I see you as a partner… which is why I would offer you 5% of the best 2 years based income coming from the site. We would still need to put it in writing, so I gotta get a lawyer anyway.
+Rocky — Yesterday at 4:55 PM
+We'll figure it out, don't stress it or dive into it too much when you don't need to, I'll let you know when the site is fully functional and you can test it and give feedback
+It's like 50% of the way though that final 50% is always kinda brutal so we'll see if we/I can get it up an running soon, then you can worry about a lawyer
+when it's like a couple weeks out I'll let you know, I'd be surprised if I could finish it in two weeks atm though there is alot of functionality but I'm working away, just might not be perfect from the jump
+Man — Yesterday at 4:57 PM
+I dont understand any of that code.. which is why you would be a partner for it.. It would take a while for me to get this aspect of the business up and running anyway. I dont see me utilizing this website for at least a year or two. I have to do the promotional marketing, the footwork, make the connections, and send you information of the people who register to be rented from, or perform, or the venues that give me the ability to broker on their behalf.
+Does this website have a way of calculating the amount made per year?
+Like I said, this is a COMMUNITY based idea. Companies, and performers registering is what will create the traffic, not necessarily my equipment.
+The reason I would give you 5% of the best 2 years is for continual assistance, and a return on investment for you that’s worth you working without getting paid upfront.
+One of the reasons I had no problem with you having 50% ownership of the website without transferring the website ownership to me, is so that you would have leverage until you received some form of payment.. if you want me to just pay you $500 now to complete this project and transfer it to me, that’s up to you… Dont want you slaving over something you dont want ties to! I would just have to hire someone else to continue to update the website based on new company registrations.
+Man — Yesterday at 5:30 PM
+I assume I will need a lawyer for more than just copywriting… I will need a lawyer to write up a digital contract companies and performers can sign on line, so I can document easily, their agreement to participate with this program. I want the demand to be easy to get, which means I want to have agreements where I can hold venues, musicians, and customers accountable .. I would potentially even get a third party to do customer service based on how big this would get…
+This thing youre building by yourself is huge, and this thing Im building by myself is huge.. bigger than us.. it’s gonna take some trust for me to let you in on the work Im doing and vice versa… Just know I trust you, and want to give you leverage so you have security in your work. If you want $500 and want to stop when you’ve completed the journey, we can do that too, like I said a few messages ago.
+Rocky — Yesterday at 6:59 PM
+I can add it, stripe itself collects tax and tells you if you've hit nexus and need to remit in that state, you have to provide the registration for the business in that state though
+Rocky — Yesterday at 7:01 PM
+I'll help whether I'm getting paid or not, just depending on the scale it may become unmanageable for just me with school/life, millions of lines of code is not easy to keep track of, even with AI it uses tons of tokens to even find the relevant code when making somewhat niche but not super niche changes, you have to give it anchor points or it just gets lost entirely as the project expands
+Rocky — Yesterday at 7:02 PM
+yea absolutely, businesses are continuing, and I plan on being a team throughout the lifecycle of this application, moreso just genuine millions of lines is hard to read as one person, it's laggy, it's slow, it's rough to work on, possible but rough
+Rocky — Yesterday at 7:07 PM
+Yes, you can create the documents yourself but you should absolutley get them reviewed by a lawyer, and yea we'll get through it I'm just saying when you do have funds if the entire company relies on me for maintaining it's runtime I cannot be responsible solely for that, with a small user base I can find bugs quicker than they can, but with millions of users the probability someone does something unexpected is much much higher and having more than one set of eyes to review what is actually happening is WAY more beneficial than anything I could ever do just myself, even if it's just a freelance security worker or just a friend who wants to learn to code I can train them, but having 2 heads is easier to catch things before they go wrong over one head, that said I'll do my best but fair warning millions of lines of code is unmaintainable for one person so if the service grows to be larger than just us or a couple hundred users and a couple venues, it'll probably need a development team, we can always renegotiate salary agreements from there though bc 5% for one developer, though generous and though it was my original work that created it, unless I'm actively maintaining it that is alot of money to spend on development for one developer
+you don't need them to be notarized or anything until you want to go public, just draft them yourself, print them and sign them as applicable, then either scan them or just save the paper and it's legally binding
+if you go public you'll have to get alot of documents notarized but for basic operating agreements drafting them yourself is legal (atleast according to my grandfather who was a lawyer back in his day)
+as long as it has the correct signatures and it's dated and such it's legally binding if declared to be, you can bring it to court as your evidence
+that said though I will keep you updated as development continues, because the basic idea and workflows are actually quite simple and just need some smart implementations to be secure
+If it's implemented well once it shouldn't need to be implemented again is the key idea but that being said 2m+ lines of code gets laggy and hard to debug so I may have to split the projects or if this grows a substantial quantity we may need more devs
+Man — Yesterday at 7:14 PM
+Youre doing a phenomenal job, I imagine! I understand this is a lot of work, and Im willing to run the prototype when it is functional and published until we’re able to help you get a team that can clean it up and turn it into a machine everyone can help monitor.
+Rocky — Yesterday at 7:14 PM
+bet, thank you, I'll work on getting it running on netlify rq, it probably won't be forwarded with the proper urls rn but I'll send you a working link in like 15 hopefully
+messaging won't work because netlify is "serverless"
+serverless means it creates a new server instance for each request, not truely serverless, that's not a thing, but server is running consistently, serverless starts new instances each time and shuts them down afterwards to conserve and distribute resources, great in principle but then websockets don't work because there's no sustained connection to connect into, when I host it from my PC I'll fix that
+for right now everything should work just not live messaging
+Rocky — Yesterday at 8:02 PM
+https://tripleaevents.netlify.app/
+https://tripleaevents.netlify.app/music
+https://tripleaevents.netlify.app/muse
+https://tripleaevents.netlify.app/musician
+oh weird things are erroring, the first link works
+give me a second
+Man — Yesterday at 8:06 PM
+5% would be a lot of money for one developer, but my hope is that, if you plan on owning a business, we can renegotiate this best-of-2years-5% deal, with you leveraging your team of coders for this same project, and have your people manage this project that would feed so many people if this was successful.. If this project isnt successful, it will stay in the smallest fetal phase and make enough money for you to feel good about your work, and for me to make money on the equipment I already have… The renegotiation would terminate that precious 5% deal, and upon termination, you would receive a minimum of $1000 if 5% of two years is less than that, and you would be free to go. This project will not make more money than what we invest in it. $1000 is 5% of $20,000, so if you wanted to make $150,000 you would have to invest in your business, leverage against me a new deal, and receive a higher percentage than 5% for your employees.. If you dont invest, this thing wont grow, and I dont mind that, because the ground work will make me money without the website.
+Rocky — Yesterday at 8:06 PM
+there we go
+Man — Yesterday at 8:09 PM
+I am excited to show my wife what we have so far.
+Rocky — Yesterday at 8:10 PM
+I'm hyped you're hyped
+musician page is the most dire redesign needed, I'll try to set up the host panel and musician pages to be better
+those links will be live for the git repository though so it will always be the most up to date version if I've made edits
+any comments or anything feel free to share
+Man — Yesterday at 8:20 PM
+Without multiple developers, I believe You will make more than the minimum just based on my hypedness to promote people to use the app, or website to pay lol. Even if there are glitches, the ground work Im going to do to promote these sites is going to cause these sites to crash and burn, or miraculously float without a crazy amount of developers. Once I hire other developers though, and our partnership is through based on me having full ownership of the sites, the best of 2 years would be terminated, and you would receive your minimum, or whatever 5% is (whichever is more)… but we have to also make sure we establish what you have to complete before I receive full ownership which commences the minimum payment. I would think the site has to make 5K to prove it is functional, before you can cash out. 5% of 5K is $250, which times that by two is $500 not $1000, which means you would get the $1000 before your 5% earned it if you wanted to cash out. That seems fair to me.
+Rocky — Yesterday at 8:25 PM
+yea, I could care less about the money, I'm happy to continue to work as the site grows, just notifying you in advance that if this does scale we will probably need a team of more than just me
+keeping a server running, let alone multiple servers is either expensive or really difficult
+or both
+idk we'll figure it out as it comes to fruition
+like I enjoy the prospect of money but I'm in this for the long haul a good relationship with a reputable business is much more valuable than any money
+Man — Yesterday at 8:38 PM
+I love music, I couldnt care less about money as well! Developers keeping track of code is like business people keeping track of money. Money tracks to people who are accountable, and it in itself is the coding of the business. Residual is like ai, the better the residual income, the better the tracking, the better the identifying of great minds is. It is my desire to create a full proof plan that satisfies the code of good business, just like you desire to identify good code through successful ai programming.
+Man — Yesterday at 10:21 PM
+Triple A Music would basically be a Music Label which would fund, produce, market, and distribute an artist's music, handling logistics, financing, and promotion in exchange for ownership of recordings and a share of profits, providing artists with teams for A&R, legal, branding, and career development. Basically the best of the best TripleAMusicians would go there, and the customers would go to TripleAMusic to see the cream of the crop. Triple A Muse would help consumers find local artists and all the minor things.
+A&R (Artists and Repertoire) is the division of a record label responsible for talent scouting, signing new artists, and overseeing their artistic development.
+Rocky — Yesterday at 10:29 PM
+ah so you're trying to be more of a label and logistics service than anything else, did not realize that I will fix that
+so do you want to handpick artists displayed on music, or do you want it to be algorithmic based on popularity and if they are like a "premium" or listener-popular artist (this could pull spotify statistics or other platforms)?
+Man — Yesterday at 10:35 PM
+You dont have Muse wrong or Musician wrong. Muse is basically the top priority, then musician, then music… who the community is championing would basically get signed. The music videos, and the streaming service of musicians would be on Music. And yes I would want it to be algorithmic based on popularity.
+Anybody I promote on Music, would just have extra promotion on there. Music would have previous performances from local artists that arent signed and are signed, only I would want the people I sign to have visibility over everyone else even if they werent as popular. I would mix popular in with the signed people
+What if Triple A Music also allowed people to pay to watch live events through twitch or something… donating or something. Maybe Im adding too much to keep track of smh.
+Rocky — Yesterday at 10:40 PM
+so music kinda as a marketplace for tickets and smaller events, almost tailoring to the small audiences and venues, muse as the main platform you want people to be on buying tickets for larger events or tours for artists, some advertisements could be ran on music but music is like a platform for artists to advertise themselves to potentially get booked, and it's possible but idk if it is with twitch idk if there are private streams like that I think I could definantly implement it though if you want a whole streaming service as well
+it's easier to implement youtube into it, but it's possible to make a custom service
+defiantly a later step but I will keep that in mind, what are the target audiences for each, bc I was thinking music was meant to be the place for tickets, muse was like the main advertisement/funnel to get people onto either site but also sell them on products, and musician was like purely for musicians, am I missing something/off?
+music is the place for tickets, possible rentals, hosting events, that sort of thing
+but idk?
+Also what's up with Man & WAM in the server? Is WAM Jelly? or your second account?
+Man — Yesterday at 10:52 PM
+Keep what you originally had
+Music would still be where people get tickets
+Youre right
+Man — Yesterday at 10:57 PM
+Wam is my BBC Prep account
+…
+Man — Yesterday at 11:06 PM
+…
+Man — Yesterday at 11:20 PM
+MUSE ISNT FOR TICKETS, BUT YOU CAN BOOK ARTISTS ON THERE.
+For Music, ticket sales for Triple A Music promoted artists would be prioritized, for Muse, you could put together an assortment of musicians such as drummers, pianists, sax players, singers.. (so you can get an uber to Taco Bell, the gas station, and the train station). whereas Music would be where you get the Taco bell delivered, because you found the mainstream stuff you like, and you dont need as much direction. Music is not where you get lesson, rentals, embroidery, it’s where The premium branding level embroidery print press advertisements for the performer etc is displayed for the consumer like an Uber Eats.
+Man — Yesterday at 11:28 PM
+Muse and Musician make Music what it will be… Uber Driver and Uber is why Uber Eats can exist.. gotta establish the driver (Uber Driver) and the customer (Uber) before you can show Mcdonald’s you have the means to broker customer and delivery for them where they had no delivery… so basically Music is less important based on how it doesnt exist without Muse or Musician, but it’s more important in that it will make more money than both of them combined based on the opportunities created by both of them.. Basically put Music out of your mind until Muse and Musician are established and Music will make more sense. Tickets dont matter without the consumer base which is developed by Muse and Musician. Muse is like an event coordinator, select “wedding, funeral, cruise, party, graduation” and then check mark select “Drummer, or pianist, or vocalist, or Master of Ceremonies blah blah” you’ll select the artists you want then select “local venue options” then select “event set up packages, speakers, etc” you can select “preferred genre”..
+Rocky — Yesterday at 11:39 PM
+lol I'm dumb I just realized that logging back in I was like "oh it could be his mini" yea that makes sense
+so muse is to browse concerts and possibly book a concert, someone could start a venue request from music but that flow should take them through muse?
+"venue request" like person requesting artists to apply a concert for a specific venue they are posting on the site/hosting at?
+Rocky — Yesterday at 11:47 PM
+that flow would go through muse because that is where you really want hosts and concert goers\* to be, music is the inbetween "marketplace" (still everything is interactable for baseline requests, tailoring to the most customers?
+Man — Yesterday at 11:48 PM
+Basically Music, would be me putting events together for 5 star artists, and consumers would go there to see what Mcdonald’s has on the menu coming up. Music is where you can basically see promoted musicians, venues, and tickets. Muse is where you would put it together yourself.
+There is overlap between uber eats and uber, because the consumer is on both of them
+Rocky — Yesterday at 11:50 PM
+Ok yes I understand, cool thank you that is good insight, doesn't really change what I'm doing at the end of the day but it is important to get details about the structure you want so I'm not refactoring 100x over, thank you for the input, if you think of anything else feel free to share otehrwise Ima lock in (no promises it'll be on the site that much I might work a bit on it, but I want to get NES DK to work on my emulator and then go to bed). I'll feed this chat to the agent and ask it to revise though
+Man — Yesterday at 11:50 PM
+No rush bruv
+Rocky — Yesterday at 11:50 PM
+And yea I getchu, they can be on either and they interact simularly, but each is a different service, for you you don't necessarily want different services but different offerings of your service
+Man — Yesterday at 11:52 PM
+The driver is required to drive… for uber eats and uber
+Rocky — Yesterday at 11:52 PM
+Like same sort of ideas and offerings on each, but music is more handpicked, flashy get people in the doors and to the events you're really pushing, muse is the "DIY" setup a concert you need an artist at or whatever, tickets can be bought here but it's more of an open marketplace, musician is self expanitory
+Man — Yesterday at 11:54 PM
+(Triple A Muse/Music/Musician, the As stand for, Acoustics, Acapellas, Accompaniments.)
+Rocky — Yesterday at 11:55 PM
+and ye that makes sense, I didn't realize uber eats and driver were one in the same though I thought it was two seperate accounts, not to take away from the analogy the point is that wherever the artist, customer or whomever is on they should be able to easily navigate to where they want to go and they should have the opportunities available to them presented clearly like how uber says "Want to drive?" => "Be a eats driver" OR "Drive around people" but like it's all clearly there and in that one Uber platform, you want it to be concise and well organized not necessarily laid out exactly the same
+?
+Man — Yesterday at 11:56 PM
+Yes
+They arent the same, but “Uber Driver” gets deliveries from both
+Rocky — 12:01 AM
+ahh I see, I hate to be dumb but like how does that relate to the layout you're going for? Musicians get notified for new gigs & venues, patrons of Music can post gigs, Muse is used as the ad "front" and helps navigate users where they want to go, how does the "getting deliveries from both" correlate... like to what type of user..? all of them?? or...?
+Man — 12:01 AM
+It’s easier for the performer.. the customer on the other hand, has to choose if they do the complex Muse, or the simplified Music where someone booked an event and left tickets open to save money on their purchase if people wanted to scout and come..
+If someone goes to Muse and wants a drummer, they would be able to see the local drummers and it would transfer them to Music to see their performances, their rehearsals, their star rating and reviews. Or is that dumb?
+Or should we just keep that info on Muse
+Rocky — 12:05 AM
+Nah, I think music if you want that to be the main storefront and muse to be your funnel, having a broader range of content will help SEO for more generalzied terms, and if the service is the most used it'll probably take top spot really easily when searching for any of the three or maybe second result when searching for triple A, google's algorithms are always kinda iffy, if you think the site should work some way we can make it work that way and if it's not good we can revise
+Man — 12:10 AM
+So what would you say is the most used for Uber U-Eats and U-Driver, and which would you say Muse Music Musician are in relation to the Ubers, or are they not the same at all or just similar?
+Rocky — 12:16 AM
+I think they can be similar, I'm just confused because the services are very different I guess, the roles don't quite align with some of the comparisons, I think I understand what you want, you want musicians to be almost like drivers, they should have essentailly total control over their schedules (with respect to yours if they need you or your team there), event planners [I've been calling them hosts] and event goes are both technically riders/eaters, hosts have slightly different workflows than customers because they can set up venues requesting artists but the artist has the ability to accept or deny that "ride" [if using the uber analogy], I guess my confusion is from just what you mean by "They arent the same, but “Uber Driver” gets deliveries from both" like true I'm just confused how you want that implemented into the site if you do want it implemented into the site somehow, ig I'm more confused if it's an idea you're throwing out there or if it's just a statement to get the purposes across better, it makes sense in the second context I'm just really tired and idk which context it is lol
+sorry I'm dumb ah hell I've been staring at code too long today, woke up at 7am to drive nat to school to get home and talk about my school code with a TA it's been a long day lol
+Man — 12:18 AM
+For example, On Musician, should there be an option for the artist to “Rent Out Equipment on Muse”??? Since the musician is being sub contracted like an Uber Driver.
+Rocky — 12:19 AM
+OHHH
+ah ok I see, community sourcing as an even larger marketplace than I was expecting
+Man — 12:19 AM
+Bro, you are extremely intelligent.. dont ever play yourself GUY! You are digesting this, and putting this together causing perfect synthesis!
+Rocky — 12:23 AM
+yea that's chilling, it's possible though I'll probably gate it behind an env flag so you can enable/disable it, you should definantly talk to a lawyer before doing that because your company may become liable for damages in some fucked up way if a bad actor/clumsy person ends up renting something and damaging it, you have to look into that and either get a signature of no protection and released liability for damages or problems to the instrument or get people on a "self-insured" plan, or you can try to figure out how to do that but that becomes a massive liability thing being a rental agency with the expectation people will not damage things and that's basically the rental premise, noone will want to rent things out on there and if they did it'd probably be difficult to get the released liability with instruments worth thousands, it'd probably fall on you to either do a bg check (I can automate that as well but it costs money unfortunately to my knowledge) or get a no liability waiver (which'll probably be damn near impossible)
+if you want to do that look into the legality, ChatGPT is actually really fire with legal advice, ask specific questions about anything confusing, at the end of the day nothing beats a good lawyer, but for planning that works, for now I'll implement the rentals with env flags so they can be quick enabled and disabled. It'll apply to all routes and UI so nothing shows and nothing is callable
+Man — 12:25 AM
+I would insure them, they could choose not to get insurance like Turo. have you heard of Turo?
+Rocky — 12:26 AM
+Yea, let me know what the costs are associated and I can wire that up, for now I'll keep everything env gated, if you let me know what agency you want to use I can try to find an API so it like autogenerates a policy and everything
+Fr I'm so sorry to say this but I could care so much more about finding an API for generating fucking insurance claims, lmk whatever service you decide/use rn I'm sure there's an API
+but actually look into it first because reimplementing this might not be as easy as swapping some names, most payment and financial APIs are very precise
+Man — 12:28 AM
+Lol it was just a thought, it isnt important to the grand scheme lol. Im not married to it lol
+Maybe another example would be, If an Artist is at an apartment that has an ideal event space, they could also be the ones to register for another artist to perform an event there?
+Maybe Im forcing the Musician Uber Driver correlation too. hard lol
+Rocky — 12:29 AM
+very litte overlap between them as well, similar in principle but every function is a different name taking different parameters and each has it's own way it needs to be setup, that said reimplementation wouldn't be easy. And yea for sure I can make sure musicans have the same permissions as hosts, if not the same dashboard access they'll have the same abilities from their dashboard.
+Nah it's a good correlation I think I was just confused as to what you meant bc I wasn't quite grasping the scope
+TBH when you develop software more time is spent at the whiteboard and mockup drawings than time is spent coding most often, it's important to make the points clear as to what you are trying to achieve bc if someone doesn't understand it you'll be running in circles for hours
+Like my last group project in my web dev class, 4 days spent planning the idea and drawing mockups and doing very basic setups to structure it all correctly, then like 2-3 days implementing, this was a group of 4/5 so to get the message across so everyone understood and knew their tasks took 3 or 4 days, software is an idea before anything else the clearer the idea the easier it is to build
 
 ﻿
 Man

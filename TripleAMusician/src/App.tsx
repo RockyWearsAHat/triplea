@@ -191,6 +191,23 @@ function MusicianLandingPage() {
         </div>
       </section>
 
+      {/* Cross-app link */}
+      <section className={ui.sectionFull} style={{ textAlign: "center" }}>
+        <p className={ui.help} style={{ marginBottom: 8 }}>
+          Looking for events to attend instead?
+        </p>
+        <a
+          href={MUSIC_ORIGIN}
+          style={{
+            color: "var(--primary)",
+            fontWeight: 500,
+            textDecoration: "underline",
+          }}
+        >
+          Browse concerts on Triple A Music →
+        </a>
+      </section>
+
       {/* Mission footer */}
       <section className={ui.missionSection}>
         <p className={ui.missionText}>

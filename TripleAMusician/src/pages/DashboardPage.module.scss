@@ -1,7 +1,38 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Triple A Musician - Dashboard Styles
+   "Uber Driver" work app feel - focus on today, requests, upcoming gigs
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.page {
+  padding: clamp(20px, 4vw, 32px) 0;
+}
+
+/* Header */
+.header {
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 700;
+}
+
+.headerSubtitle {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+/* Stats Section */
+.statsSection {
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+
 .statsRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 @media (max-width: 768px) {
@@ -10,10 +41,11 @@
   }
 }
 
+/* Main Grid */
 .grid {
   display: grid;
-  gap: 32px;
-  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  grid-template-columns: 1fr 280px;
   align-items: start;
 }
 
@@ -26,9 +58,10 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
+/* Content Sections */
 .contentSection {
   padding: clamp(20px, 3vw, 28px);
   border-radius: var(--radius-lg);
@@ -36,11 +69,164 @@
   border: 1px solid var(--border);
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary, #fff);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sectionHint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Request Cards */
+.requestList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.requestCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.requestInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.requestTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.requestMeta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.requestActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Gig Cards */
+.gigList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gigCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.gigDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.gigDay {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gigMonth {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.gigInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.gigTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.gigMeta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.gigStatus {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Sidebar */
 .sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   padding: clamp(20px, 3vw, 28px);
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
+}
+
+.sidebarSection {
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebarTitle {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 650;
 }
 
 .quickActions {
@@ -48,4 +234,31 @@
   flex-direction: column;
   gap: 10px;
   margin-top: 16px;
+}
+
+/* Perks */
+.perksList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.perkItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.perkIcon {
+  font-size: 18px;
+}
+
+.perkLabel {
+  font-size: 13px;
+  font-weight: 500;
 }
