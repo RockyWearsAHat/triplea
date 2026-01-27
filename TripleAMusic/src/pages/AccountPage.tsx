@@ -5,6 +5,7 @@ import {
   useAuthGuard,
   AuthLoadingScreen,
   useAuth,
+  getMusicianOrigin,
 } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, Link } from "react-router-dom";
@@ -111,6 +112,8 @@ export function AccountPage() {
     setConfirmPassword("");
   };
 
+  const isMusician = user.role.includes("musician");
+
   const linkedApps = [
     {
       name: "Triple A Music",
@@ -123,16 +126,18 @@ export function AccountPage() {
     {
       name: "Triple A Musician",
       description: "Performer dashboard",
-      url: "https://tripleamusician.org",
-      active: user.role.includes("musician"),
-      needsRegistration: !user.role.includes("musician"),
+      url: isMusician ? getMusicianOrigin() : `${getMusicianOrigin()}/register`,
+      active: isMusician,
+      needsRegistration: !isMusician,
     },
     {
       name: "Host",
       description: "Post events & manage venues",
-      url: "/host",
-      active: user.role.includes("customer"),
-      needsRegistration: !user.role.includes("customer"),
+      // On Music app: go to /manage if host, or onboarding if not
+      url: isHost ? "/manage" : "/register?become=host",
+      active: isHost,
+      current: false,
+      needsRegistration: !isHost,
     },
   ];
 

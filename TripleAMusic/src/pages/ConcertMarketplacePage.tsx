@@ -242,7 +242,7 @@ export default function ConcertMarketplacePage() {
             className={styles.crossAppCard}
             onClick={() => window.open(getMuseOrigin(), "_blank")}
           >
-            <h3 className={styles.crossAppTitle}>Plan your own event?</h3>
+            <h3 className={styles.crossAppTitle}>Planning an event?</h3>
             <p className={styles.crossAppDesc}>
               Use Triple A Muse to assemble your own lineup — select performers,
               packages, and venues.

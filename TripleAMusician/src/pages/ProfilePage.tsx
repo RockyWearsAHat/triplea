@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AppShell, Button, useAuth } from "@shared";
+import { AppShell, Button, useAuth, getMusicOrigin } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./ProfilePage.module.scss";
@@ -143,6 +143,8 @@ export function ProfilePage() {
     setConfirmPassword("");
   };
 
+  const isHost = user.role.includes("customer");
+
   const linkedApps = [
     {
       name: "Triple A Musician",
@@ -155,16 +157,19 @@ export function ProfilePage() {
     {
       name: "Triple A Music",
       description: "Browse events & buy tickets",
-      url: "https://tripleamusic.org",
+      url: getMusicOrigin(),
       active: true,
       needsRegistration: false,
     },
     {
       name: "Host",
       description: "Post events & manage venues",
-      url: "https://tripleamusic.org/host",
-      active: user.role.includes("customer"),
-      needsRegistration: !user.role.includes("customer"),
+      // Go to Music manage page if host, or Music host registration if not
+      url: isHost
+        ? `${getMusicOrigin()}/manage`
+        : `${getMusicOrigin()}/register?become=host`,
+      active: isHost,
+      needsRegistration: !isHost,
     },
   ];
 
