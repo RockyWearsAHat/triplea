@@ -64,12 +64,14 @@ export interface ITicket extends Document {
   updatedAt: Date;
 }
 
-// Generate a random confirmation code like "TAM-ABC123"
+// Generate a cryptographically secure random confirmation code like "TAM-ABCD1234EF"
+// Uses 10 characters from 32-char alphabet = ~50 bits of entropy (vs 30 bits before)
 function generateConfirmationCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const randomBytes = crypto.randomBytes(10);
   let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 10; i++) {
+    code += chars.charAt(randomBytes[i] % chars.length);
   }
   return `TAM-${code}`;
 }

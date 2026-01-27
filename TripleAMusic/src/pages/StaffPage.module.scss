@@ -1,16 +1,87 @@
 /* StaffPage.module.scss — Staff management styles */
 
-.staffTab {
+.staffPage {
   display: flex;
   flex-direction: column;
-  gap: clamp(1rem, 3vw, 1.5rem);
+  gap: clamp(1.25rem, 4vw, 2rem);
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Invite Form */
+.inviteForm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Permissions */
+.permissionGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.permissionCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.permissionCheckbox input {
+  accent-color: var(--primary);
 }
 
 /* Section */
 .section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.75rem;
 }
 
 .sectionTitle {
@@ -18,6 +89,170 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Staff List */
+.staffList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.staffCard {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease;
+}
+
+.staffCard:hover {
+  border-color: var(--border-strong);
+}
+
+.staffInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.staffAvatar,
+.staffAvatarActive {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.staffAvatar {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.staffAvatarActive {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+.staffName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staffEmail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.staffMeta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Permissions badges */
+.staffPermissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.permissionBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Actions */
+.staffActions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.iconButton,
+.iconButtonDanger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.iconButton {
+  color: var(--text-muted);
+}
+
+.iconButton:hover {
+  background: var(--surface-elevated);
+  color: var(--text);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.iconButtonDanger {
+  color: var(--text-muted);
+}
+
+.iconButtonDanger:hover {
+  background: color-mix(in srgb, #ef4444 15%, transparent);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.iconButtonDanger:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text);
+}
+
+.emptyState p {
+  margin: 0 0 0.5rem;
+}
+
+/* Legacy - keeping for backwards compatibility */
+.staffTab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
 }
 
 .comingSoon {
@@ -32,4 +267,20 @@
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.7;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .staffCard {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .staffPermissions {
+    justify-content: flex-start;
+  }
+
+  .staffActions {
+    justify-content: flex-end;
+  }
 }

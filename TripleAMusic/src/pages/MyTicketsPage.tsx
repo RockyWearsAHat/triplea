@@ -159,83 +159,98 @@ export default function MyTicketsPage() {
             }[ticket.status];
 
             return (
-              <div
+              <TicketCard
                 key={ticket.id}
-                className={`${styles.ticketCard} ${ticket.status === "used" ? styles.used : ""}`}
+                ticket={ticket}
+                formattedDate={formattedDate}
+                statusLabel={statusLabel}
                 onClick={() => navigate(`/tickets/${ticket.confirmationCode}`)}
-              >
-                <div className={styles.ticketCardInner}>
-                  <div className={styles.ticketImage}>
-                    {ticket.location?.id ? (
-                      <img
-                        src={getAssetUrl(
-                          `/api/public/locations/${ticket.location.id}/images/0`,
-                        )}
-                        alt=""
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                          (
-                            e.target as HTMLImageElement
-                          ).parentElement!.innerHTML =
-                            '<div class="' +
-                            styles.imagePlaceholder +
-                            '">🎵</div>';
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.imagePlaceholder}>🎵</div>
-                    )}
-                  </div>
-
-                  <div className={styles.ticketInfo}>
-                    <h3 className={styles.ticketTitle}>
-                      {ticket.gig?.title || "Event"}
-                      <span
-                        className={`${styles.statusChip} ${styles[ticket.status]}`}
-                      >
-                        {statusLabel}
-                      </span>
-                    </h3>
-                    <div className={styles.ticketMeta}>
-                      {formattedDate && (
-                        <div className={styles.metaRow}>
-                          <span className={styles.icon}>📅</span>
-                          <span>
-                            {formattedDate}
-                            {ticket.gig?.time && ` at ${ticket.gig.time}`}
-                          </span>
-                        </div>
-                      )}
-                      {ticket.location?.name && (
-                        <div className={styles.metaRow}>
-                          <span className={styles.icon}>📍</span>
-                          <span>
-                            {ticket.location.name}
-                            {ticket.location.city &&
-                              `, ${ticket.location.city}`}
-                          </span>
-                        </div>
-                      )}
-                      <div className={styles.metaRow}>
-                        <span className={styles.icon}>🎫</span>
-                        <span>{ticket.confirmationCode}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.ticketActions}>
-                    <div className={styles.ticketQuantity}>
-                      <span>{ticket.quantity}</span>
-                      {ticket.quantity === 1 ? "ticket" : "tickets"}
-                    </div>
-                    <button className={styles.viewButton}>View</button>
-                  </div>
-                </div>
-              </div>
+              />
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Separate component to properly handle image error state with React
+interface TicketCardProps {
+  ticket: Ticket;
+  formattedDate: string | null;
+  statusLabel: string | undefined;
+  onClick: () => void;
+}
+
+function TicketCard({
+  ticket,
+  formattedDate,
+  statusLabel,
+  onClick,
+}: TicketCardProps) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className={`${styles.ticketCard} ${ticket.status === "used" ? styles.used : ""}`}
+      onClick={onClick}
+    >
+      <div className={styles.ticketCardInner}>
+        <div className={styles.ticketImage}>
+          {ticket.location?.id && !imageError ? (
+            <img
+              src={getAssetUrl(
+                `/api/public/locations/${ticket.location.id}/images/0`,
+              )}
+              alt=""
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className={styles.imagePlaceholder}>🎵</div>
+          )}
+        </div>
+
+        <div className={styles.ticketInfo}>
+          <h3 className={styles.ticketTitle}>
+            {ticket.gig?.title || "Event"}
+            <span className={`${styles.statusChip} ${styles[ticket.status]}`}>
+              {statusLabel}
+            </span>
+          </h3>
+          <div className={styles.ticketMeta}>
+            {formattedDate && (
+              <div className={styles.metaRow}>
+                <span className={styles.icon}>📅</span>
+                <span>
+                  {formattedDate}
+                  {ticket.gig?.time && ` at ${ticket.gig.time}`}
+                </span>
+              </div>
+            )}
+            {ticket.location?.name && (
+              <div className={styles.metaRow}>
+                <span className={styles.icon}>📍</span>
+                <span>
+                  {ticket.location.name}
+                  {ticket.location.city && `, ${ticket.location.city}`}
+                </span>
+              </div>
+            )}
+            <div className={styles.metaRow}>
+              <span className={styles.icon}>🎫</span>
+              <span>{ticket.confirmationCode}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.ticketActions}>
+          <div className={styles.ticketQuantity}>
+            <span>{ticket.quantity}</span>
+            {ticket.quantity === 1 ? "ticket" : "tickets"}
+          </div>
+          <button className={styles.viewButton}>View</button>
+        </div>
+      </div>
     </div>
   );
 }

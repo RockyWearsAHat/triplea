@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Instrument, Location } from "@shared";
 import { ProductCard, Button } from "@shared";
-import ui from "@shared/styles/primitives.module.scss";
 import styles from "./HomePage.module.scss";
 import {
   createApiClient,

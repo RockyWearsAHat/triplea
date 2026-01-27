@@ -12,6 +12,7 @@ import serverless from "serverless-http";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import mongoose from "mongoose";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
@@ -26,8 +27,10 @@ import instrumentsRoutes from "./routes/instruments";
 import ticketsRoutes from "./routes/tickets";
 import stripeRoutes from "./routes/stripe";
 import seatingRoutes from "./routes/seating";
+import staffRoutes from "./routes/staff";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
+import { globalLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
@@ -60,23 +63,62 @@ app.use(
   cors({
     origin: (origin, callback) => {
       const allowed = getAllowedOrigins();
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin || allowed.includes(origin)) {
-        callback(null, true);
-      } else {
-        // In production, be more permissive for Netlify deploy previews
-        if (process.env.NETLIFY && origin?.includes("netlify")) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
+      // Allow requests with no origin only in development (like mobile apps or curl)
+      if (!origin) {
+        if (process.env.NODE_ENV === "production") {
+          return callback(new Error("Origin header required"));
         }
+        return callback(null, true);
       }
+
+      if (allowed.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // In production, be more permissive for Netlify deploy previews
+      if (process.env.NETLIFY && origin?.includes("netlify")) {
+        return callback(null, true);
+      }
+
+      // In production, reject unknown origins
+      if (process.env.NODE_ENV === "production") {
+        return callback(new Error("CORS not allowed from this origin"));
+      }
+
+      // In development, allow all
+      callback(null, true);
     },
     credentials: true,
   }),
 );
 
-app.use(express.json());
+// Security headers
+app.use(
+  helmet({
+    // Allow cross-origin image loading (for images served from API to frontend)
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        frameSrc: [
+          "'self'",
+          "https://js.stripe.com",
+          "https://hooks.stripe.com",
+        ],
+        connectSrc: ["'self'", "https://api.stripe.com"],
+      },
+    },
+  }),
+);
+
+// Global rate limiting
+app.use(globalLimiter);
+
+// Body parsing with size limits
+app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(attachUser);
 
@@ -94,6 +136,7 @@ app.use("/api/instruments", instrumentsRoutes);
 app.use("/api/tickets", ticketsRoutes);
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/seating", seatingRoutes);
+app.use("/api/staff", staffRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

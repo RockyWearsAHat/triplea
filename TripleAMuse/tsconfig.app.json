@@ -27,7 +27,8 @@
     "baseUrl": ".",
     "paths": {
       "@shared": ["../packages/shared/src/index.ts"],
-      "@shared/*": ["../packages/shared/src/*"]
+      "@shared/*": ["../packages/shared/src/*"],
+      "react-router-dom": ["./node_modules/react-router-dom"]
     }
   },
   "include": ["src", "../packages/shared/src"]

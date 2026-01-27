@@ -32,6 +32,7 @@ import ManagePage from "./pages/ManagePage";
 import MyGigsPage from "./pages/MyGigsPage";
 import VenuesPage from "./pages/VenuesPage";
 import StaffPage from "./pages/StaffPage";
+import StaffJoinPage from "./pages/StaffJoinPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
 import AccountPage from "./pages/AccountPage";
@@ -1960,6 +1961,8 @@ function App() {
                   </RequireRole>
                 }
               />
+              {/* Staff join page - public route for accepting invites */}
+              <Route path="/staff/join/:token" element={<StaffJoinPage />} />
               {/* Legacy routes */}
               <Route
                 path="/events"

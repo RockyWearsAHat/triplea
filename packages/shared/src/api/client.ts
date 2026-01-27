@@ -10,6 +10,7 @@ import type {
   GigApplication,
   Gig,
   GigWithDistance,
+  GigWithStats,
   ArtistRequest,
   Instrument,
   Location,
@@ -25,6 +26,9 @@ import type {
   CheckoutSession,
   CheckoutRequest,
   FeeCalculationResult,
+  StaffMember,
+  StaffPermission,
+  StaffHost,
 } from "../types";
 
 export interface ApiClientConfig {
@@ -527,10 +531,16 @@ export class TripleAApiClient {
     });
   }
 
-  async listMyGigs(): Promise<Gig[]> {
+  async listMyGigs(): Promise<GigWithStats[]> {
     const data = await this.request<{
       gigs: Array<
-        Omit<Gig, "location"> & { locationId?: string | null; gigType?: string }
+        Omit<Gig, "location"> & {
+          locationId?: string | null;
+          gigType?: string;
+          ticketsSold?: number;
+          ticketRevenue?: number;
+          applicantCount?: number;
+        }
       >;
     }>("/gigs/mine", { method: "GET" });
 
@@ -543,7 +553,12 @@ export class TripleAApiClient {
       budget: g.budget,
       status: g.status,
       gigType: g.gigType as Gig["gigType"],
+      openForTickets: g.openForTickets,
+      ticketPrice: g.ticketPrice,
       location: null,
+      ticketsSold: g.ticketsSold ?? 0,
+      ticketRevenue: g.ticketRevenue ?? 0,
+      applicantCount: g.applicantCount ?? 0,
     }));
   }
 
@@ -1070,5 +1085,103 @@ export class TripleAApiClient {
         body: JSON.stringify({ seatCapacity }),
       },
     );
+  }
+
+  // ===== Staff Management =====
+
+  async inviteStaff(params: {
+    email: string;
+    permissions?: StaffPermission[];
+    staffName?: string;
+  }): Promise<{ invite: StaffMember }> {
+    return await this.request<{ invite: StaffMember }>("/staff/invite", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async listStaff(): Promise<StaffMember[]> {
+    const data = await this.request<{ staff: StaffMember[] }>("/staff", {
+      method: "GET",
+    });
+    return data.staff;
+  }
+
+  async updateStaffMember(
+    id: string,
+    params: { permissions?: StaffPermission[]; staffName?: string },
+  ): Promise<{ staff: StaffMember }> {
+    return await this.request<{ staff: StaffMember }>(
+      `/staff/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  async removeStaffMember(id: string): Promise<{ success: boolean }> {
+    return await this.request<{ success: boolean }>(
+      `/staff/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
+  async resendStaffInvite(
+    id: string,
+  ): Promise<{ success: boolean; expiresAt: string }> {
+    return await this.request<{ success: boolean; expiresAt: string }>(
+      `/staff/${encodeURIComponent(id)}/resend`,
+      {
+        method: "POST",
+      },
+    );
+  }
+
+  async getStaffInviteInfo(token: string): Promise<{
+    invite: {
+      email: string;
+      hostName: string;
+      permissions: StaffPermission[];
+      isExistingUser: boolean;
+    };
+  }> {
+    return await this.request(`/staff/join/${encodeURIComponent(token)}`, {
+      method: "GET",
+    });
+  }
+
+  async acceptStaffInvite(
+    token: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await this.request<{ success: boolean; message: string }>(
+      `/staff/join/${encodeURIComponent(token)}/link`,
+      {
+        method: "POST",
+      },
+    );
+  }
+
+  async registerAndAcceptStaffInvite(
+    token: string,
+    params: { name: string; password: string },
+  ): Promise<{ success: boolean; message: string; userId: string }> {
+    return await this.request<{
+      success: boolean;
+      message: string;
+      userId: string;
+    }>(`/staff/join/${encodeURIComponent(token)}/register`, {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getMyStaffHosts(): Promise<StaffHost[]> {
+    const data = await this.request<{ hosts: StaffHost[] }>("/staff/my-hosts", {
+      method: "GET",
+    });
+    return data.hosts;
   }
 }

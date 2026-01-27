@@ -14,6 +14,7 @@ import {
   validateBody,
   formatZodErrors,
 } from "../lib/validation";
+import { checkoutLimiter } from "../middleware/rateLimiter";
 
 const router: Router = express.Router();
 
@@ -56,194 +57,200 @@ async function canScanTicketsForGig(
 
 // Purchase tickets for a concert
 // POST /api/tickets/purchase
-router.post("/purchase", async (req: Request, res: Response) => {
-  try {
-    const { gigId, quantity, email, holderName, tierId, seatIds } =
-      req.body as {
-        gigId: string;
-        quantity: number;
-        email: string;
-        holderName: string;
-        tierId?: string;
-        seatIds?: string[];
-      };
+router.post(
+  "/purchase",
+  checkoutLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { gigId, quantity, email, holderName, tierId, seatIds } =
+        req.body as {
+          gigId: string;
+          quantity: number;
+          email: string;
+          holderName: string;
+          tierId?: string;
+          seatIds?: string[];
+        };
 
-    // Validate inputs
-    if (!gigId || !email || !holderName) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const qty = Number(quantity) || 1;
-    if (qty < 1 || qty > 10) {
-      return res
-        .status(400)
-        .json({ message: "Quantity must be between 1 and 10" });
-    }
-
-    // Find the gig/concert
-    const gig = await Gig.findById(gigId).exec();
-    if (!gig) {
-      return res.status(404).json({ message: "Concert not found" });
-    }
-
-    if (gig.gigType !== "public-concert") {
-      return res.status(400).json({ message: "This is not a ticketed event" });
-    }
-
-    if (!gig.openForTickets) {
-      return res
-        .status(400)
-        .json({ message: "Tickets are not available for this event" });
-    }
-
-    // Get user if authenticated
-    const authReq = req as AuthenticatedRequest;
-    const userId = authReq.authUser?.id
-      ? new Types.ObjectId(authReq.authUser.id)
-      : null;
-
-    let pricePerTicket = gig.ticketPrice ?? 0;
-    let tier = null;
-    let tierName: string | undefined;
-
-    // Handle tiered pricing
-    if (tierId) {
-      tier = await TicketTier.findById(tierId).exec();
-      if (!tier) {
-        return res.status(404).json({ message: "Ticket tier not found" });
+      // Validate inputs
+      if (!gigId || !email || !holderName) {
+        return res.status(400).json({ message: "Missing required fields" });
       }
-      if (String(tier.gigId) !== gigId) {
+
+      const qty = Number(quantity) || 1;
+      if (qty < 1 || qty > 10) {
         return res
           .status(400)
-          .json({ message: "Tier does not belong to this event" });
+          .json({ message: "Quantity must be between 1 and 10" });
       }
-      if (!tier.available) {
+
+      // Find the gig/concert
+      const gig = await Gig.findById(gigId).exec();
+      if (!gig) {
+        return res.status(404).json({ message: "Concert not found" });
+      }
+
+      if (gig.gigType !== "public-concert") {
         return res
           .status(400)
-          .json({ message: "This ticket tier is not available" });
-      }
-      if (tier.sold + qty > tier.capacity) {
-        return res.status(400).json({
-          message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
-        });
-      }
-      pricePerTicket = tier.price;
-      tierName = tier.name;
-    }
-
-    // Handle reserved seating
-    let seatAssignments: Array<{
-      seatId: string;
-      section: string;
-      row: string;
-      seatNumber: string;
-    }> = [];
-
-    if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
-      if (!seatIds || seatIds.length !== qty) {
-        return res.status(400).json({
-          message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
-        });
+          .json({ message: "This is not a ticketed event" });
       }
 
-      const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
-      if (!layout) {
-        return res.status(500).json({ message: "Seating layout not found" });
+      if (!gig.openForTickets) {
+        return res
+          .status(400)
+          .json({ message: "Tickets are not available for this event" });
       }
 
-      // Verify all seats exist and are available
-      const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+      // Get user if authenticated
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.authUser?.id
+        ? new Types.ObjectId(authReq.authUser.id)
+        : null;
 
-      // Check for already sold seats
-      const existingTickets = await Ticket.find({
-        gigId: gig._id,
-        status: { $in: ["valid", "used"] },
-        "seatAssignments.seatId": { $in: seatIds },
-      }).exec();
+      let pricePerTicket = gig.ticketPrice ?? 0;
+      let tier = null;
+      let tierName: string | undefined;
 
-      if (existingTickets.length > 0) {
-        return res.status(400).json({
-          message: "One or more selected seats are no longer available",
-        });
-      }
-
-      for (const seatId of seatIds) {
-        const seat = seatMap.get(seatId);
-        if (!seat) {
-          return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+      // Handle tiered pricing
+      if (tierId) {
+        tier = await TicketTier.findById(tierId).exec();
+        if (!tier) {
+          return res.status(404).json({ message: "Ticket tier not found" });
         }
-        if (!seat.isAvailable) {
+        if (String(tier.gigId) !== gigId) {
+          return res
+            .status(400)
+            .json({ message: "Tier does not belong to this event" });
+        }
+        if (!tier.available) {
+          return res
+            .status(400)
+            .json({ message: "This ticket tier is not available" });
+        }
+        if (tier.sold + qty > tier.capacity) {
           return res.status(400).json({
-            message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+            message: `Only ${tier.capacity - tier.sold} tickets remaining in this tier`,
           });
         }
-        seatAssignments.push({
-          seatId: seat.seatId,
-          section: seat.section,
-          row: seat.row,
-          seatNumber: seat.seatNumber,
-        });
+        pricePerTicket = tier.price;
+        tierName = tier.name;
       }
+
+      // Handle reserved seating
+      let seatAssignments: Array<{
+        seatId: string;
+        section: string;
+        row: string;
+        seatNumber: string;
+      }> = [];
+
+      if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+        if (!seatIds || seatIds.length !== qty) {
+          return res.status(400).json({
+            message: `Please select exactly ${qty} seat(s) for this reserved seating event`,
+          });
+        }
+
+        const layout = await SeatingLayout.findById(gig.seatingLayoutId).exec();
+        if (!layout) {
+          return res.status(500).json({ message: "Seating layout not found" });
+        }
+
+        // Verify all seats exist and are available
+        const seatMap = new Map(layout.seats.map((s) => [s.seatId, s]));
+
+        // Check for already sold seats
+        const existingTickets = await Ticket.find({
+          gigId: gig._id,
+          status: { $in: ["valid", "used"] },
+          "seatAssignments.seatId": { $in: seatIds },
+        }).exec();
+
+        if (existingTickets.length > 0) {
+          return res.status(400).json({
+            message: "One or more selected seats are no longer available",
+          });
+        }
+
+        for (const seatId of seatIds) {
+          const seat = seatMap.get(seatId);
+          if (!seat) {
+            return res.status(400).json({ message: `Invalid seat: ${seatId}` });
+          }
+          if (!seat.isAvailable) {
+            return res.status(400).json({
+              message: `Seat ${seat.row}${seat.seatNumber} is not available`,
+            });
+          }
+          seatAssignments.push({
+            seatId: seat.seatId,
+            section: seat.section,
+            row: seat.row,
+            seatNumber: seat.seatNumber,
+          });
+        }
+      }
+
+      // Create the ticket
+      const ticket = await (Ticket as any).createTicket({
+        gigId: new Types.ObjectId(gigId),
+        userId,
+        email,
+        holderName,
+        quantity: qty,
+        pricePerTicket,
+      });
+
+      // Add tier and seat information if applicable
+      if (tier) {
+        ticket.tierId = tier._id;
+        ticket.tierName = tierName;
+        // Increment sold count
+        tier.sold += qty;
+        await tier.save();
+      }
+      if (seatAssignments.length > 0) {
+        ticket.seatAssignments = seatAssignments;
+      }
+      await ticket.save();
+
+      // Get location for email
+      const location = gig.locationId
+        ? await Location.findById(gig.locationId).exec()
+        : null;
+
+      // Send confirmation email
+      await sendTicketConfirmationEmail({
+        ticket,
+        gig,
+        locationName: location?.name,
+      });
+
+      return res.status(201).json({
+        ticket: {
+          id: ticket.id,
+          confirmationCode: ticket.confirmationCode,
+          gigId: ticket.gigId,
+          quantity: ticket.quantity,
+          pricePerTicket: ticket.pricePerTicket,
+          totalPaid: ticket.totalPaid,
+          status: ticket.status,
+          holderName: ticket.holderName,
+          email: ticket.email,
+          tierId: ticket.tierId ? String(ticket.tierId) : null,
+          tierName: ticket.tierName,
+          seatAssignments: ticket.seatAssignments,
+          createdAt: ticket.createdAt,
+        },
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /tickets/purchase error", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    // Create the ticket
-    const ticket = await (Ticket as any).createTicket({
-      gigId: new Types.ObjectId(gigId),
-      userId,
-      email,
-      holderName,
-      quantity: qty,
-      pricePerTicket,
-    });
-
-    // Add tier and seat information if applicable
-    if (tier) {
-      ticket.tierId = tier._id;
-      ticket.tierName = tierName;
-      // Increment sold count
-      tier.sold += qty;
-      await tier.save();
-    }
-    if (seatAssignments.length > 0) {
-      ticket.seatAssignments = seatAssignments;
-    }
-    await ticket.save();
-
-    // Get location for email
-    const location = gig.locationId
-      ? await Location.findById(gig.locationId).exec()
-      : null;
-
-    // Send confirmation email
-    await sendTicketConfirmationEmail({
-      ticket,
-      gig,
-      locationName: location?.name,
-    });
-
-    return res.status(201).json({
-      ticket: {
-        id: ticket.id,
-        confirmationCode: ticket.confirmationCode,
-        gigId: ticket.gigId,
-        quantity: ticket.quantity,
-        pricePerTicket: ticket.pricePerTicket,
-        totalPaid: ticket.totalPaid,
-        status: ticket.status,
-        holderName: ticket.holderName,
-        email: ticket.email,
-        tierId: ticket.tierId ? String(ticket.tierId) : null,
-        tierName: ticket.tierName,
-        seatAssignments: ticket.seatAssignments,
-        createdAt: ticket.createdAt,
-      },
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("POST /tickets/purchase error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  },
+);
 
 // Get ticket by confirmation code (public - for viewing ticket)
 // GET /api/tickets/confirm/:code
@@ -549,12 +556,10 @@ router.post("/:id/use", async (req: Request, res: Response) => {
     );
 
     if (!hasPermission) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Permission denied. You can only scan tickets for your own events.",
-        });
+      return res.status(403).json({
+        message:
+          "Permission denied. You can only scan tickets for your own events.",
+      });
     }
 
     if (ticket.status !== "valid") {

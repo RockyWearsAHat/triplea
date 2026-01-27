@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+// Note: react-router-dom types are provided by the consuming app's node_modules
+
 interface ImportMetaEnv {
   // Netlify detection
   readonly VITE_NETLIFY?: string;

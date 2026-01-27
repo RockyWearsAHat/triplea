@@ -307,3 +307,96 @@ tripleamusic.org
     text,
   });
 }
+
+/**
+ * Send staff invite email
+ */
+export async function sendStaffInviteEmail(params: {
+  to: string;
+  hostName: string;
+  token: string;
+  isExistingUser: boolean;
+}): Promise<boolean> {
+  const { to, hostName, token, isExistingUser } = params;
+
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:5173";
+  const joinUrl = `${baseUrl}/staff/join/${token}`;
+
+  const actionText = isExistingUser
+    ? "Click the button below to accept the invitation and link your existing account."
+    : "Click the button below to create your account and join the team.";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Invited to Join a Team</title>
+  <style>${getEmailStyles()}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>You're Invited!</h1>
+      <p>Triple A Music</p>
+    </div>
+    
+    <div class="content">
+      <p class="message">
+        <strong>${hostName}</strong> has invited you to join their event staff on Triple A Music.<br><br>
+        As a staff member, you'll be able to help manage their events and operations.
+      </p>
+      
+      <div class="info-box">
+        ${actionText}
+      </div>
+      
+      <a href="${joinUrl}" class="cta-button">
+        ${isExistingUser ? "Accept Invitation" : "Create Account & Join"}
+      </a>
+      
+      <div class="warning">
+        <strong>Note:</strong> This invitation will expire in 7 days.
+      </div>
+      
+      <p class="link-fallback">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${joinUrl}">${joinUrl}</a>
+      </p>
+    </div>
+    
+    <div class="footer">
+      <p><strong>Triple A Music</strong></p>
+      <p><a href="${baseUrl}">tripleamusic.org</a></p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  const text = `YOU'RE INVITED!
+===============
+
+${hostName} has invited you to join their event staff on Triple A Music.
+
+${actionText}
+
+JOIN THE TEAM
+-------------
+${joinUrl}
+
+This invitation will expire in 7 days.
+
+---
+Triple A Music
+tripleamusic.org
+`;
+
+  return sendEmail({
+    to,
+    subject: `${hostName} invited you to join their team on Triple A Music`,
+    html,
+    text,
+  });
+}

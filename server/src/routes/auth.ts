@@ -157,87 +157,97 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
 // Invite-only registration for internal employees.
 // The invite token is one-time-use, email-bound, and expires.
-router.post("/register-invite", async (req: Request, res: Response) => {
-  try {
-    const { token, name, email, password } = req.body as {
-      token: string;
-      name: string;
-      email: string;
-      password: string;
-    };
+router.post(
+  "/register-invite",
+  registrationLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { token, name, email, password } = req.body as {
+        token: string;
+        name: string;
+        email: string;
+        password: string;
+      };
 
-    if (!token || !name || !email || !password) {
-      return res.status(400).json({ message: "Missing required fields" });
+      if (!token || !name || !email || !password) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(String(token))
+        .digest("hex");
+
+      const invite = await Invite.findOne({ tokenHash }).exec();
+      if (!invite) {
+        return res.status(400).json({ message: "Invalid or expired invite" });
+      }
+      if (invite.revokedAt) {
+        return res.status(400).json({ message: "Invalid or expired invite" });
+      }
+      if (invite.usedAt) {
+        return res
+          .status(400)
+          .json({ message: "Invite has already been used" });
+      }
+      if (invite.expiresAt.getTime() < Date.now()) {
+        return res.status(400).json({ message: "Invalid or expired invite" });
+      }
+      if (invite.email !== normalizedEmail) {
+        return res
+          .status(403)
+          .json({ message: "Invite is not valid for this email" });
+      }
+
+      const existing = await User.findOne({ email: normalizedEmail }).exec();
+      if (existing) {
+        return res.status(409).json({ message: "Email already in use" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Only allow employee roles via invite.
+      const canonicalRoles = invite.roles;
+      if (!canonicalRoles.includes("rental_provider")) {
+        return res.status(400).json({ message: "Invite misconfigured" });
+      }
+
+      const user = await User.create({
+        name,
+        email: normalizedEmail,
+        passwordHash,
+        roles: canonicalRoles,
+        permissions:
+          invite.permissions ?? deriveDefaultPermissions(canonicalRoles),
+        employeeRoles: invite.employeeRoles ?? [],
+      });
+
+      invite.usedAt = new Date();
+      invite.usedByUserId = user.id;
+      await invite.save();
+
+      issueAuthCookie(res, {
+        id: user.id,
+        email: user.email,
+        roles: user.roles,
+      });
+
+      return res.status(201).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        permissions: user.permissions,
+        employeeRoles: user.employeeRoles,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("/register-invite error", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(String(token))
-      .digest("hex");
-
-    const invite = await Invite.findOne({ tokenHash }).exec();
-    if (!invite) {
-      return res.status(400).json({ message: "Invalid or expired invite" });
-    }
-    if (invite.revokedAt) {
-      return res.status(400).json({ message: "Invalid or expired invite" });
-    }
-    if (invite.usedAt) {
-      return res.status(400).json({ message: "Invite has already been used" });
-    }
-    if (invite.expiresAt.getTime() < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired invite" });
-    }
-    if (invite.email !== normalizedEmail) {
-      return res
-        .status(403)
-        .json({ message: "Invite is not valid for this email" });
-    }
-
-    const existing = await User.findOne({ email: normalizedEmail }).exec();
-    if (existing) {
-      return res.status(409).json({ message: "Email already in use" });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Only allow employee roles via invite.
-    const canonicalRoles = invite.roles;
-    if (!canonicalRoles.includes("rental_provider")) {
-      return res.status(400).json({ message: "Invite misconfigured" });
-    }
-
-    const user = await User.create({
-      name,
-      email: normalizedEmail,
-      passwordHash,
-      roles: canonicalRoles,
-      permissions:
-        invite.permissions ?? deriveDefaultPermissions(canonicalRoles),
-      employeeRoles: invite.employeeRoles ?? [],
-    });
-
-    invite.usedAt = new Date();
-    invite.usedByUserId = user.id;
-    await invite.save();
-
-    issueAuthCookie(res, { id: user.id, email: user.email, roles: user.roles });
-
-    return res.status(201).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      roles: user.roles,
-      permissions: user.permissions,
-      employeeRoles: user.employeeRoles,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("/register-invite error", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  },
+);
 
 router.post("/logout", (req: Request, res: Response) => {
   res.clearCookie(JWT_COOKIE, {

@@ -22,6 +22,7 @@ import instrumentsRoutes from "./routes/instruments";
 import ticketsRoutes from "./routes/tickets";
 import stripeRoutes from "./routes/stripe";
 import seatingRoutes from "./routes/seating";
+import staffRoutes from "./routes/staff";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 import { globalLimiter } from "./middleware/rateLimiter";
@@ -97,6 +98,8 @@ app.use(
 // Security headers
 app.use(
   helmet({
+    // Allow cross-origin image loading (for images served from API to frontend)
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -135,6 +138,7 @@ app.use("/api/instruments", instrumentsRoutes);
 app.use("/api/tickets", ticketsRoutes);
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/seating", seatingRoutes);
+app.use("/api/staff", staffRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const MONGO_URI = process.env.MONGO_URI ?? "";

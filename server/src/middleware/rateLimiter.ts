@@ -1,12 +1,15 @@
 import rateLimit from "express-rate-limit";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /**
  * Global rate limiter - applies to all API endpoints
- * 100 requests per 15 minutes per IP
+ * Production: 200 requests per 15 minutes per IP
+ * Development: 1000 requests per 15 minutes (more lenient for testing)
  */
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: isDev ? 1000 : 200, // Higher limit for dev, reasonable for production
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later" },
@@ -16,11 +19,12 @@ export const globalLimiter = rateLimit({
 
 /**
  * Strict rate limiter for auth endpoints
- * 5 attempts per 15 minutes per IP
+ * Production: 10 attempts per 15 minutes per IP
+ * Development: 50 attempts per 15 minutes (more lenient for testing)
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  max: isDev ? 50 : 10, // More attempts allowed, especially in dev
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many login attempts, please try again later" },

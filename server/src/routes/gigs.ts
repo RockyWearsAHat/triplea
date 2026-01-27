@@ -7,6 +7,7 @@ import { GigApplication } from "../models/GigApplication";
 import { Location } from "../models/Location";
 import { ArtistRequest } from "../models/ArtistRequest";
 import { MusicianProfile } from "../models/MusicianProfile";
+import { Ticket } from "../models/Ticket";
 
 const router: Router = express.Router();
 
@@ -85,20 +86,59 @@ router.get(
         .limit(200)
         .exec();
 
+      // Get ticket stats for all gigs in a single aggregation
+      const gigIds = gigs.map((g) => g._id);
+      const ticketStats = await Ticket.aggregate([
+        {
+          $match: {
+            gigId: { $in: gigIds },
+            status: { $in: ["valid", "used"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$gigId",
+            ticketsSold: { $sum: "$quantity" },
+            ticketRevenue: { $sum: "$totalPaid" },
+          },
+        },
+      ]);
+
+      // Get application counts
+      const applicationCounts = await GigApplication.aggregate([
+        { $match: { gigId: { $in: gigIds } } },
+        { $group: { _id: "$gigId", count: { $sum: 1 } } },
+      ]);
+
+      // Create lookup maps
+      const ticketStatsMap = new Map(
+        ticketStats.map((s) => [String(s._id), s]),
+      );
+      const applicationCountMap = new Map(
+        applicationCounts.map((a) => [String(a._id), a.count]),
+      );
+
       return res.json({
-        gigs: gigs.map((g) => ({
-          id: g.id,
-          title: g.title,
-          description: g.description,
-          date: g.date,
-          time: g.time,
-          budget: g.budget,
-          status: g.status,
-          gigType: g.gigType,
-          openForTickets: g.openForTickets,
-          ticketPrice: g.ticketPrice,
-          locationId: g.locationId ? String(g.locationId) : null,
-        })),
+        gigs: gigs.map((g) => {
+          const stats = ticketStatsMap.get(String(g._id));
+          return {
+            id: g.id,
+            title: g.title,
+            description: g.description,
+            date: g.date,
+            time: g.time,
+            budget: g.budget,
+            status: g.status,
+            gigType: g.gigType,
+            openForTickets: g.openForTickets,
+            ticketPrice: g.ticketPrice,
+            locationId: g.locationId ? String(g.locationId) : null,
+            // Stats
+            ticketsSold: stats?.ticketsSold ?? 0,
+            ticketRevenue: stats?.ticketRevenue ?? 0,
+            applicantCount: applicationCountMap.get(String(g._id)) ?? 0,
+          };
+        }),
       });
     } catch (err) {
       // eslint-disable-next-line no-console

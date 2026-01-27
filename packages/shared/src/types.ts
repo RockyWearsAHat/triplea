@@ -381,3 +381,43 @@ export interface AvailableSeatsResponse {
   soldSeatIds: string[];
   tiers: TicketTier[];
 }
+
+// ===== Staff Management Types =====
+
+export type StaffPermission =
+  | "scan_tickets"
+  | "view_sales"
+  | "manage_events"
+  | "manage_venues"
+  | "send_messages";
+
+export type StaffInviteStatus = "pending" | "accepted" | "revoked" | "expired";
+
+export interface StaffMember {
+  id: string;
+  email: string;
+  staffName: string | null;
+  permissions: StaffPermission[];
+  status: StaffInviteStatus;
+  userId: string | null;
+  acceptedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+}
+
+export interface StaffHost {
+  id: string;
+  hostId: string;
+  hostName: string;
+  hostEmail?: string;
+  permissions: StaffPermission[];
+  acceptedAt?: string;
+}
+
+// ===== Extended Gig Type with Stats =====
+
+export interface GigWithStats extends Gig {
+  ticketsSold?: number;
+  ticketRevenue?: number;
+  applicantCount?: number;
+}
