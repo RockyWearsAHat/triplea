@@ -199,6 +199,17 @@
   filter: grayscale(20%);
 }
 
+.layoutImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.08;
+  pointer-events: none;
+  filter: grayscale(40%);
+}
+
 .stage {
   position: absolute;
   background: color-mix(in srgb, var(--surface-3) 85%, var(--accent));
@@ -211,6 +222,31 @@
   pointer-events: none;
   box-shadow: var(--shadow-1);
   z-index: 2;
+}
+
+.stageWorld {
+  position: absolute;
+  background: color-mix(in srgb, var(--surface-3) 90%, var(--accent));
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: move;
+  pointer-events: auto;
+  box-shadow: var(--shadow-1);
+  z-index: 2;
+  transition: border-color 0.15s;
+}
+
+.stageWorld:hover {
+  border-color: var(--accent);
+}
+
+.stageLabel {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  pointer-events: none;
+  user-select: none;
 }
 
 .stage[data-position="top"] {
@@ -301,10 +337,145 @@
   line-height: 1;
 }
 
+.aisle {
+  position: absolute;
+  cursor: move;
+  pointer-events: auto;
+  z-index: 1;
+  transition: border-color 0.15s;
+}
+
+.aisle[data-orientation="vertical"] {
+  width: 2px;
+  background: var(--border);
+  border-left: 1px dashed
+    color-mix(in srgb, var(--border-strong) 60%, transparent);
+  border-right: 1px dashed
+    color-mix(in srgb, var(--border-strong) 60%, transparent);
+}
+
+.aisle[data-orientation="horizontal"] {
+  height: 2px;
+  background: var(--border);
+  border-top: 1px dashed
+    color-mix(in srgb, var(--border-strong) 60%, transparent);
+  border-bottom: 1px dashed
+    color-mix(in srgb, var(--border-strong) 60%, transparent);
+}
+
+.aisle[data-selected="true"] {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.aisle[data-selected="true"][data-orientation="vertical"] {
+  border-left-color: var(--accent);
+  border-right-color: var(--accent);
+}
+
+.aisle[data-selected="true"][data-orientation="horizontal"] {
+  border-top-color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.aisle:hover {
+  background: var(--border-strong);
+}
+
+.aisleLabel {
+  position: absolute;
+  padding: 3px 7px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+}
+
+.measureLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.measureLine {
+  position: absolute;
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.measureLine[data-orientation="vertical"] {
+  width: 1px;
+}
+
+.measureLine[data-orientation="horizontal"] {
+  height: 1px;
+}
+
+.measureLabel {
+  position: absolute;
+  padding: 3px 7px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--taa-black);
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+}
+
+.rowDraft {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.rowDraftLine {
+  position: absolute;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.rowDraftHint {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  opacity: 0.7;
+}
+
+.seat[data-row-selected="true"] {
+  background: color-mix(in srgb, var(--surface-3) 70%, var(--accent));
+  border-color: color-mix(in srgb, var(--border-strong) 60%, var(--accent));
+}
+
+.seat[data-detached="true"]::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 6px;
+  height: 6px;
+  background: var(--warning);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .seat,
   .floorTab,
-  .toggle {
+  .toggle,
+  .stageWorld,
+  .aisle {
     transition: none;
   }
 

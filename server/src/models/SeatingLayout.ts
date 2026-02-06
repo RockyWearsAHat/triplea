@@ -24,6 +24,25 @@ export interface ISeat {
   isAvailable: boolean;
   /** Accessibility features for this seat */
   accessibility?: string[];
+
+  /** Optional row grouping identifier used by the editor */
+  rowGroupId?: string;
+  /** If true, this seat will not be affected by row-level moves/reflows */
+  detachedFromRow?: boolean;
+}
+
+export interface ILayoutElement {
+  elementId: string;
+  type: "aisle";
+  floorId?: string;
+  orientation: "vertical" | "horizontal";
+  /** World coordinates (same coordinate system as seat posX/posY) */
+  x: number;
+  y: number;
+  /** Size in world units */
+  length: number;
+  thickness: number;
+  label?: string;
 }
 
 export interface IFloor {
@@ -75,6 +94,19 @@ export interface ISeatingLayout extends Document {
   seats: ISeat[];
   /** Floors/levels for this venue */
   floors?: IFloor[];
+  /** Optional layout elements (e.g., aisles) used by the editor */
+  elements?: ILayoutElement[];
+  /** Optional editor background image (distinct from the venue cover image) */
+  backgroundImageUrl?: string;
+  /** Stage configuration stored in world coordinates */
+  stage?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    shape?: "rect" | "rounded";
+    cornerRadius?: number;
+  };
   /** Whether this layout is a template that can be cloned */
   isTemplate: boolean;
   /** Stage/screen position for visualization (top, bottom, left, right) */
@@ -95,6 +127,27 @@ const SeatSchema = new Schema<ISeat>(
     posY: { type: Number },
     isAvailable: { type: Boolean, default: true },
     accessibility: [{ type: String }],
+    rowGroupId: { type: String },
+    detachedFromRow: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
+const LayoutElementSchema = new Schema<ILayoutElement>(
+  {
+    elementId: { type: String, required: true },
+    type: { type: String, required: true, enum: ["aisle"] },
+    floorId: { type: String },
+    orientation: {
+      type: String,
+      required: true,
+      enum: ["vertical", "horizontal"],
+    },
+    x: { type: Number, required: true },
+    y: { type: Number, required: true },
+    length: { type: Number, required: true, min: 0 },
+    thickness: { type: Number, required: true, min: 0 },
+    label: { type: String },
   },
   { _id: false },
 );
@@ -140,6 +193,16 @@ const SeatingLayoutSchema = new Schema<ISeatingLayout>(
     sections: [SectionSchema],
     seats: [SeatSchema],
     floors: [FloorSchema],
+    elements: [LayoutElementSchema],
+    backgroundImageUrl: { type: String },
+    stage: {
+      x: { type: Number },
+      y: { type: Number },
+      width: { type: Number },
+      height: { type: Number },
+      shape: { type: String, enum: ["rect", "rounded"] },
+      cornerRadius: { type: Number },
+    },
     isTemplate: { type: Boolean, default: false },
     stagePosition: {
       type: String,

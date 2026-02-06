@@ -1336,6 +1336,7 @@ export class TripleAApiClient {
       name: string;
       locationId: string;
       description?: string;
+      backgroundImageUrl?: string;
       totalCapacity: number;
       sections: Array<{
         sectionId: string;
@@ -1356,8 +1357,29 @@ export class TripleAApiClient {
         posY?: number;
         isAvailable: boolean;
         accessibility?: string[];
+        rowGroupId?: string;
+        detachedFromRow?: boolean;
       }>;
       floors?: Array<{ floorId: string; name: string; order: number }>;
+      elements?: Array<{
+        elementId: string;
+        type: "aisle";
+        floorId?: string;
+        orientation: "vertical" | "horizontal";
+        x: number;
+        y: number;
+        length: number;
+        thickness: number;
+        label?: string;
+      }>;
+      stage?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        shape?: "rect" | "rounded";
+        cornerRadius?: number;
+      };
       isTemplate: boolean;
       stagePosition?: "top" | "bottom" | "left" | "right";
       createdAt: string;
@@ -1378,7 +1400,27 @@ export class TripleAApiClient {
       name?: string;
       description?: string;
       stagePosition?: "top" | "bottom" | "left" | "right";
+      backgroundImageUrl?: string;
       floors?: Array<{ floorId: string; name: string; order: number }>;
+      elements?: Array<{
+        elementId: string;
+        type: "aisle";
+        floorId?: string;
+        orientation: "vertical" | "horizontal";
+        x: number;
+        y: number;
+        length: number;
+        thickness: number;
+        label?: string;
+      }>;
+      stage?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        shape?: "rect" | "rounded";
+        cornerRadius?: number;
+      };
       sections?: Array<{
         sectionId: string;
         name: string;
@@ -1398,6 +1440,8 @@ export class TripleAApiClient {
         posY?: number;
         isAvailable: boolean;
         accessibility?: string[];
+        rowGroupId?: string;
+        detachedFromRow?: boolean;
       }>;
     },
   ): Promise<{
@@ -1425,6 +1469,8 @@ export class TripleAApiClient {
         posY?: number;
         isAvailable: boolean;
         accessibility?: string[];
+        rowGroupId?: string;
+        detachedFromRow?: boolean;
       }>;
       isTemplate: boolean;
       stagePosition?: "top" | "bottom" | "left" | "right";

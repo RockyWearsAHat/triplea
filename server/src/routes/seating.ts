@@ -411,8 +411,28 @@ router.patch(
         name?: string;
         description?: string;
         stagePosition?: "top" | "bottom" | "left" | "right";
+        backgroundImageUrl?: string;
+        stage?: {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          shape?: "rect" | "rounded";
+          cornerRadius?: number;
+        };
         sections?: any[];
         floors?: Array<{ floorId: string; name: string; order: number }>;
+        elements?: Array<{
+          elementId: string;
+          type: "aisle";
+          floorId?: string;
+          orientation: "vertical" | "horizontal";
+          x: number;
+          y: number;
+          length: number;
+          thickness: number;
+          label?: string;
+        }>;
         seats?: Array<{
           seatId: string;
           row: string;
@@ -424,6 +444,8 @@ router.patch(
           posY?: number;
           isAvailable: boolean;
           accessibility?: string[];
+          rowGroupId?: string;
+          detachedFromRow?: boolean;
         }>;
       };
 
@@ -442,6 +464,18 @@ router.patch(
       if (updates.stagePosition !== undefined)
         layout.stagePosition = updates.stagePosition;
 
+      if (updates.backgroundImageUrl !== undefined) {
+        (layout as any).backgroundImageUrl =
+          typeof updates.backgroundImageUrl === "string" &&
+          updates.backgroundImageUrl.trim() !== ""
+            ? updates.backgroundImageUrl.trim()
+            : undefined;
+      }
+
+      if (updates.stage !== undefined) {
+        (layout as any).stage = updates.stage;
+      }
+
       if (updates.floors) {
         // Basic validation only
         const seen = new Set<string>();
@@ -459,6 +493,28 @@ router.patch(
           seen.add(f.floorId);
         }
         (layout as any).floors = updates.floors;
+      }
+
+      if (updates.elements) {
+        const elementIds = new Set<string>();
+        for (const el of updates.elements) {
+          if (
+            !el ||
+            typeof el.elementId !== "string" ||
+            el.elementId.trim() === ""
+          ) {
+            return res
+              .status(400)
+              .json({ message: "Each element must have an elementId" });
+          }
+          if (elementIds.has(el.elementId)) {
+            return res
+              .status(400)
+              .json({ message: `Duplicate elementId: ${el.elementId}` });
+          }
+          elementIds.add(el.elementId);
+        }
+        (layout as any).elements = updates.elements;
       }
 
       if (updates.seats) {
@@ -501,6 +557,8 @@ router.patch(
           posY: s.posY,
           isAvailable: !!s.isAvailable,
           accessibility: s.accessibility,
+          rowGroupId: s.rowGroupId,
+          detachedFromRow: !!s.detachedFromRow,
         }));
 
         layout.totalCapacity = layout.seats.length;
@@ -523,6 +581,9 @@ router.patch(
           sections: layout.sections,
           seats: layout.seats,
           floors: (layout as any).floors,
+          elements: (layout as any).elements,
+          backgroundImageUrl: (layout as any).backgroundImageUrl,
+          stage: (layout as any).stage,
           isTemplate: layout.isTemplate,
           stagePosition: layout.stagePosition,
           createdAt: layout.createdAt,
@@ -817,6 +878,9 @@ router.post(
         sections: template.sections,
         seats: template.seats,
         floors: (template as any).floors,
+        elements: (template as any).elements,
+        backgroundImageUrl: (template as any).backgroundImageUrl,
+        stage: (template as any).stage,
         isTemplate: false,
         stagePosition: template.stagePosition || "top",
       });
@@ -835,6 +899,9 @@ router.post(
           sections: cloned.sections,
           seats: cloned.seats,
           floors: (cloned as any).floors,
+          elements: (cloned as any).elements,
+          backgroundImageUrl: (cloned as any).backgroundImageUrl,
+          stage: (cloned as any).stage,
           stagePosition: cloned.stagePosition,
         },
       });
