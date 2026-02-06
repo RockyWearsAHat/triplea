@@ -768,6 +768,7 @@ export function SeatLayoutEditorPage() {
             <div
               ref={viewportRef}
               className={styles.viewport}
+              data-tool={tool}
               onPointerDown={handleViewportPointerDown}
               onPointerMove={handleViewportPointerMove}
               onPointerUp={handleViewportPointerUp}

@@ -1,0 +1,54 @@
+TRIPLE A APPS — PROPRIETARY LICENSE / RIGHTS RESERVED
+
+IMPORTANT: This is a proprietary repository. No permission is granted to use, copy, modify, distribute, sublicense, or create derivative works of the software or its source code, except as explicitly authorized in writing by the Owner (defined below).
+
+This file is provided as a practical repository notice and a lightweight statement of intended ownership/permission. It is not legal advice.
+
+Effective Date / Scope (Intended): To the maximum extent permitted by applicable law, "This file backdates any previous commits, forks, modifications, or forms of the Triple A apps and their related code and applies to everything previously created.”
+
+This notice is intended to apply to all versions of the Software embodied in this repository (including prior commits) and to any copies or forks of this repository, except where superseded by a separate signed written agreement with Owner/Company or where limited by applicable law. Nothing in this file modifies third-party license terms.
+
+1. Definitions
+
+- “Software” means all source code, documentation, build scripts, configuration, assets, designs, and other materials contained in this repository.
+- “Owner” means Man (William) and/or the company designated by Man (William) as the owner of the Software (the “Company”).
+- “Contributor” means Alex Waldmann.
+
+2. Ownership and Assignment
+
+- The Software is privately owned and proprietary.
+- To the maximum extent permitted by law, Contributor hereby assigns to Owner/Company all right, title, and interest in and to the Software and any contributions made by Contributor to the Software, including all intellectual property rights worldwide.
+- If any portion of the above assignment is not effective in a jurisdiction, Contributor grants Owner/Company an exclusive, perpetual, irrevocable, worldwide, royalty-free license to exercise all rights in such portion.
+
+3. Viewing / Access Control
+
+- Owner/Company reserves the exclusive right to grant, restrict, or revoke viewing access, disclosure rights, and distribution rights for the Software.
+- Any viewing, sharing, or disclosure of the Software by any party (including Contributor) is prohibited unless explicitly authorized in writing by Owner/Company.
+
+4. Contributor Work Authorization (While Contract Is Valid)
+
+- While Contributor is engaged by Owner/Company under a valid contract or written engagement, Contributor is granted a limited, non-transferable, revocable permission to access, view, and modify the Software solely to perform work for Owner/Company.
+- This permission is free of charge to Contributor and does not grant any ownership, publication, or distribution rights.
+
+5. Termination
+
+- Upon termination of Contributor’s engagement for any reason, all permissions granted to Contributor under Section 4 automatically terminate.
+- All code, work product, and related materials remain the sole property of Owner/Company. No rights are retained by Contributor beyond what is required by applicable law.
+
+6. No Free-Use Permissions
+
+- No implied licenses are granted.
+- There are no free-use permissions for the Software.
+
+7. Third-Party Components
+
+- This notice applies to the proprietary portions of the Software in this repository.
+- Third-party dependencies (for example, open-source packages installed via package managers) are licensed by their respective authors under their own licenses. Nothing in this file alters those third-party license terms.
+
+8. Confidentiality
+
+- The Software and all non-public information about it are confidential. Unauthorized access, disclosure, or distribution is prohibited.
+
+Contact
+
+- For permissions or licensing inquiries, contact the Owner/Company in writing.
