@@ -80,7 +80,7 @@
 }
 
 .gigCardHeader:hover {
-  background-color: color-mix(in srgb, var(--surface) 95%, var(--text) 5%);
+  background: var(--surface-2);
 }
 
 .gigCardHeader:focus-visible {
@@ -144,7 +144,7 @@
 
 /* Inline Link */
 .inlineLink {
-  color: var(--primary);
+  color: var(--accent);
   text-decoration: none;
   cursor: pointer;
 }

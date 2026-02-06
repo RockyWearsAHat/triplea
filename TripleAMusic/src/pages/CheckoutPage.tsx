@@ -7,7 +7,9 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import type { CheckoutSession, FeeCalculationResult } from "@shared";
+import type { CheckoutSession, FeeCalculationResult, Gig } from "@shared";
+import { SeatSelector } from "@shared";
+import type { SeatInfo, SectionInfo, TierInfo } from "@shared";
 import { useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import styles from "./CheckoutPage.module.scss";
@@ -126,7 +128,9 @@ function CheckoutForm({
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, subtotal, itemCount, clearCart } = useCart();
+  const { items, subtotal, itemCount, clearCart, updateSeatIds } = useCart();
+
+  const checkoutItem = items[0];
 
   // Form state for customer info
   const [holderName, setHolderName] = useState("");
@@ -145,6 +149,20 @@ export default function CheckoutPage() {
   const [sessionError, setSessionError] = useState<string | null>(null);
 
   const api = useMemo(() => createApiClient(), []);
+
+  const [checkoutGig, setCheckoutGig] = useState<Gig | null>(null);
+  const [seatingLoading, setSeatingLoading] = useState(false);
+  const [seatingError, setSeatingError] = useState<string | null>(null);
+  const [seatingData, setSeatingData] = useState<{
+    layout: {
+      seats: SeatInfo[];
+      sections: SectionInfo[];
+      stagePosition?: "top" | "bottom" | "left" | "right";
+    };
+    tiers: TierInfo[];
+  } | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [showSeatPicker, setShowSeatPicker] = useState(false);
 
   // Pre-fill form if user is logged in
   useEffect(() => {
@@ -206,6 +224,66 @@ export default function CheckoutPage() {
     };
   }, [api, items]);
 
+  // Load gig + seating availability for reserved seating (single-item checkout)
+  useEffect(() => {
+    const item = checkoutItem;
+    if (!item?.gigId) return;
+
+    let cancelled = false;
+    setCheckoutGig(null);
+    setSeatingData(null);
+    setSeatingError(null);
+    setShowSeatPicker(false);
+    setSelectedSeats(item.seatIds ?? []);
+
+    async function load() {
+      try {
+        const gig = await api.getPublicGig(item.gigId);
+        if (cancelled) return;
+        setCheckoutGig(gig);
+
+        if (gig.seatingType === "reserved" && gig.seatingLayoutId) {
+          setSeatingLoading(true);
+          try {
+            const seatsData = await api.getAvailableSeats(item.gigId);
+            if (cancelled) return;
+
+            setSeatingData({
+              layout: {
+                seats: seatsData.layout.seats as SeatInfo[],
+                sections: seatsData.layout.sections as SectionInfo[],
+                stagePosition: seatsData.layout.stagePosition as
+                  | "top"
+                  | "bottom"
+                  | "left"
+                  | "right",
+              },
+              tiers: seatsData.tiers as TierInfo[],
+            });
+            setShowSeatPicker(true);
+          } catch (e) {
+            if (cancelled) return;
+            setSeatingError(
+              e instanceof Error
+                ? e.message
+                : "Unable to load seating availability",
+            );
+          } finally {
+            if (!cancelled) setSeatingLoading(false);
+          }
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setSeatingError(e instanceof Error ? e.message : String(e));
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, checkoutItem?.gigId]);
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -225,6 +303,23 @@ export default function CheckoutPage() {
 
     // Create checkout session
     const item = items[0]; // Single item for now
+
+    const isReservedSeating = checkoutGig?.seatingType === "reserved";
+    if (isReservedSeating) {
+      if (!checkoutGig?.seatingLayoutId) {
+        setFormError(
+          "This event is reserved seating, but no seat map is configured yet.",
+        );
+        return;
+      }
+      if (!selectedSeats || selectedSeats.length !== item.quantity) {
+        setFormError(
+          `Please select exactly ${item.quantity} seat(s) before continuing.`,
+        );
+        return;
+      }
+    }
+
     setSessionLoading(true);
     setSessionError(null);
 
@@ -236,7 +331,7 @@ export default function CheckoutPage() {
         holderName: holderName.trim(),
         // Include tier and seat info if available
         tierId: item.tierId,
-        seatIds: item.seatIds,
+        seatIds: isReservedSeating ? selectedSeats : item.seatIds,
       });
       setCheckoutSession(session);
       setFormSubmitted(true);
@@ -304,6 +399,12 @@ export default function CheckoutPage() {
                 <span>Tickets</span>
                 <span>{item?.quantity}×</span>
               </div>
+              {item?.seatIds && item.seatIds.length > 0 && (
+                <div className={styles.ticketRow}>
+                  <span>Seats</span>
+                  <span>{item.seatIds.join(", ")}</span>
+                </div>
+              )}
               <div className={styles.ticketRow}>
                 <span>Ticket holder</span>
                 <span>{holderName}</span>
@@ -412,6 +513,7 @@ export default function CheckoutPage() {
   // Show customer info form
   const item = items[0];
   const isFree = (item?.ticketPrice ?? 0) === 0;
+  const isReservedSeating = checkoutGig?.seatingType === "reserved";
 
   return (
     <div className={styles.container}>
@@ -515,6 +617,82 @@ export default function CheckoutPage() {
             We'll send your tickets to this email address.
           </p>
 
+          {isReservedSeating && (
+            <div
+              className={[ui.card, ui.cardPad].join(" ")}
+              style={{ marginBottom: 16 }}
+            >
+              <div
+                className={ui.stack}
+                style={{ "--stack-gap": "10px" } as any}
+              >
+                <div>
+                  <p className={ui.sectionTitle} style={{ margin: 0 }}>
+                    Select seats
+                  </p>
+                  <p className={ui.help} style={{ marginTop: 4 }}>
+                    Choose exactly {item.quantity} seat
+                    {item.quantity > 1 ? "s" : ""} for this event.
+                  </p>
+                </div>
+
+                {seatingError ? (
+                  <p className={ui.error} style={{ margin: 0 }}>
+                    {seatingError}
+                  </p>
+                ) : seatingLoading ? (
+                  <p className={ui.help} style={{ margin: 0 }}>
+                    Loading seat map...
+                  </p>
+                ) : seatingData ? (
+                  <>
+                    {showSeatPicker ? (
+                      <SeatSelector
+                        seats={seatingData.layout.seats}
+                        sections={seatingData.layout.sections}
+                        tiers={seatingData.tiers}
+                        selectedSeats={selectedSeats}
+                        onSelectionChange={(seatIds: string[]) => {
+                          const next = seatIds.slice(0, item.quantity);
+                          setSelectedSeats(next);
+                          updateSeatIds(item.gigId, next);
+                        }}
+                        maxSeats={item.quantity}
+                        stagePosition={seatingData.layout.stagePosition}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.payButton}
+                        onClick={() => setShowSeatPicker(true)}
+                      >
+                        Choose seats
+                      </button>
+                    )}
+
+                    {selectedSeats.length > 0 && (
+                      <p className={ui.help} style={{ margin: 0 }}>
+                        Selected: {selectedSeats.join(", ")}
+                      </p>
+                    )}
+
+                    {selectedSeats.length !== item.quantity && (
+                      <p className={ui.error} style={{ margin: 0 }}>
+                        Select {item.quantity - selectedSeats.length} more seat
+                        {item.quantity - selectedSeats.length === 1 ? "" : "s"}
+                        to continue.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className={ui.help} style={{ margin: 0 }}>
+                    Seat selection is required for this event.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleFormSubmit} className={styles.customerForm}>
             <div className={styles.formField}>
               <label htmlFor="holderName">Full name</label>
@@ -547,7 +725,12 @@ export default function CheckoutPage() {
             <button
               type="submit"
               className={styles.payButton}
-              disabled={sessionLoading || !holderName.trim() || !email.trim()}
+              disabled={
+                sessionLoading ||
+                !holderName.trim() ||
+                !email.trim() ||
+                (isReservedSeating && selectedSeats.length !== item.quantity)
+              }
             >
               {sessionLoading
                 ? "Loading..."

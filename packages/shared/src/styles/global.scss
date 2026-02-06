@@ -96,13 +96,13 @@
 
 /* Per-app accent overrides (set via data attribute on body) */
 body[data-taa-app="music"] {
-  --app-accent: #c9b5f0;
-  --accent: #c9b5f0;
+  --app-accent: var(--taa-purple-400);
+  --accent: var(--taa-purple-400);
 }
 
 body[data-taa-app="musician"] {
-  --app-accent: var(--taa-purple-900);
-  --accent: var(--taa-purple-900);
+  --app-accent: var(--taa-purple-400);
+  --accent: var(--taa-purple-400);
 }
 
 body[data-taa-app="muse"] {

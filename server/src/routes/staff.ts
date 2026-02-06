@@ -14,6 +14,22 @@ import { sendStaffInviteEmail } from "../lib/email";
 
 const router: Router = express.Router();
 
+async function expireStaleInvites(hostUserId: Types.ObjectId) {
+  const now = new Date();
+  await StaffInvite.updateMany(
+    {
+      hostUserId,
+      status: "pending",
+      expiresAt: { $lt: now },
+    },
+    {
+      $set: {
+        status: "expired",
+      },
+    },
+  ).exec();
+}
+
 /**
  * Host Staff Management Routes
  *
@@ -40,6 +56,8 @@ router.post(
 
       const normalizedEmail = String(email).trim().toLowerCase();
       const hostUserId = new Types.ObjectId(req.authUser!.id);
+
+      await expireStaleInvites(hostUserId);
 
       // Validate permissions
       const validPermissions = (permissions ?? ["scan_tickets"]).filter((p) =>
@@ -136,9 +154,11 @@ router.get(
     try {
       const hostUserId = new Types.ObjectId(req.authUser!.id);
 
+      await expireStaleInvites(hostUserId);
+
       const staffRecords = await StaffInvite.find({
         hostUserId,
-        status: { $in: ["pending", "accepted"] },
+        status: { $in: ["pending", "accepted", "expired"] },
       })
         .populate("linkedUserId", "name email")
         .sort({ createdAt: -1 })
@@ -258,14 +278,16 @@ router.post(
       const { id } = req.params;
       const hostUserId = new Types.ObjectId(req.authUser!.id);
 
+      await expireStaleInvites(hostUserId);
+
       const staffRecord = await StaffInvite.findOne({
         _id: id,
         hostUserId,
-        status: "pending",
+        status: { $in: ["pending", "expired"] },
       }).exec();
 
       if (!staffRecord) {
-        return res.status(404).json({ message: "Pending invite not found" });
+        return res.status(404).json({ message: "Invite not found" });
       }
 
       // Generate new token
@@ -275,6 +297,7 @@ router.post(
       // Extend expiration
       staffRecord.tokenHash = tokenHash;
       staffRecord.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      staffRecord.status = "pending";
       await staffRecord.save();
 
       // Check if user exists
@@ -310,6 +333,8 @@ router.patch(
       const { email } = req.body as { email: string };
       const hostUserId = new Types.ObjectId(req.authUser!.id);
 
+      await expireStaleInvites(hostUserId);
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
@@ -319,11 +344,11 @@ router.patch(
       const staffRecord = await StaffInvite.findOne({
         _id: id,
         hostUserId,
-        status: "pending",
+        status: { $in: ["pending", "expired"] },
       }).exec();
 
       if (!staffRecord) {
-        return res.status(404).json({ message: "Pending invite not found" });
+        return res.status(404).json({ message: "Invite not found" });
       }
 
       // If email is the same, just resend
@@ -337,6 +362,7 @@ router.patch(
 
         staffRecord.tokenHash = tokenHash;
         staffRecord.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        staffRecord.status = "pending";
         await staffRecord.save();
 
         const existingUser = await User.findOne({
@@ -393,6 +419,7 @@ router.patch(
       staffRecord.email = normalizedEmail;
       staffRecord.tokenHash = tokenHash;
       staffRecord.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      staffRecord.status = "pending";
       await staffRecord.save();
 
       // Check if new user exists

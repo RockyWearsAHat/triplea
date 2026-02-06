@@ -132,7 +132,7 @@ function LoginPage() {
             Not a musician?{" "}
             <a
               href={MUSIC_ORIGIN}
-              style={{ color: "var(--gold)", textDecoration: "underline" }}
+              style={{ color: "var(--primary)", textDecoration: "underline" }}
             >
               Browse and host concerts here
             </a>
@@ -152,10 +152,10 @@ function MusicianLandingPage() {
       {/* Hero - Full viewport, one bold message */}
       <section className={ui.heroFull}>
         <p className={ui.heroKicker}>Triple A Musician</p>
-        <h1 className={ui.heroMassive}>You're in the family.</h1>
+        <h1 className={ui.heroMassive}>Your performer console.</h1>
         <p className={ui.heroSubtitleLarge}>
-          One clean dashboard for your requests, bookings, and perks — with a
-          real team behind it.
+          Keep requests, bookings, and perks in one place — built for fast
+          decisions and a clean weekly rhythm.
         </p>
         <div className={ui.heroActionsLarge}>
           {user?.role.includes("musician") ? (
@@ -183,7 +183,7 @@ function MusicianLandingPage() {
       <section className={ui.sectionFullCenter}>
         <h2 className={ui.sectionTitleLarge}>Everything you need</h2>
         <p className={ui.sectionLead}>
-          Focus on performing. We handle the rest.
+          Focus on performing. Stay organized, stay ready.
         </p>
 
         <div className={ui.pathGrid} style={{ marginTop: 40 }}>

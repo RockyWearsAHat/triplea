@@ -1073,12 +1073,14 @@ export class TripleAApiClient {
         row: string;
         seatNumber: string;
         section: string;
+        floorId?: string;
         tierId?: string;
         posX?: number;
         posY?: number;
         isAvailable: boolean;
         accessibility?: string[];
       }>;
+      floors?: Array<{ floorId: string; name: string; order: number }>;
       stagePosition?: string;
     } | null;
   }> {
@@ -1110,12 +1112,14 @@ export class TripleAApiClient {
         row: string;
         seatNumber: string;
         section: string;
+        floorId?: string;
         tierId?: string;
         posX?: number;
         posY?: number;
         isAvailable: boolean;
         isSold?: boolean;
       }>;
+      floors?: Array<{ floorId: string; name: string; order: number }>;
       stagePosition?: string;
     };
     soldSeatIds: string[];
@@ -1166,6 +1170,49 @@ export class TripleAApiClient {
     );
   }
 
+  async cloneTemplateLayoutToGig(
+    gigId: string,
+    templateLayoutId: string,
+  ): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        floorId?: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+      floors?: Array<{ floorId: string; name: string; order: number }>;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+    };
+  }> {
+    return await this.request(
+      `/seating/gigs/${encodeURIComponent(gigId)}/layout/clone`,
+      {
+        method: "POST",
+        body: JSON.stringify({ templateLayoutId }),
+      },
+    );
+  }
+
   async updateGigSeatingConfig(
     gigId: string,
     config: {
@@ -1207,6 +1254,189 @@ export class TripleAApiClient {
       {
         method: "PATCH",
         body: JSON.stringify({ seatCapacity }),
+      },
+    );
+  }
+
+  async listLocationSeatingLayouts(locationId: string): Promise<{
+    layouts: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      totalCapacity: number;
+      isTemplate: boolean;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+    }>;
+  }> {
+    return await this.request(
+      `/seating/locations/${encodeURIComponent(locationId)}/layouts`,
+      { method: "GET" },
+    );
+  }
+
+  async createLocationSeatingLayout(
+    locationId: string,
+    params: {
+      name: string;
+      description?: string;
+      sections?: Array<{
+        name: string;
+        rows: number;
+        seatsPerRow: number;
+        tierId?: string;
+        color?: string;
+      }>;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      useSimpleLayout?: boolean;
+    },
+  ): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        floorId?: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+      floors?: Array<{ floorId: string; name: string; order: number }>;
+      isTemplate: boolean;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+    };
+  }> {
+    return await this.request(
+      `/seating/locations/${encodeURIComponent(locationId)}/layouts`,
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  async getSeatingLayout(layoutId: string): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        floorId?: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+      floors?: Array<{ floorId: string; name: string; order: number }>;
+      isTemplate: boolean;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> {
+    return await this.request(
+      `/seating/layouts/${encodeURIComponent(layoutId)}`,
+      {
+        method: "GET",
+      },
+    );
+  }
+
+  async updateSeatingLayout(
+    layoutId: string,
+    updates: {
+      name?: string;
+      description?: string;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      floors?: Array<{ floorId: string; name: string; order: number }>;
+      sections?: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats?: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        floorId?: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+    },
+  ): Promise<{
+    layout: {
+      id: string;
+      name: string;
+      locationId: string;
+      description?: string;
+      totalCapacity: number;
+      sections: Array<{
+        sectionId: string;
+        name: string;
+        color?: string;
+        defaultTierId?: string;
+        rows: string[];
+        seatsPerRow: number[];
+      }>;
+      seats: Array<{
+        seatId: string;
+        row: string;
+        seatNumber: string;
+        section: string;
+        tierId?: string;
+        posX?: number;
+        posY?: number;
+        isAvailable: boolean;
+        accessibility?: string[];
+      }>;
+      isTemplate: boolean;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> {
+    return await this.request(
+      `/seating/layouts/${encodeURIComponent(layoutId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(updates),
       },
     );
   }

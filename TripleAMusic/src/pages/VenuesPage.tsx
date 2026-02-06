@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Location } from "@shared";
-import { Button } from "@shared";
+import { Button, spacing } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
+import { useNavigate } from "react-router-dom";
 import { createApiClient, getAssetUrl } from "../lib/urls";
 import { HostDashboardShell } from "../components/HostDashboardShell";
 import styles from "./VenuesPage.module.scss";
@@ -23,6 +24,7 @@ function Section({
 
 export function VenuesPage() {
   const api = useMemo(() => createApiClient(), []);
+  const navigate = useNavigate();
 
   const [venues, setVenues] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,6 +143,16 @@ export function VenuesPage() {
                           <p className={ui.help}>Capacity: {v.seatCapacity}</p>
                         )}
                       </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: spacing.sm }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate(`/venues/${v.id}/seating`)}
+                      >
+                        Seating
+                      </Button>
                     </div>
                   </div>
                 </div>

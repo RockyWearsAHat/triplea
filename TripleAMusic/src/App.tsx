@@ -31,6 +31,8 @@ import TicketScannerPage from "./pages/TicketScannerPage";
 import ManagePage from "./pages/ManagePage";
 import MyGigsPage from "./pages/MyGigsPage";
 import VenuesPage from "./pages/VenuesPage";
+import VenueSeatingLayoutsPage from "./pages/VenueSeatingLayoutsPage";
+import SeatLayoutEditorPage from "./pages/SeatLayoutEditorPage";
 import StaffPage from "./pages/StaffPage";
 import StaffJoinPage from "./pages/StaffJoinPage";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -1182,6 +1184,7 @@ function GigSeatingConfigPage() {
   const { id } = useParams();
   const gigId = id ?? "";
   const goBack = useSafeBack("/my-gigs");
+  const navigate = useNavigate();
 
   const [gig, setGig] = useState<Gig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1189,6 +1192,34 @@ function GigSeatingConfigPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  type SeatingLayoutSummary = {
+    id: string;
+    name: string;
+    description?: string;
+    totalCapacity: number;
+    isTemplate: boolean;
+    stagePosition?: "top" | "bottom" | "left" | "right";
+  };
+
+  const [venueLayouts, setVenueLayouts] = useState<SeatingLayoutSummary[]>([]);
+  const [venueLayoutsLoading, setVenueLayoutsLoading] = useState(false);
+  const [venueLayoutsError, setVenueLayoutsError] = useState<string | null>(
+    null,
+  );
+
+  const [currentLayout, setCurrentLayout] = useState<null | {
+    id: string;
+    name: string;
+    totalCapacity: number;
+    updatedAt?: string;
+  }>(null);
+  const [currentLayoutLoading, setCurrentLayoutLoading] = useState(false);
+
+  const [busyTemplateId, setBusyTemplateId] = useState<string | null>(null);
+  const [templateActionError, setTemplateActionError] = useState<string | null>(
+    null,
+  );
 
   // Form state
   const [seatingType, setSeatingType] = useState<
@@ -1254,6 +1285,53 @@ function GigSeatingConfigPage() {
             // Tiers not available yet
           }
         }
+
+        // Fetch venue templates (if the gig is attached to a location)
+        const locationId = gigData.location?.id;
+        if (locationId) {
+          setVenueLayoutsLoading(true);
+          setVenueLayoutsError(null);
+          api
+            .listLocationSeatingLayouts(locationId)
+            .then((r) => {
+              if (cancelled) return;
+              setVenueLayouts(r.layouts as SeatingLayoutSummary[]);
+            })
+            .catch((e) => {
+              if (cancelled) return;
+              setVenueLayoutsError(e instanceof Error ? e.message : String(e));
+            })
+            .finally(() => {
+              if (cancelled) return;
+              setVenueLayoutsLoading(false);
+            });
+        }
+
+        // Fetch current layout (if the gig already has reserved seating attached)
+        if (gigData.seatingLayoutId) {
+          setCurrentLayoutLoading(true);
+          api
+            .getSeatingLayout(gigData.seatingLayoutId)
+            .then((r) => {
+              if (cancelled) return;
+              setCurrentLayout({
+                id: r.layout.id,
+                name: r.layout.name,
+                totalCapacity: r.layout.totalCapacity,
+                updatedAt: r.layout.updatedAt,
+              });
+              setSeatCapacity(r.layout.totalCapacity);
+            })
+            .catch(() => {
+              // Layout may not be accessible, or not yet created
+            })
+            .finally(() => {
+              if (cancelled) return;
+              setCurrentLayoutLoading(false);
+            });
+        } else {
+          setCurrentLayout(null);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -1275,16 +1353,74 @@ function GigSeatingConfigPage() {
     setSaveSuccess(false);
 
     try {
-      await api.updateGigSeatingConfig(gigId, {
+      const result = await api.updateGigSeatingConfig(gigId, {
         seatingType,
         seatCapacity: seatCapacity === "" ? undefined : Number(seatCapacity),
       });
+      setGig((prev) =>
+        prev
+          ? {
+              ...prev,
+              seatingType: result.gig.seatingType as Gig["seatingType"],
+              seatCapacity: result.gig.seatCapacity,
+              seatingLayoutId: result.gig.seatingLayoutId,
+            }
+          : prev,
+      );
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleApplyTemplateToGig = async (templateLayoutId: string) => {
+    if (!gigId) return;
+    if (!gig?.location?.id) {
+      setTemplateActionError("This gig has no venue yet.");
+      return;
+    }
+
+    setTemplateActionError(null);
+
+    if (gig.seatingLayoutId) {
+      const ok = window.confirm(
+        "This will replace the current seat map for this gig. Continue?",
+      );
+      if (!ok) return;
+    }
+
+    setBusyTemplateId(templateLayoutId);
+    try {
+      const result = await api.cloneTemplateLayoutToGig(
+        gigId,
+        templateLayoutId,
+      );
+      const newLayout = result.layout;
+
+      setSeatingType("reserved");
+      setSeatCapacity(newLayout.totalCapacity);
+      setGig((prev) =>
+        prev
+          ? {
+              ...prev,
+              seatingType: "reserved",
+              seatCapacity: newLayout.totalCapacity,
+              seatingLayoutId: newLayout.id,
+            }
+          : prev,
+      );
+      setCurrentLayout({
+        id: newLayout.id,
+        name: newLayout.name,
+        totalCapacity: newLayout.totalCapacity,
+      });
+    } catch (e) {
+      setTemplateActionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyTemplateId(null);
     }
   };
 
@@ -1393,7 +1529,7 @@ function GigSeatingConfigPage() {
                 cursor: "pointer",
                 border:
                   seatingType === "general_admission"
-                    ? "2px solid #E59D0D"
+                    ? "2px solid var(--primary)"
                     : undefined,
                 flex: 1,
                 minWidth: 200,
@@ -1421,7 +1557,9 @@ function GigSeatingConfigPage() {
                 gap: spacing.sm,
                 cursor: "pointer",
                 border:
-                  seatingType === "reserved" ? "2px solid #E59D0D" : undefined,
+                  seatingType === "reserved"
+                    ? "2px solid var(--primary)"
+                    : undefined,
                 flex: 1,
                 minWidth: 200,
               }}
@@ -1443,6 +1581,185 @@ function GigSeatingConfigPage() {
           </div>
         </Section>
 
+        {/* Reserved seating seat map */}
+        {seatingType === "reserved" && (
+          <Section title="Seat map">
+            {!gig.location?.id ? (
+              <p className={ui.error} style={{ margin: 0 }}>
+                Set a venue for this gig before configuring reserved seats.
+              </p>
+            ) : (
+              <div
+                className={ui.stack}
+                style={{ "--stack-gap": "12px" } as React.CSSProperties}
+              >
+                {templateActionError ? (
+                  <p className={ui.error} style={{ margin: 0 }}>
+                    {templateActionError}
+                  </p>
+                ) : null}
+
+                <div className={[ui.card, ui.cardPad].join(" ")}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.md,
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ flex: "1 1 240px" }}>
+                      <p style={{ fontWeight: 600, margin: 0 }}>
+                        Current seat map
+                      </p>
+                      {currentLayoutLoading ? (
+                        <p
+                          className={ui.help}
+                          style={{ margin: 0, fontSize: 13 }}
+                        >
+                          Loading seat map...
+                        </p>
+                      ) : gig.seatingLayoutId ? (
+                        <p
+                          className={ui.help}
+                          style={{ margin: 0, fontSize: 13 }}
+                        >
+                          {currentLayout?.name ?? "Seat map"} · Capacity:{" "}
+                          {currentLayout?.totalCapacity ??
+                            gig.seatCapacity ??
+                            "—"}
+                        </p>
+                      ) : (
+                        <p
+                          className={ui.help}
+                          style={{ margin: 0, fontSize: 13 }}
+                        >
+                          No seat map applied yet.
+                        </p>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: spacing.sm,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Button
+                        variant="secondary"
+                        disabled={!gig.seatingLayoutId}
+                        onClick={() =>
+                          navigate(
+                            `/venues/${encodeURIComponent(
+                              gig.location!.id,
+                            )}/seating/${encodeURIComponent(
+                              gig.seatingLayoutId || "",
+                            )}`,
+                          )
+                        }
+                      >
+                        Edit seat map
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          navigate(
+                            `/venues/${encodeURIComponent(
+                              gig.location!.id,
+                            )}/seating`,
+                          )
+                        }
+                      >
+                        Manage venue maps
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p style={{ fontWeight: 600, margin: 0 }}>Apply a template</p>
+                  <p className={ui.help} style={{ marginTop: 4, fontSize: 13 }}>
+                    Choose a venue seat map template to clone onto this gig.
+                  </p>
+
+                  {venueLayoutsLoading ? (
+                    <p
+                      className={ui.help}
+                      style={{ fontSize: 13, marginTop: 8 }}
+                    >
+                      Loading templates...
+                    </p>
+                  ) : venueLayoutsError ? (
+                    <p
+                      className={ui.error}
+                      style={{ fontSize: 13, marginTop: 8 }}
+                    >
+                      {venueLayoutsError}
+                    </p>
+                  ) : venueLayouts.filter((l) => l.isTemplate).length === 0 ? (
+                    <p
+                      className={ui.help}
+                      style={{ fontSize: 13, marginTop: 8 }}
+                    >
+                      No templates yet. Create one in “Manage venue maps”.
+                    </p>
+                  ) : (
+                    <div
+                      className={ui.stack}
+                      style={
+                        {
+                          "--stack-gap": "10px",
+                          marginTop: 8,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {venueLayouts
+                        .filter((l) => l.isTemplate)
+                        .map((l) => (
+                          <div
+                            key={l.id}
+                            className={[ui.card, ui.cardPad].join(" ")}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: spacing.md,
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div style={{ flex: "1 1 240px" }}>
+                              <p style={{ margin: 0, fontWeight: 600 }}>
+                                {l.name}
+                              </p>
+                              <p
+                                className={ui.help}
+                                style={{ margin: 0, fontSize: 13 }}
+                              >
+                                Capacity: {l.totalCapacity}
+                                {l.description ? ` · ${l.description}` : ""}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              disabled={busyTemplateId === l.id}
+                              onClick={() => handleApplyTemplateToGig(l.id)}
+                            >
+                              {busyTemplateId === l.id
+                                ? "Applying..."
+                                : "Use template"}
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Section>
+        )}
+
         {/* Seat Capacity */}
         <Section title="Seat capacity">
           <div
@@ -1456,6 +1773,11 @@ function GigSeatingConfigPage() {
               type="number"
               min={1}
               value={seatCapacity}
+              disabled={
+                seatingType === "reserved" &&
+                Boolean(gig.seatingLayoutId) &&
+                Boolean(currentLayout?.totalCapacity)
+              }
               onChange={(e) =>
                 setSeatCapacity(
                   e.target.value === "" ? "" : Number(e.target.value),
@@ -1466,8 +1788,9 @@ function GigSeatingConfigPage() {
               style={{ maxWidth: 200 }}
             />
             <p className={ui.help} style={{ fontSize: 13, margin: 0 }}>
-              Maximum number of tickets that can be sold. Leave empty for
-              unlimited.
+              {seatingType === "reserved" && gig.seatingLayoutId
+                ? "For reserved seating, capacity is derived from the seat map."
+                : "Maximum number of tickets that can be sold. Leave empty for unlimited."}
             </p>
           </div>
         </Section>
@@ -1688,7 +2011,7 @@ function GigSeatingConfigPage() {
           {saveSuccess && (
             <span
               style={{
-                color: "var(--success, #16a34a)",
+                color: "var(--success)",
                 fontSize: 14,
                 fontWeight: 500,
               }}
@@ -1951,6 +2274,22 @@ function App() {
                 element={
                   <RequireRole role="customer">
                     <VenuesPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/venues/:locationId/seating"
+                element={
+                  <RequireRole role="customer">
+                    <VenueSeatingLayoutsPage />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/venues/:locationId/seating/:layoutId"
+                element={
+                  <RequireRole role="customer">
+                    <SeatLayoutEditorPage />
                   </RequireRole>
                 }
               />

@@ -181,7 +181,18 @@ export function StaffPage() {
     }
   };
 
-  const pendingInvites = staff.filter((s) => s.status === "pending");
+  const nowMs = Date.now();
+  const isExpired = (member: StaffMember) => {
+    if (!member.expiresAt) return false;
+    const ms = Date.parse(member.expiresAt);
+    return Number.isFinite(ms) ? ms < nowMs : false;
+  };
+
+  const invites = staff.filter((s) => {
+    const effectiveStatus =
+      s.status === "pending" && isExpired(s) ? "expired" : s.status;
+    return effectiveStatus === "pending" || effectiveStatus === "expired";
+  });
   const activeStaff = staff.filter((s) => s.status === "accepted");
 
   if (loading) {
@@ -289,117 +300,130 @@ export function StaffPage() {
 
         {error && <p className={ui.error}>{error}</p>}
 
-        {/* Pending Invites */}
-        {pendingInvites.length > 0 && (
+        {/* Invites */}
+        {invites.length > 0 && (
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>
               <Clock size={16} />
-              Pending Invites ({pendingInvites.length})
+              Invites ({invites.length})
             </h3>
             <div className={styles.staffList}>
-              {pendingInvites.map((member) => (
-                <div key={member.id} className={styles.staffCard}>
-                  <div className={styles.staffInfo}>
-                    <div className={styles.staffAvatar}>
-                      <Mail size={16} />
-                    </div>
-                    <div>
-                      <p className={styles.staffName}>
-                        {member.staffName || member.email}
-                      </p>
-                      {editingEmailId === member.id ? (
-                        <div className={styles.editEmailForm}>
-                          <input
-                            type="email"
-                            value={editEmail}
-                            onChange={(e) => setEditEmail(e.target.value)}
-                            placeholder="new@email.com"
-                            className={ui.input}
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleSaveEmail(member.id);
-                              } else if (e.key === "Escape") {
-                                handleCancelEditEmail();
-                              }
-                            }}
-                          />
-                          {editEmailError && (
-                            <p className={ui.error} style={{ marginTop: 4 }}>
-                              {editEmailError}
-                            </p>
-                          )}
-                          <div className={styles.editEmailActions}>
-                            <button
-                              className={styles.iconButton}
-                              onClick={() => handleSaveEmail(member.id)}
-                              title="Save"
-                              type="button"
-                              disabled={savingEmail}
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              className={styles.iconButton}
-                              onClick={handleCancelEditEmail}
-                              title="Cancel"
-                              type="button"
-                            >
-                              <X size={14} />
-                            </button>
+              {invites.map((member) => {
+                const expired =
+                  member.status === "expired" ||
+                  (member.status === "pending" && isExpired(member));
+                return (
+                  <div key={member.id} className={styles.staffCard}>
+                    <div className={styles.staffInfo}>
+                      <div className={styles.staffAvatar}>
+                        <Mail size={16} />
+                      </div>
+                      <div>
+                        <p className={styles.staffName}>
+                          {member.staffName || member.email}
+                          <span
+                            className={
+                              expired ? ui.badgeWarning : ui.badgeNeutral
+                            }
+                            style={{ marginLeft: 8 }}
+                          >
+                            {expired ? "Expired" : "Pending"}
+                          </span>
+                        </p>
+                        {editingEmailId === member.id ? (
+                          <div className={styles.editEmailForm}>
+                            <input
+                              type="email"
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                              placeholder="new@email.com"
+                              className={ui.input}
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleSaveEmail(member.id);
+                                } else if (e.key === "Escape") {
+                                  handleCancelEditEmail();
+                                }
+                              }}
+                            />
+                            {editEmailError && (
+                              <p className={ui.error} style={{ marginTop: 4 }}>
+                                {editEmailError}
+                              </p>
+                            )}
+                            <div className={styles.editEmailActions}>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleSaveEmail(member.id)}
+                                title="Save"
+                                type="button"
+                                disabled={savingEmail}
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                className={styles.iconButton}
+                                onClick={handleCancelEditEmail}
+                                title="Cancel"
+                                type="button"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className={styles.staffEmail}>
-                            {member.email}
-                            <button
-                              className={styles.inlineEditButton}
-                              onClick={() => handleStartEditEmail(member)}
-                              title="Edit email"
-                              type="button"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                          </p>
-                        </>
-                      )}
-                      <p className={styles.staffMeta}>
-                        Expires:{" "}
-                        {member.expiresAt
-                          ? new Date(member.expiresAt).toLocaleDateString()
-                          : "—"}
-                      </p>
+                        ) : (
+                          <>
+                            <p className={styles.staffEmail}>
+                              {member.email}
+                              <button
+                                className={styles.inlineEditButton}
+                                onClick={() => handleStartEditEmail(member)}
+                                title="Edit email"
+                                type="button"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            </p>
+                          </>
+                        )}
+                        <p className={styles.staffMeta}>
+                          Expires:{" "}
+                          {member.expiresAt
+                            ? new Date(member.expiresAt).toLocaleDateString()
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={styles.staffPermissions}>
+                      {member.permissions.map((p) => (
+                        <span key={p} className={styles.permissionBadge}>
+                          {PERMISSION_LABELS[p]}
+                        </span>
+                      ))}
+                    </div>
+                    <div className={styles.staffActions}>
+                      <button
+                        className={styles.iconButton}
+                        onClick={() => handleResend(member.id)}
+                        title="Resend invite"
+                        type="button"
+                      >
+                        <RefreshCw size={14} />
+                      </button>
+                      <button
+                        className={styles.iconButtonDanger}
+                        onClick={() => handleRemove(member.id)}
+                        title="Revoke invite"
+                        type="button"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
-                  <div className={styles.staffPermissions}>
-                    {member.permissions.map((p) => (
-                      <span key={p} className={styles.permissionBadge}>
-                        {PERMISSION_LABELS[p]}
-                      </span>
-                    ))}
-                  </div>
-                  <div className={styles.staffActions}>
-                    <button
-                      className={styles.iconButton}
-                      onClick={() => handleResend(member.id)}
-                      title="Resend invite"
-                      type="button"
-                    >
-                      <RefreshCw size={14} />
-                    </button>
-                    <button
-                      className={styles.iconButtonDanger}
-                      onClick={() => handleRemove(member.id)}
-                      title="Revoke invite"
-                      type="button"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

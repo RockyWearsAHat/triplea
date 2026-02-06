@@ -12,6 +12,8 @@ export interface ISeat {
   seatNumber: string;
   /** Section name (e.g., "Orchestra", "Balcony", "VIP") */
   section: string;
+  /** Floor identifier (e.g., "floor-1", "balcony") */
+  floorId?: string;
   /** Associated ticket tier ID for pricing */
   tierId?: Types.ObjectId;
   /** X position for visual layout (percentage 0-100) */
@@ -24,6 +26,15 @@ export interface ISeat {
   accessibility?: string[];
 }
 
+export interface IFloor {
+  /** Floor identifier */
+  floorId: string;
+  /** Display name */
+  name: string;
+  /** Sort order (lower first) */
+  order: number;
+}
+
 /**
  * Represents a section in the venue (e.g., Orchestra, Balcony)
  */
@@ -32,6 +43,8 @@ export interface ISection {
   sectionId: string;
   /** Display name for the section */
   name: string;
+  /** Floor identifier this section belongs to */
+  floorId?: string;
   /** Color for UI display (hex) */
   color?: string;
   /** Default tier for seats in this section */
@@ -60,6 +73,8 @@ export interface ISeatingLayout extends Document {
   sections: ISection[];
   /** All individual seats */
   seats: ISeat[];
+  /** Floors/levels for this venue */
+  floors?: IFloor[];
   /** Whether this layout is a template that can be cloned */
   isTemplate: boolean;
   /** Stage/screen position for visualization (top, bottom, left, right) */
@@ -74,6 +89,7 @@ const SeatSchema = new Schema<ISeat>(
     row: { type: String, required: true },
     seatNumber: { type: String, required: true },
     section: { type: String, required: true },
+    floorId: { type: String },
     tierId: { type: Schema.Types.ObjectId, ref: "TicketTier" },
     posX: { type: Number },
     posY: { type: Number },
@@ -87,10 +103,20 @@ const SectionSchema = new Schema<ISection>(
   {
     sectionId: { type: String, required: true },
     name: { type: String, required: true },
+    floorId: { type: String },
     color: { type: String },
     defaultTierId: { type: Schema.Types.ObjectId, ref: "TicketTier" },
     rows: [{ type: String }],
     seatsPerRow: [{ type: Number }],
+  },
+  { _id: false },
+);
+
+const FloorSchema = new Schema<IFloor>(
+  {
+    floorId: { type: String, required: true },
+    name: { type: String, required: true },
+    order: { type: Number, required: true },
   },
   { _id: false },
 );
@@ -113,6 +139,7 @@ const SeatingLayoutSchema = new Schema<ISeatingLayout>(
     totalCapacity: { type: Number, required: true, min: 0 },
     sections: [SectionSchema],
     seats: [SeatSchema],
+    floors: [FloorSchema],
     isTemplate: { type: Boolean, default: false },
     stagePosition: {
       type: String,
@@ -142,6 +169,7 @@ SeatingLayoutSchema.statics.generateSimpleLayout = function (params: {
   const seats: ISeat[] = [];
   const sectionDefs: ISection[] = [];
   let totalCapacity = 0;
+  const defaultFloorId = "floor-1";
 
   params.sections.forEach((sec, secIdx) => {
     const sectionId = `section-${secIdx}`;
@@ -160,6 +188,7 @@ SeatingLayoutSchema.statics.generateSimpleLayout = function (params: {
           row: rowLetter,
           seatNumber: String(s),
           section: sec.name,
+          floorId: defaultFloorId,
           tierId: sec.tierId,
           posX: (s / (sec.seatsPerRow + 1)) * 100,
           posY:
@@ -173,6 +202,7 @@ SeatingLayoutSchema.statics.generateSimpleLayout = function (params: {
     sectionDefs.push({
       sectionId,
       name: sec.name,
+      floorId: defaultFloorId,
       color: sec.color,
       defaultTierId: sec.tierId,
       rows: rowLetters,
@@ -187,6 +217,7 @@ SeatingLayoutSchema.statics.generateSimpleLayout = function (params: {
     totalCapacity,
     sections: sectionDefs,
     seats,
+    floors: [{ floorId: defaultFloorId, name: "Main Floor", order: 0 }],
     isTemplate: false,
   });
 };

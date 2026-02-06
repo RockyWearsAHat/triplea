@@ -1,0 +1,245 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.headerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 340px;
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+}
+
+.headerRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.viewportCard {
+  display: flex;
+  flex-direction: column;
+  min-height: min(70vh, 560px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.viewportToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  flex-wrap: wrap;
+}
+
+.floors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.floorTab {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.floorTab:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.floorTab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.floorTab[data-active="true"] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--surface-3) 70%, var(--accent));
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background-color: var(--surface);
+  touch-action: none;
+}
+
+.venueImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.16;
+  pointer-events: none;
+  filter: grayscale(10%);
+}
+
+.stage {
+  position: absolute;
+  background: color-mix(in srgb, var(--surface-3) 82%, var(--accent));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.stage[data-position="top"] {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.stage[data-position="bottom"] {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.stage[data-position="left"] {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.stage[data-position="right"] {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.seat {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-3) 82%, var(--accent));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.seat:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface-3) 70%, var(--accent));
+}
+
+.seat:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.seat[data-active="true"] {
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
+.seat[data-available="false"] {
+  background: color-mix(in srgb, var(--surface-3) 82%, var(--error));
+  cursor: not-allowed;
+}
+
+.seatText {
+  pointer-events: none;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat,
+  .floorTab {
+    transition: none;
+  }
+}

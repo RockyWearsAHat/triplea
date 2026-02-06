@@ -28,6 +28,7 @@ interface CartContextValue {
   subtotal: number;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   updateQuantity: (gigId: string, quantity: number) => void;
+  updateSeatIds: (gigId: string, seatIds: string[] | undefined) => void;
   removeItem: (gigId: string) => void;
   clearCart: () => void;
 }
@@ -89,6 +90,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateSeatIds = useCallback(
+    (gigId: string, seatIds: string[] | undefined) => {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.gigId === gigId
+            ? {
+                ...i,
+                seatIds: seatIds && seatIds.length > 0 ? seatIds : undefined,
+              }
+            : i,
+        ),
+      );
+    },
+    [],
+  );
+
   const removeItem = useCallback((gigId: string) => {
     setItems((prev) => prev.filter((i) => i.gigId !== gigId));
   }, []);
@@ -111,6 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         subtotal,
         addItem,
         updateQuantity,
+        updateSeatIds,
         removeItem,
         clearCart,
       }}
