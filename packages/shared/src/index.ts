@@ -26,3 +26,7 @@ export * from "./components/ProductCard";
 export * from "./components/StatusCard";
 export * from "./components/SearchBar";
 export * from "./components/SeatSelector";
+export {
+  getStripeElementsAppearance,
+  getStripeConnectAppearance,
+} from "./lib/stripeAppearance";

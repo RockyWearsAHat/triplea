@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import styles from "./Button.module.scss";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   leftIcon?: ReactNode;
@@ -23,7 +23,9 @@ export function Button({
       ? styles.secondary
       : variant === "ghost"
         ? styles.ghost
-        : styles.primary;
+        : variant === "danger"
+          ? styles.danger
+          : styles.primary;
 
   const sizeClass =
     size === "sm" ? styles.sm : size === "lg" ? styles.lg : styles.md;

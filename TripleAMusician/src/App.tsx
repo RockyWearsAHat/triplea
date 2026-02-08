@@ -139,7 +139,7 @@ function MusicianSetupGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!user?.role.includes("musician")) return;
+    if (!user) return;
     let cancelled = false;
 
     async function load() {
@@ -349,9 +349,11 @@ function MusicianLandingPage() {
           decisions and a clean weekly rhythm.
         </p>
         <div className={ui.heroActionsLarge}>
-          {user?.role.includes("musician") ? (
+          {user ? (
             <Button size="lg" onClick={() => navigate("/dashboard")}>
-              Open my dashboard
+              {user.role.includes("musician")
+                ? "Open my dashboard"
+                : "Get started"}
             </Button>
           ) : (
             <>
@@ -452,58 +454,66 @@ function RegisterPage() {
   }
 
   return (
-    <AppShell title="Create musician account" centered>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Name</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={ui.input}
-          />
+    <AppShell title="Join as a musician" centered>
+      <div className={ui.formSection} style={{ maxWidth: 400, width: "100%" }}>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h2 className={ui.formSectionTitle} style={{ fontSize: 20 }}>
+            Create your account
+          </h2>
+          <p className={ui.formSectionDesc} style={{ margin: "4px auto 0" }}>
+            Start performing with Triple A
+          </p>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={ui.input}
-          />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Password</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={ui.input}
-          />
-        </div>
-        {error && <p className={ui.error}>{error}</p>}
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating..." : "Create account"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => navigate("/login")}
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 16 }}
         >
-          Back to login
-        </Button>
-      </form>
+          <div className={ui.field}>
+            <label className={ui.label}>Full name</label>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={ui.input}
+              placeholder="John Smith"
+            />
+          </div>
+          <div className={ui.field}>
+            <label className={ui.label}>Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={ui.input}
+              placeholder="you@email.com"
+            />
+          </div>
+          <div className={ui.field}>
+            <label className={ui.label}>Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={ui.input}
+              placeholder="Min. 8 characters"
+            />
+          </div>
+          {error && <div className={ui.alertError}>{error}</div>}
+          <Button type="submit" disabled={submitting} fullWidth>
+            {submitting ? "Creating..." : "Create account"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            fullWidth
+            onClick={() => navigate("/login")}
+          >
+            Already have an account? Sign in
+          </Button>
+        </form>
+      </div>
     </AppShell>
   );
 }
@@ -777,28 +787,140 @@ function ResetPasswordPage() {
 
 function BookingsPage() {
   return (
-    <AppShell
-      title="Bookings overview"
-      subtitle="Upcoming and past gigs, with quick access to details."
-    >
-      <p className={ui.help} style={{ fontSize: 14 }}>
-        This is a placeholder route. You can expand it with filters (by date,
-        venue, status) and a timeline-style history.
-      </p>
+    <AppShell title="Bookings" subtitle="Your upcoming and past performances">
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <section className={ui.formSection}>
+          <h3 className={ui.formSectionTitle}>Upcoming</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              {
+                title: "Jazz Night",
+                date: "Jan 28",
+                venue: "Blue Note Lounge",
+                status: "confirmed",
+                pay: "$300",
+              },
+              {
+                title: "Private Party",
+                date: "Feb 2",
+                venue: "Skyline Rooftop",
+                status: "confirmed",
+                pay: "$450",
+              },
+            ].map((b, i) => (
+              <div key={i} className={ui.lineItem}>
+                <div style={{ flex: 1 }}>
+                  <p className={ui.lineItemTitle}>{b.title}</p>
+                  <p className={ui.lineItemMeta}>
+                    {b.date} · {b.venue}
+                  </p>
+                </div>
+                <span
+                  className={
+                    b.status === "confirmed" ? ui.badgeSuccess : ui.badgeWarning
+                  }
+                >
+                  {b.status}
+                </span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{b.pay}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className={ui.formSection}>
+          <h3 className={ui.formSectionTitle}>Past performances</h3>
+          <div className={ui.empty}>
+            <p className={ui.emptyTitle}>No past bookings yet</p>
+            <p className={ui.emptyText}>Completed gigs will appear here.</p>
+          </div>
+        </section>
+      </div>
     </AppShell>
   );
 }
 
 function PerksPage() {
   return (
-    <AppShell
-      title="Perks center"
-      subtitle="Track what you’ve unlocked and what’s coming next."
-    >
-      <p className={ui.help} style={{ fontSize: 14 }}>
-        This route is a good home for detailed perk tiers, progress bars, and
-        redemption history.
-      </p>
+    <AppShell title="Perks" subtitle="Rewards and benefits you've earned">
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <section className={ui.formSection} style={{ textAlign: "center" }}>
+          <p className={ui.formSectionTitle}>Your tier</p>
+          <p
+            style={{
+              fontSize: 48,
+              fontWeight: 700,
+              color: "var(--primary)",
+              margin: "8px 0",
+            }}
+          >
+            Silver
+          </p>
+          <p className={ui.formSectionDesc}>
+            Complete 5 more gigs with 4.5+ rating to reach Gold
+          </p>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 400,
+              margin: "16px auto 0",
+              height: 8,
+              borderRadius: 999,
+              background: "var(--surface-2)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: "60%",
+                height: "100%",
+                borderRadius: 999,
+                background: "var(--primary)",
+              }}
+            />
+          </div>
+          <p className={ui.help} style={{ marginTop: 8 }}>
+            12 / 20 qualifying gigs
+          </p>
+        </section>
+        <section className={ui.formSection}>
+          <h3 className={ui.formSectionTitle}>Your perks</h3>
+          {[
+            {
+              icon: "🎸",
+              name: "Free rental credit",
+              detail: "1 day free per month",
+              active: true,
+            },
+            {
+              icon: "🎨",
+              name: "Embroidery discount",
+              detail: "20% off branding",
+              active: true,
+            },
+            {
+              icon: "🎤",
+              name: "Priority bookings",
+              detail: "4.5+ rating required",
+              active: false,
+            },
+          ].map((perk, i) => (
+            <div
+              key={i}
+              className={ui.lineItem}
+              style={{ opacity: perk.active ? 1 : 0.5 }}
+            >
+              <span style={{ fontSize: 24 }}>{perk.icon}</span>
+              <div style={{ flex: 1 }}>
+                <p className={ui.lineItemTitle}>{perk.name}</p>
+                <p className={ui.lineItemMeta}>{perk.detail}</p>
+              </div>
+              <span className={perk.active ? ui.badgeSuccess : ui.badgeNeutral}>
+                {perk.active ? "Active" : "Locked"}
+              </span>
+            </div>
+          ))}
+        </section>
+      </div>
     </AppShell>
   );
 }

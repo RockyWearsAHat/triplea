@@ -1,5 +1,5 @@
 import React from "react";
-import { AppShell, Button, spacing, useAuth } from "@shared";
+import { AppShell, Button, useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate } from "react-router-dom";
 
@@ -35,23 +35,19 @@ export function RegisterPage() {
   }
 
   return (
-    <AppShell
-      title="Create account"
-      subtitle="Unified identity across Triple A apps."
-      centered
-    >
+    <AppShell title="Create account" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 420,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 420, width: "100%" }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Account type</label>
+        <h2 className={ui.formSectionTitle}>Create account</h2>
+        <p className={ui.formSectionDesc}>
+          Unified identity across Triple A apps.
+        </p>
+
+        <div className={ui.field}>
+          <label className={ui.label}>Account type</label>
           <select
             value={accountType}
             onChange={(e) =>
@@ -62,13 +58,13 @@ export function RegisterPage() {
             <option value="customer">Customer / organiser</option>
             <option value="musician">Musician</option>
           </select>
-          <p className={ui.help} style={{ marginTop: 6 }}>
+          <p className={ui.help}>
             Employees must use an invite link. Admins cannot self-register.
           </p>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Name</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Name</label>
           <input
             required
             value={name}
@@ -77,8 +73,8 @@ export function RegisterPage() {
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
@@ -88,8 +84,8 @@ export function RegisterPage() {
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Password</label>
           <input
             type="password"
             required
@@ -99,7 +95,7 @@ export function RegisterPage() {
           />
         </div>
 
-        {error && <p className={ui.error}>{error}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Creating..." : "Create account"}

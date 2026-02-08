@@ -298,11 +298,60 @@ export class TripleAApiClient {
     );
   }
 
+  async createMusicianStripeOnboardingSession(): Promise<{
+    client_secret: string;
+  }> {
+    return await this.request<{ client_secret: string }>(
+      "/stripe/musicians/onboarding-session",
+      { method: "POST" },
+    );
+  }
+
   async getMusicianStripeStatus(): Promise<StripeOnboardingStatus> {
     return await this.request<StripeOnboardingStatus>(
       "/stripe/musicians/status",
       { method: "GET" },
     );
+  }
+
+  async createFinancialConnectionsSession(
+    accountId: string,
+  ): Promise<{ clientSecret: string }> {
+    return await this.request<{ clientSecret: string }>(
+      "/stripe/musicians/financial-connections",
+      {
+        method: "POST",
+        body: JSON.stringify({ accountId }),
+      },
+    );
+  }
+
+  async submitMusicianOnboarding(data: {
+    firstName: string;
+    lastName: string;
+    dob: { day: string; month: string; year: string };
+    ssnLast4: string;
+    phone: string;
+    address: {
+      line1: string;
+      line2?: string;
+      city: string;
+      state: string;
+      postal_code: string;
+    };
+    bankAccountToken: string;
+  }): Promise<{
+    success: boolean;
+    stripeAccountId: string;
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    detailsSubmitted: boolean;
+    requirements: string[];
+  }> {
+    return await this.request("/stripe/musicians/onboarding/submit", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   // --- Admin ---

@@ -1,0 +1,34 @@
+/* Stripe Connect wrapper - set base styles that the iframe might inherit */
+.stripeConnectWrapper {
+  background: transparent;
+  font-size: 15px;
+  font-family: var(--font);
+  line-height: 1.4;
+
+  /* Set explicit sizing on the container */
+  & :global(iframe) {
+    font-size: 15px !important;
+  }
+
+  /* Try to override any scoped styles */
+  :global {
+    * {
+      font-size: 15px !important;
+      line-height: 1.4 !important;
+    }
+
+    input,
+    select,
+    textarea {
+      padding: 10px 14px !important;
+      height: auto !important;
+      min-height: 40px !important;
+    }
+
+    label {
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      margin-bottom: 6px !important;
+    }
+  }
+}

@@ -1,97 +1,178 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   Triple A Musician - Dashboard Styles
-   "Uber Driver" work app feel - focus on today, requests, upcoming gigs
+   Triple A Musician - Dashboard
+   Apple/Uber Driver-inspired professional work console
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ── Page Container ──────────────────────────────────────────────────────── */
+
 .page {
-  padding: clamp(20px, 4vw, 32px) 0;
+  padding: clamp(16px, 3vw, 32px) clamp(16px, 3vw, 24px);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* Header */
-.header {
-  margin-bottom: clamp(24px, 4vw, 40px);
+/* ── Page Header ─────────────────────────────────────────────────────────── */
+
+.pageHeader {
+  margin-block-end: clamp(24px, 4vw, 40px);
 }
 
-.headerTitle {
+.greeting {
   margin: 0;
-  font-size: clamp(28px, 4vw, 36px);
+  font-size: clamp(26px, 4vw, 34px);
   font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.headerSubtitle {
-  margin: 4px 0 0;
-  font-size: 15px;
+.greetingSub {
+  margin: 6px 0 0;
+  font-size: clamp(14px, 2vw, 15px);
   color: var(--text-muted);
 }
 
-/* Stats Section */
-.statsSection {
-  margin-bottom: clamp(24px, 4vw, 40px);
+/* ── Metrics Row ─────────────────────────────────────────────────────────── */
+
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: clamp(12px, 2vw, 16px);
+  margin-block-end: clamp(24px, 4vw, 32px);
 }
 
-.statsRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
-  gap: 16px;
+@media (min-width: 600px) {
+  .metricsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-/* Main Grid */
-.grid {
+@media (min-width: 900px) {
+  .metricsRow {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.metricCard {
+  padding: clamp(16px, 3vw, 20px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease;
+}
+
+.metricCard:hover {
+  border-color: var(--border-strong);
+}
+
+.metricLabel {
+  margin: 0 0 8px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.metricValue {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.metricUnit {
+  font-size: 0.5em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.metricSub {
+  margin: 8px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.metricHighlight {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ── Dashboard Grid ──────────────────────────────────────────────────────── */
+
+.dashGrid {
   display: grid;
-  gap: 24px;
+  gap: clamp(20px, 3vw, 24px);
   grid-template-columns: 1fr;
   align-items: start;
 }
 
 @media (min-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr 280px;
+  .dashGrid {
+    grid-template-columns: 1fr 320px;
   }
 }
 
-.main {
+.mainCol {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(20px, 3vw, 24px);
+  min-width: 0;
 }
 
-/* Content Sections */
-.contentSection {
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vw, 24px);
+}
+
+/* ── Section Card ────────────────────────────────────────────────────────── */
+
+.section {
   padding: clamp(20px, 3vw, 28px);
-  border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  margin-block-end: 6px;
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 18px;
+  font-size: clamp(17px, 2.5vw, 19px);
   font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
-.badge {
-  padding: 4px 10px;
-  border-radius: 999px;
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 6px;
   background: var(--primary);
   color: var(--primary-contrast);
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-.sectionHint {
-  margin: 0 0 16px;
-  font-size: 13px;
+.sectionDesc {
+  margin: 0 0 clamp(16px, 2vw, 20px);
+  font-size: var(--text-sm);
   color: var(--text-muted);
+  line-height: 1.5;
 }
 
-/* Request Cards */
+/* ── Request List ────────────────────────────────────────────────────────── */
+
 .requestList {
   display: flex;
   flex-direction: column;
@@ -100,159 +181,341 @@
 
 .requestCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border-radius: var(--radius-md);
+  align-items: flex-start;
+  gap: clamp(12px, 2vw, 16px);
+  padding: clamp(14px, 2vw, 18px);
   background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
-.requestInfo {
+.requestCard:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.requestMain {
   flex: 1;
   min-width: 0;
 }
 
+.requestHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-block-end: 8px;
+  flex-wrap: wrap;
+}
+
 .requestTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.requestPay {
+  color: var(--primary);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .requestMeta {
-  margin: 4px 0 0;
-  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-block-end: 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.requestType {
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+  color: var(--info);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .requestActions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  margin-block-start: 12px;
 }
 
-/* Gig Cards */
-.gigList {
+@media (min-width: 600px) {
+  .requestActions {
+    margin-block-start: 0;
+  }
+}
+
+/* ── Schedule List ───────────────────────────────────────────────────────── */
+
+.scheduleList {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.gigCard {
+.scheduleCard {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border-radius: var(--radius-md);
+  align-items: flex-start;
+  gap: clamp(14px, 2vw, 18px);
+  padding: clamp(14px, 2vw, 18px);
   background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
-.gigDate {
+.scheduleCard:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.dateBlock {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  min-width: 56px;
+  height: 60px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
-.gigDay {
-  font-size: 18px;
+.dateDay {
+  margin: 0;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
-.gigMonth {
+.dateMonth {
+  margin: 4px 0 0;
   font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
 }
 
-.gigInfo {
+.scheduleInfo {
   flex: 1;
   min-width: 0;
 }
 
-.gigTitle {
-  margin: 0;
-  font-size: 15px;
+.scheduleTitle {
+  margin: 0 0 6px;
+  font-size: var(--text-base);
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.gigMeta {
-  margin: 4px 0 0;
-  font-size: 13px;
+.scheduleMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
-.gigStatus {
+.statusPill {
+  align-self: flex-start;
   padding: 6px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   flex-shrink: 0;
 }
 
-/* Sidebar */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.statusConfirmed {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+}
+
+.statusPending {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+}
+
+/* ── CTA Card ────────────────────────────────────────────────────────────── */
+
+.ctaCard {
   padding: clamp(20px, 3vw, 28px);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 8%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
   border-radius: var(--radius-lg);
+}
+
+.ctaContent {
+  margin-block-end: 16px;
+}
+
+.ctaTitle {
+  margin: 0 0 8px;
+  font-size: clamp(17px, 2.5vw, 19px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.ctaDesc {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Side Card ───────────────────────────────────────────────────────────── */
+
+.sideCard {
+  padding: clamp(18px, 3vw, 24px);
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
-.sidebarSection {
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-
-.sidebarTitle {
+.sideTitle {
   margin: 0 0 4px;
-  font-size: 16px;
+  font-size: clamp(16px, 2.5vw, 17px);
   font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
-.quickActions {
+.sideDesc {
+  margin: 0 0 16px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Action Nav (iOS Settings-style) ────────────────────────────────────── */
+
+.actionNav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 1px;
+  margin-inline: calc(clamp(18px, 3vw, 24px) * -1);
+  margin-block-end: calc(clamp(18px, 3vw, 24px) * -1);
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
-/* Perks */
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px clamp(18px, 3vw, 24px);
+  background: var(--bg);
+  border: none;
+  border-top: 1px solid var(--border);
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.actionBtn:hover {
+  background: var(--surface-2);
+}
+
+.actionBtn:active {
+  background: var(--surface-3);
+}
+
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.actionChevron {
+  margin-inline-start: auto;
+  opacity: 0.4;
+  font-size: 14px;
+}
+
+/* ── Perks List ──────────────────────────────────────────────────────────── */
+
 .perksList {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 12px;
 }
 
 .perkItem {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  gap: 12px;
+  padding: 12px 14px;
   background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease;
+}
+
+.perkItem:hover {
+  border-color: var(--border-strong);
 }
 
 .perkIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   font-size: 18px;
 }
 
-.perkLabel {
-  font-size: 13px;
-  font-weight: 500;
+.perkContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.perkName {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.perkDetail {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }

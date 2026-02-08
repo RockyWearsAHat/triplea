@@ -1,5 +1,5 @@
 import React from "react";
-import { AppShell, Button, spacing } from "@shared";
+import { AppShell, Button } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, Link } from "react-router-dom";
 import { createApiClient } from "../lib/urls";
@@ -36,16 +36,11 @@ export function ForgotPasswordPage() {
     return (
       <AppShell title="Check your email" centered>
         <div
-          style={{
-            maxWidth: 400,
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            textAlign: "center",
-          }}
+          className={ui.formSection}
+          style={{ maxWidth: 400, width: "100%", textAlign: "center" }}
         >
-          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>📧</div>
+          <div style={{ fontSize: 48 }}>📧</div>
+          <h2 className={ui.formSectionTitle}>Check your email</h2>
           <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
             If an account exists for <strong>{email}</strong>, you'll receive an
             email with instructions to reset your password.
@@ -53,19 +48,11 @@ export function ForgotPasswordPage() {
           <p className={ui.help}>
             Didn't receive the email? Check your spam folder or try again.
           </p>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-              marginTop: spacing.md,
-            }}
-          >
-            <Button onClick={() => setSuccess(false)} variant="ghost">
-              Try a different email
-            </Button>
-            <Button onClick={() => navigate("/login")}>Back to sign in</Button>
-          </div>
+          <div className={ui.divider} />
+          <Button onClick={() => setSuccess(false)} variant="ghost">
+            Try a different email
+          </Button>
+          <Button onClick={() => navigate("/login")}>Back to sign in</Button>
         </div>
       </AppShell>
     );
@@ -75,21 +62,17 @@ export function ForgotPasswordPage() {
     <AppShell title="Reset your password" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <p className={ui.help}>
+        <h2 className={ui.formSectionTitle}>Reset your password</h2>
+        <p className={ui.formSectionDesc}>
           Enter your email address and we'll send you a link to reset your
           password.
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
@@ -100,7 +83,7 @@ export function ForgotPasswordPage() {
           />
         </div>
 
-        {error && <p className={ui.error}>{error}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Sending..." : "Send reset link"}

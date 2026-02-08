@@ -1,24 +1,39 @@
 .statusCard {
-  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--transition-normal, 200ms ease);
+}
+
+.statusCard:hover {
+  border-color: var(--border-strong);
 }
 
 .header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .indicator {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .indicator[data-status="active"] {
   background: var(--success);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--success) 40%, transparent);
 }
 
 .indicator[data-status="busy"] {
   background: var(--warning);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--warning) 40%, transparent);
 }
 
 .indicator[data-status="idle"] {
@@ -26,6 +41,8 @@
 }
 
 .metric {
-  font-size: var(--text-2xl);
+  font-size: clamp(28px, 4vw, 36px);
   font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }

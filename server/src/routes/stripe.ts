@@ -117,6 +117,31 @@ router.post(
   },
 );
 
+router.post(
+  "/musicians/onboarding-session",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      const account = await ensureStripeAccount(user);
+      const session = await getStripe().accountSessions.create({
+        account: account.id,
+        components: {
+          account_onboarding: {
+            enabled: true,
+          },
+        },
+      });
+
+      return res.json({ client_secret: session.client_secret });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /stripe/musicians/onboarding-session error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
 router.get(
   "/musicians/status",
   requireRole("musician"),
@@ -147,6 +172,128 @@ router.get(
       // eslint-disable-next-line no-console
       console.error("GET /stripe/musicians/status error", err);
       return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+// Financial Connections: create session for bank account linking
+router.post(
+  "/musicians/financial-connections",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+
+      if (!user.stripeAccountId) {
+        return res.status(400).json({
+          message: "No Stripe account found. Please create one first.",
+        });
+      }
+
+      // Create Financial Connections session with dark mode
+      const session = await getStripe().financialConnections.sessions.create({
+        account_holder: {
+          type: "account",
+          account: user.stripeAccountId,
+        },
+        permissions: ["payment_method", "balances"],
+        filters: {
+          countries: ["US"],
+        },
+        // Note: Stripe Financial Connections doesn't support custom appearance/theming
+        // The modal will use Stripe's default styling
+      });
+
+      res.json({ clientSecret: session.client_secret });
+    } catch (err) {
+      console.error("POST /stripe/musicians/financial-connections error", err);
+      res
+        .status(500)
+        .json({ message: "Failed to create Financial Connections session" });
+    }
+  },
+);
+
+// Custom onboarding: submit personal/business details directly to Stripe
+router.post(
+  "/musicians/onboarding/submit",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      const {
+        firstName,
+        lastName,
+        dob, // { day, month, year }
+        ssnLast4,
+        phone,
+        address, // { line1, line2?, city, state, postal_code }
+        bankAccountToken, // Financial Connections token
+      } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName || !dob || !ssnLast4 || !address || !phone) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get or create Stripe account
+      const account = await ensureStripeAccount(user);
+
+      // Update account with personal information
+      const updated = await getStripe().accounts.update(account.id, {
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          dob: {
+            day: Number(dob.day),
+            month: Number(dob.month),
+            year: Number(dob.year),
+          },
+          ssn_last_4: ssnLast4,
+          phone,
+          email: user.email,
+          address: {
+            line1: address.line1,
+            line2: address.line2 || undefined,
+            city: address.city,
+            state: address.state,
+            postal_code: address.postal_code,
+            country: "US",
+          },
+        },
+        business_type: "individual",
+        tos_acceptance: {
+          date: Math.floor(Date.now() / 1000),
+          ip: req.ip || req.connection.remoteAddress || "0.0.0.0",
+        },
+      });
+
+      // Add bank account token if provided
+      if (bankAccountToken) {
+        await getStripe().accounts.createExternalAccount(account.id, {
+          external_account: bankAccountToken,
+        });
+      }
+
+      // Sync status
+      await syncStripeAccountStatus(user, updated);
+
+      return res.json({
+        success: true,
+        stripeAccountId: updated.id,
+        chargesEnabled: updated.charges_enabled,
+        payoutsEnabled: updated.payouts_enabled,
+        detailsSubmitted: updated.details_submitted,
+        requirements: updated.requirements?.currently_due ?? [],
+      });
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error("POST /stripe/musicians/onboarding/submit error", err);
+      return res.status(400).json({
+        message: err.message || "Failed to submit onboarding information",
+        type: err.type,
+        code: err.code,
+      });
     }
   },
 );

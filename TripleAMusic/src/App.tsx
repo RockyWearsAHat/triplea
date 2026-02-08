@@ -119,35 +119,37 @@ function LoginPage() {
   const hasAnyRole = userRoles.length > 0;
 
   return (
-    <AppShell title="Sign in to Triple A Music" centered>
+    <AppShell title="Sign in" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h2 className={ui.formSectionTitle}>Welcome back</h2>
+          <p className={ui.formSectionDesc}>Sign in to Triple A Music</p>
+        </div>
+
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={ui.input}
+            placeholder="you@example.com"
           />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Password</label>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={ui.input}
+            placeholder="••••••••"
           />
           <button
             type="button"
@@ -157,16 +159,17 @@ function LoginPage() {
               border: "none",
               padding: 0,
               fontSize: 13,
-              color: "var(--gold)",
+              color: "var(--primary)",
               cursor: "pointer",
               alignSelf: "flex-end",
-              marginTop: 4,
+              marginTop: 2,
             }}
           >
             Forgot password?
           </button>
         </div>
-        {error && <p className={ui.error}>{error}</p>}
+
+        {error && <p className={ui.alertError}>{error}</p>}
         {user && (
           <p className={ui.help}>
             {user.email}
@@ -175,7 +178,8 @@ function LoginPage() {
               " · This account is not set up as a host yet."}
           </p>
         )}
-        <Button type="submit" disabled={submitting}>
+
+        <Button type="submit" disabled={submitting} style={{ width: "100%" }}>
           {submitting ? "Signing in..." : "Sign in"}
         </Button>
 
@@ -183,28 +187,21 @@ function LoginPage() {
           type="button"
           variant="ghost"
           onClick={() => navigate("/register")}
+          style={{ width: "100%" }}
         >
           Create an account
         </Button>
 
-        <div
-          style={{
-            marginTop: spacing.xl,
-            paddingTop: spacing.md,
-            borderTop: "1px solid var(--border)",
-            textAlign: "center",
-          }}
-        >
-          <p className={ui.help} style={{ marginBottom: spacing.sm }}>
-            Looking to perform?{" "}
-            <a
-              href={`${MUSICIAN_ORIGIN}/login`}
-              style={{ color: "var(--primary)", textDecoration: "underline" }}
-            >
-              Sign up or login to the musician portal here
-            </a>
-          </p>
-        </div>
+        <div className={ui.divider} />
+        <p className={ui.help} style={{ textAlign: "center" }}>
+          Looking to perform?{" "}
+          <a
+            href={`${MUSICIAN_ORIGIN}/login`}
+            style={{ color: "var(--primary)", textDecoration: "underline" }}
+          >
+            Musician portal
+          </a>
+        </p>
       </form>
     </AppShell>
   );
@@ -245,53 +242,63 @@ function RegisterPage() {
     <AppShell title="Create account" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Name</label>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h2 className={ui.formSectionTitle}>Join Triple A Music</h2>
+          <p className={ui.formSectionDesc}>
+            {isHostIntent
+              ? "Create a host account to post events"
+              : "Create your account"}
+          </p>
+        </div>
+
+        <div className={ui.field}>
+          <label className={ui.label}>Name</label>
           <input
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={ui.input}
+            placeholder="Your name"
           />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={ui.input}
+            placeholder="you@example.com"
           />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Password</label>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={ui.input}
+            placeholder="••••••••"
           />
         </div>
-        {error && <p className={ui.error}>{error}</p>}
-        <Button type="submit" disabled={submitting}>
+
+        {error && <p className={ui.alertError}>{error}</p>}
+
+        <Button type="submit" disabled={submitting} style={{ width: "100%" }}>
           {submitting ? "Creating..." : "Create account"}
         </Button>
         <Button
           type="button"
           variant="ghost"
           onClick={() => navigate("/login")}
+          style={{ width: "100%" }}
         >
-          Back to login
+          Back to sign in
         </Button>
       </form>
     </AppShell>
@@ -330,17 +337,12 @@ function ForgotPasswordPage() {
     return (
       <AppShell title="Check your email" centered>
         <div
-          style={{
-            maxWidth: 400,
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            textAlign: "center",
-          }}
+          className={ui.formSection}
+          style={{ maxWidth: 400, width: "100%", textAlign: "center" }}
         >
-          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>📧</div>
-          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>📧</div>
+          <p className={ui.formSectionTitle}>Check your inbox</p>
+          <p className={ui.formSectionDesc}>
             If an account exists for <strong>{email}</strong>, you'll receive an
             email with instructions to reset your password.
           </p>
@@ -351,14 +353,23 @@ function ForgotPasswordPage() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: spacing.sm,
-              marginTop: spacing.md,
+              gap: 8,
+              marginTop: 16,
             }}
           >
-            <Button onClick={() => setSuccess(false)} variant="ghost">
+            <Button
+              onClick={() => setSuccess(false)}
+              variant="ghost"
+              style={{ width: "100%" }}
+            >
               Try a different email
             </Button>
-            <Button onClick={() => navigate("/login")}>Back to sign in</Button>
+            <Button
+              onClick={() => navigate("/login")}
+              style={{ width: "100%" }}
+            >
+              Back to sign in
+            </Button>
           </div>
         </div>
       </AppShell>
@@ -366,24 +377,21 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <AppShell title="Reset your password" centered>
+    <AppShell title="Reset password" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <p className={ui.help}>
-          Enter your email address and we'll send you a link to reset your
-          password.
-        </p>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h2 className={ui.formSectionTitle}>Forgot your password?</h2>
+          <p className={ui.formSectionDesc}>
+            Enter your email and we'll send you a reset link.
+          </p>
+        </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
@@ -391,12 +399,13 @@ function ForgotPasswordPage() {
             onChange={(e) => setEmail(e.target.value)}
             className={ui.input}
             autoFocus
+            placeholder="you@example.com"
           />
         </div>
 
-        {error && <p className={ui.error}>{error}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting} style={{ width: "100%" }}>
           {submitting ? "Sending..." : "Send reset link"}
         </Button>
 
@@ -404,6 +413,7 @@ function ForgotPasswordPage() {
           type="button"
           variant="ghost"
           onClick={() => navigate("/login")}
+          style={{ width: "100%" }}
         >
           Back to sign in
         </Button>
@@ -429,21 +439,19 @@ function ResetPasswordPage() {
     return (
       <AppShell title="Invalid link" centered>
         <div
-          style={{
-            maxWidth: 400,
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            textAlign: "center",
-          }}
+          className={ui.formSection}
+          style={{ maxWidth: 400, width: "100%", textAlign: "center" }}
         >
-          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>⚠️</div>
-          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>⚠️</div>
+          <p className={ui.formSectionTitle}>Invalid or expired link</p>
+          <p className={ui.formSectionDesc}>
             This password reset link is invalid or has expired.
           </p>
           <p className={ui.help}>Please request a new password reset link.</p>
-          <Button onClick={() => navigate("/forgot-password")}>
+          <Button
+            onClick={() => navigate("/forgot-password")}
+            style={{ width: "100%", marginTop: 8 }}
+          >
             Request new link
           </Button>
         </div>
@@ -485,42 +493,39 @@ function ResetPasswordPage() {
     return (
       <AppShell title="Password reset" centered>
         <div
-          style={{
-            maxWidth: 400,
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            textAlign: "center",
-          }}
+          className={ui.formSection}
+          style={{ maxWidth: 400, width: "100%", textAlign: "center" }}
         >
-          <div style={{ fontSize: 48, marginBottom: spacing.sm }}>✅</div>
-          <p style={{ color: "var(--text-primary)", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
+          <p className={ui.formSectionTitle}>All set!</p>
+          <p className={ui.formSectionDesc}>
             Your password has been reset successfully.
           </p>
-          <p className={ui.help}>You can now sign in with your new password.</p>
-          <Button onClick={() => navigate("/login")}>Sign in</Button>
+          <Button
+            onClick={() => navigate("/login")}
+            style={{ width: "100%", marginTop: 8 }}
+          >
+            Sign in
+          </Button>
         </div>
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Create new password" centered>
+    <AppShell title="New password" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <p className={ui.help}>Enter your new password below.</p>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <h2 className={ui.formSectionTitle}>Create new password</h2>
+          <p className={ui.formSectionDesc}>Enter your new password below.</p>
+        </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>New password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>New password</label>
           <input
             type="password"
             required
@@ -529,24 +534,26 @@ function ResetPasswordPage() {
             onChange={(e) => setNewPassword(e.target.value)}
             className={ui.input}
             autoFocus
+            placeholder="••••••••"
           />
           <p className={ui.help}>Minimum 8 characters</p>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Confirm password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Confirm password</label>
           <input
             type="password"
             required
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className={ui.input}
+            placeholder="••••••••"
           />
         </div>
 
-        {error && <p className={ui.error}>{error}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting} style={{ width: "100%" }}>
           {submitting ? "Resetting..." : "Reset password"}
         </Button>
 
@@ -554,6 +561,7 @@ function ResetPasswordPage() {
           type="button"
           variant="ghost"
           onClick={() => navigate("/login")}
+          style={{ width: "100%" }}
         >
           Back to sign in
         </Button>
@@ -689,51 +697,44 @@ function BrowsePage() {
           {loading ? (
             <p className={ui.help}>Loading...</p>
           ) : error ? (
-            <p className={ui.error}>{error}</p>
+            <p className={ui.alertError}>{error}</p>
           ) : gigs.length === 0 ? (
-            <p className={ui.help}>No concerts available yet.</p>
+            <div className={ui.empty}>
+              <p className={ui.emptyTitle}>No concerts yet</p>
+              <p className={ui.emptyText}>
+                Check back soon for upcoming events.
+              </p>
+            </div>
           ) : (
-            gigs.map((gig) => (
-              <div
-                key={gig.id}
-                data-reveal
-                className={[ui.card, ui.cardPad].join(" ")}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: spacing.lg,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  marginBottom: spacing.md,
-                }}
-              >
-                <div style={{ minWidth: 220 }}>
-                  <h3 style={{ fontWeight: 600 }}>{gig.title}</h3>
-                  <p
-                    style={{
-                      marginTop: spacing.xs,
-                      fontSize: 14,
-                    }}
-                    className={ui.help}
-                  >
-                    {gig.date} · {gig.city}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {gigs.map((gig) => (
+                <div
+                  key={gig.id}
+                  data-reveal
+                  className={ui.lineItem}
+                  style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/gigs/${gig.id}`)}
                 >
-                  View details
-                </Button>
-              </div>
-            ))
+                  <div style={{ flex: 1 }}>
+                    <p className={ui.lineItemTitle}>{gig.title}</p>
+                    <p className={ui.lineItemMeta}>
+                      {gig.date} · {gig.city}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/gigs/${gig.id}`);
+                    }}
+                  >
+                    View
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
-        </Section>
-        <Section title="How booking works">
-          <p className={ui.help} style={{ fontSize: 14, margin: 0 }}>
-            Browse performers, view details, then sign in to request and manage
-            bookings.
-          </p>
         </Section>
       </section>
     </div>
@@ -753,14 +754,16 @@ function MessagesPage() {
 
 function RatingsPage() {
   return (
-    <AppShell
-      title="Ratings & reviews"
-      subtitle="History of how your performers and venues have been rated."
-    >
-      <p className={ui.help} style={{ fontSize: 14 }}>
-        This placeholder can evolve into a searchable log of all ratings you’ve
-        left and received, plus summaries for repeat collaborators.
-      </p>
+    <AppShell title="Ratings & reviews" subtitle="Your review history">
+      <div className={ui.formSection}>
+        <div className={ui.empty}>
+          <p className={ui.emptyTitle}>No ratings yet</p>
+          <p className={ui.emptyText}>
+            After attending events or working with musicians, your ratings and
+            reviews will appear here.
+          </p>
+        </div>
+      </div>
     </AppShell>
   );
 }

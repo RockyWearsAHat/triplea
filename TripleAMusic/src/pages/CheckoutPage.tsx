@@ -8,7 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import type { CheckoutSession, FeeCalculationResult, Gig } from "@shared";
-import { SeatSelector } from "@shared";
+import { SeatSelector, getStripeElementsAppearance } from "@shared";
 import type { SeatInfo, SectionInfo, TierInfo } from "@shared";
 import { useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
@@ -480,17 +480,7 @@ export default function CheckoutPage() {
               stripe={stripePromise}
               options={{
                 clientSecret: checkoutSession.clientSecret,
-                appearance: {
-                  theme: "stripe",
-                  variables: {
-                    colorPrimary: "#E59D0D",
-                    colorBackground: "#ffffff",
-                    colorText: "#1a1a1a",
-                    colorDanger: "#f87171",
-                    fontFamily: "system-ui, sans-serif",
-                    borderRadius: "8px",
-                  },
-                },
+                appearance: getStripeElementsAppearance(),
               }}
             >
               <CheckoutForm

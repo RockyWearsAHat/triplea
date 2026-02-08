@@ -16,8 +16,16 @@
    Hero
    ───────────────────────────────────────────────────────────────────────── */
 .hero {
-  padding: clamp(48px, 10vh, 80px) 0 clamp(32px, 6vh, 56px);
+  padding: clamp(64px, 12vh, 100px) 0 clamp(48px, 8vh, 72px);
   text-align: center;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 3%, var(--bg)) 0%,
+    var(--bg) 100%
+  );
+  margin: 0 calc(-1 * var(--page-pad));
+  padding-left: var(--page-pad);
+  padding-right: var(--page-pad);
 }
 
 .kicker {
@@ -31,10 +39,10 @@
 
 .heroTitle {
   margin: 0;
-  font-size: clamp(32px, 6vw, 56px);
-  font-weight: 750;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-size: clamp(36px, 7vw, 64px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
 }
 
 .heroHighlight {
@@ -42,11 +50,11 @@
 }
 
 .heroSubtitle {
-  margin: 16px auto 0;
-  font-size: clamp(15px, 2vw, 18px);
+  margin: 20px auto 0;
+  font-size: clamp(16px, 2.2vw, 20px);
   color: var(--text-muted);
-  max-width: 48ch;
-  line-height: 1.5;
+  max-width: 52ch;
+  line-height: 1.6;
 }
 
 .heroCta {
@@ -100,12 +108,14 @@
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: border-color 150ms ease;
+  transition: all var(--transition-normal) ease;
   text-align: left;
 }
 
 .serviceCard:hover {
   border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 .serviceCard:focus-visible {
@@ -185,7 +195,9 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--primary) 12%, var(--bg));
+  background:
+    color-mix(in srgb, var(--primary) 10%, transparent),
+    color-mix(in srgb, var(--primary) 8%, var(--surface));
   color: var(--primary);
   flex-shrink: 0;
 }
@@ -475,6 +487,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--transition-normal) ease;
+}
+
+.venueCard:hover .venueImage {
+  transform: scale(1.03);
 }
 
 .venueImageFallback {
@@ -610,6 +627,11 @@
   background: var(--surface-2);
 }
 
+.viewAllBtn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    Funnel Section - Links to Music & Musician apps
    ───────────────────────────────────────────────────────────────────────── */
@@ -621,25 +643,27 @@
 .funnelGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+  gap: 16px;
+  margin-top: 20px;
 }
 
 .funnelCard {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px) clamp(22px, 3vw, 32px);
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all var(--transition-normal) ease;
 }
 
 .funnelCard:hover {
-  border-color: var(--border-strong);
+  border-color: var(--primary);
   background: var(--surface-2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .funnelCard:focus-visible {
@@ -688,8 +712,15 @@
 .missionFooter {
   padding: clamp(40px, 6vh, 64px) 0 clamp(24px, 4vh, 40px);
   border-top: 1px solid var(--border);
-  margin-top: clamp(16px, 3vh, 32px);
+  margin: clamp(16px, 3vh, 32px) calc(-1 * var(--page-pad)) 0;
+  padding-left: var(--page-pad);
+  padding-right: var(--page-pad);
   text-align: center;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--primary) 2%, var(--bg)) 0%,
+    var(--bg) 40%
+  );
 }
 
 .missionTitle {

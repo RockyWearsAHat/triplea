@@ -100,15 +100,26 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://js.stripe.com",
+          "https://connect-js.stripe.com",
+        ],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
         frameSrc: [
           "'self'",
           "https://js.stripe.com",
           "https://hooks.stripe.com",
+          "https://connect.stripe.com",
+          "https://connect-js.stripe.com",
         ],
-        connectSrc: ["'self'", "https://api.stripe.com"],
+        connectSrc: [
+          "'self'",
+          "https://api.stripe.com",
+          "https://connect-js.stripe.com",
+        ],
       },
     },
   }),

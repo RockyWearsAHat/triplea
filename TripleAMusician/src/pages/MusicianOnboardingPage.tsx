@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import type { MusicianProfile, StripeOnboardingStatus } from "@shared";
-import { AppShell, Button, spacing, useAuth } from "@shared";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import type { StripeOnboardingStatus } from "@shared";
+import { AppShell, Button, useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate } from "react-router-dom";
 import { createApiClient } from "../lib/urls";
+import { StripeOnboardingForm } from "../components/StripeOnboardingForm";
 
 function parseList(value: string): string[] {
   return value
@@ -12,19 +13,145 @@ function parseList(value: string): string[] {
     .filter(Boolean);
 }
 
+/* Step indicator component */
+function StepProgress({
+  currentStep,
+  steps,
+}: {
+  currentStep: number;
+  steps: string[];
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0,
+        width: "100%",
+        maxWidth: 520,
+        margin: "0 auto 32px",
+      }}
+    >
+      {steps.map((label, i) => {
+        const stepNum = i + 1;
+        const isActive = stepNum === currentStep;
+        const isComplete = stepNum < currentStep;
+        return (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+              flex: 1,
+              position: "relative",
+            }}
+          >
+            {i < steps.length - 1 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  left: "50%",
+                  width: "100%",
+                  height: 2,
+                  background: isComplete ? "var(--success)" : "var(--border)",
+                  zIndex: 1,
+                }}
+              />
+            )}
+            <div style={{ position: "relative", zIndex: 3 }}>
+              {/* Solid background blocker */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  left: -4,
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: "#000000",
+                  zIndex: -1,
+                }}
+              />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  background: isComplete
+                    ? "var(--success)"
+                    : isActive
+                      ? "var(--primary)"
+                      : "var(--surface)",
+                  border: `2px solid ${isComplete ? "var(--success)" : isActive ? "var(--primary)" : "var(--border)"}`,
+                  color:
+                    isComplete || isActive
+                      ? isComplete
+                        ? "white"
+                        : "var(--primary-contrast)"
+                      : "var(--text-muted)",
+                  position: "relative",
+                  transition: "all 200ms ease",
+                }}
+              >
+                {isComplete ? "✓" : stepNum}
+              </div>
+            </div>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive
+                  ? "var(--primary)"
+                  : isComplete
+                    ? "var(--success)"
+                    : "var(--text-muted)",
+                textAlign: "center",
+              }}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function MusicianOnboardingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const api = useMemo(() => createApiClient(), []);
 
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [stripeStatus, setStripeStatus] =
     useState<StripeOnboardingStatus | null>(null);
-  const [profile, setProfile] = useState<MusicianProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [stripeBusy, setStripeBusy] = useState(false);
-  const [profileBusy, setProfileBusy] = useState(false);
 
+  // Stripe submit handler
+  const [stripeSubmitFn, setStripeSubmitFn] = useState<
+    (() => Promise<void>) | null
+  >(null);
+  const [stripeValid, setStripeValid] = useState(false);
+
+  // Stable callbacks to prevent infinite loops
+  const handleStripeValidationChange = useCallback((isValid: boolean) => {
+    setStripeValid(isValid);
+  }, []);
+
+  const handleStripeSubmitReady = useCallback((fn: () => Promise<void>) => {
+    setStripeSubmitFn(() => fn);
+  }, []);
+
+  // Form fields
   const [instruments, setInstruments] = useState("");
   const [genres, setGenres] = useState("");
   const [bio, setBio] = useState("");
@@ -45,7 +172,6 @@ export function MusicianOnboardingPage() {
         ]);
         if (cancelled) return;
         setStripeStatus(stripe);
-        setProfile(profileRes);
         setInstruments(profileRes.instruments.join(", "));
         setGenres(profileRes.genres.join(", "));
         setBio(profileRes.bio ?? "");
@@ -83,166 +209,135 @@ export function MusicianOnboardingPage() {
     );
   }
 
-  if (!user.role.includes("musician")) {
-    return (
-      <AppShell title="Musician onboarding" centered>
-        <div
-          className={[ui.card, ui.cardPad].join(" ")}
-          style={{ maxWidth: 520, width: "100%", textAlign: "center" }}
-        >
-          <h2 className={ui.sectionTitle}>Enable musician access first</h2>
-          <p className={ui.help}>
-            This account isn&apos;t enabled for musician access yet.
-          </p>
-          <Button onClick={() => navigate("/")}>Back to home</Button>
-        </div>
-      </AppShell>
-    );
-  }
-
   const stripeReady =
     !!stripeStatus?.chargesEnabled && !!stripeStatus?.payoutsEnabled;
-  const profileReady =
-    (profile?.instruments?.length ?? 0) > 0 &&
-    (profile?.genres?.length ?? 0) > 0 &&
-    !!profile?.bio?.trim();
-  const onboardingReady = stripeReady && profileReady;
 
-  async function handleStartStripe() {
-    setStripeBusy(true);
-    setError(null);
-    try {
-      const link = await api.getMusicianStripeOnboardingLink();
-      window.location.assign(link.url);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to open Stripe onboarding.",
-      );
-      setStripeBusy(false);
-    }
-  }
+  // Determine current step based on what user has filled out
+  const hasStripeInfo = stripeReady;
+  const stripeComplete = hasStripeInfo || stripeValid;
+  const hasProfile = instruments.trim() && genres.trim() && bio.trim();
+  const profileReady = hasProfile;
+  const onboardingReady = stripeComplete && hasProfile;
 
-  async function refreshStripeStatus() {
-    setStripeBusy(true);
-    setError(null);
-    try {
-      const stripe = await api.getMusicianStripeStatus();
-      setStripeStatus(stripe);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to refresh Stripe status.",
-      );
-    } finally {
-      setStripeBusy(false);
-    }
-  }
+  const currentStep = stripeComplete ? (hasProfile ? 3 : 2) : 1;
 
-  async function handleSaveProfile() {
-    setProfileBusy(true);
+  const handleCompleteOnboarding = async () => {
+    setBusy(true);
     setError(null);
+
     try {
-      const updated = await api.updateMyMusicianProfile({
+      // Step 1: Submit Stripe onboarding if needed
+      if (!hasStripeInfo && stripeSubmitFn) {
+        await stripeSubmitFn();
+      }
+
+      // Step 2: Save profile
+      await api.updateMyMusicianProfile({
         instruments: parseList(instruments),
         genres: parseList(genres),
         bio: bio.trim() || undefined,
         defaultHourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
         acceptsDirectRequests,
       });
-      setProfile(updated);
+
+      // Step 3: Navigate to dashboard
+      navigate("/dashboard");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to save profile details.",
+        err instanceof Error ? err.message : "Unable to complete onboarding.",
       );
     } finally {
-      setProfileBusy(false);
+      setBusy(false);
     }
-  }
+  };
 
   return (
-    <AppShell title="Musician onboarding" subtitle="Get paid and go live">
-      <div className={ui.stack} style={{ gap: spacing.lg }}>
-        {error && <p className={ui.error}>{error}</p>}
+    <AppShell
+      title="Get started"
+      subtitle="Complete these steps to go live as a performer"
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleCompleteOnboarding();
+        }}
+        style={{ maxWidth: 640, width: "100%", margin: "0 auto" }}
+      >
+        {/* Step Progress */}
+        <StepProgress
+          currentStep={currentStep}
+          steps={["Payouts", "Profile", "Go Live"]}
+        />
 
-        <section
-          className={[ui.card, ui.cardPad].join(" ")}
-          style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}
-        >
-          <div>
-            <h2 className={ui.sectionTitle} style={{ marginBottom: 4 }}>
-              Step 1: Connect payouts (Stripe)
-            </h2>
-            <p className={ui.help}>
-              Set up your Stripe account so we can pay you automatically.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
-            <Button onClick={handleStartStripe} disabled={stripeBusy}>
-              {stripeStatus?.stripeAccountId
-                ? stripeBusy
-                  ? "Opening..."
-                  : "Continue Stripe setup"
-                : stripeBusy
-                  ? "Opening..."
-                  : "Start Stripe setup"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={refreshStripeStatus}
-              disabled={stripeBusy}
-            >
-              {stripeBusy ? "Checking..." : "Check status"}
-            </Button>
-          </div>
-          <div className={ui.help}>
-            Status: {stripeReady ? "Connected" : "Not finished"}
-          </div>
-          {stripeStatus?.requirements?.length ? (
-            <div className={ui.help}>
-              Stripe still needs: {stripeStatus.requirements.join(", ")}
-            </div>
-          ) : null}
-        </section>
-
-        <section
-          className={[ui.card, ui.cardPad].join(" ")}
-          style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-        >
-          <div>
-            <h2 className={ui.sectionTitle} style={{ marginBottom: 4 }}>
-              Step 2: Performer profile
-            </h2>
-            <p className={ui.help}>
-              Tell hosts what you play and the genres you specialize in.
-            </p>
-          </div>
-
+        {/* Step 1: Stripe Payouts */}
+        <div className={ui.formSection} style={{ marginBottom: 24 }}>
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
             }}
           >
-            <label style={{ fontSize: 13 }}>
-              Instruments (comma separated)
-            </label>
+            <h2 className={ui.formSectionTitle}>
+              {stripeComplete ? "✓ " : "1. "}Connect payouts
+            </h2>
+            {stripeComplete && (
+              <span className={ui.badgeSuccess}>Complete</span>
+            )}
+          </div>
+          <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
+            Set up your Stripe account so we can pay you automatically after
+            each gig.
+          </p>
+          {!hasStripeInfo && user?.stripeAccountId ? (
+            <StripeOnboardingForm
+              accountId={user.stripeAccountId}
+              onSuccess={() => window.location.reload()}
+              onValidationChange={handleStripeValidationChange}
+              onSubmitReady={handleStripeSubmitReady}
+            />
+          ) : hasStripeInfo ? (
+            <p className={ui.help}>✓ Stripe account connected and ready</p>
+          ) : (
+            <p className={ui.help}>Setting up your Stripe account...</p>
+          )}
+        </div>
+
+        {/* Step 2: Profile */}
+        <div className={ui.formSection} style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
+          >
+            <h2 className={ui.formSectionTitle}>
+              {profileReady ? "✓ " : "2. "}Performer profile
+            </h2>
+            {profileReady && <span className={ui.badgeSuccess}>Complete</span>}
+          </div>
+          <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
+            Tell hosts what you play and the genres you specialize in.
+          </p>
+
+          <div className={ui.field}>
+            <label className={ui.label}>Instruments</label>
             <input
               className={ui.input}
               value={instruments}
               onChange={(e) => setInstruments(e.target.value)}
               placeholder="Drums, Piano, Vocals"
             />
+            <span className={ui.help}>
+              Separate multiple instruments with commas
+            </span>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            <label style={{ fontSize: 13 }}>Genres (comma separated)</label>
+
+          <div className={ui.field}>
+            <label className={ui.label}>Genres</label>
             <input
               className={ui.input}
               value={genres}
@@ -250,32 +345,21 @@ export function MusicianOnboardingPage() {
               placeholder="Jazz, Gospel, Pop"
             />
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            <label style={{ fontSize: 13 }}>Bio</label>
+
+          <div className={ui.field}>
+            <label className={ui.label}>Bio</label>
             <textarea
               className={ui.input}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Short professional bio"
+              placeholder="A short professional bio about your experience and style"
               rows={4}
+              style={{ resize: "vertical" }}
             />
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            <label style={{ fontSize: 13 }}>
-              Default hourly rate (optional)
-            </label>
+
+          <div className={ui.field}>
+            <label className={ui.label}>Hourly rate (optional)</label>
             <input
               className={ui.input}
               type="number"
@@ -284,54 +368,48 @@ export function MusicianOnboardingPage() {
               onChange={(e) => setHourlyRate(e.target.value)}
               placeholder="150"
             />
+            <span className={ui.help}>
+              Your default rate — can be adjusted per gig
+            </span>
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+          <label className={ui.checkboxLabel}>
             <input
               type="checkbox"
+              className={ui.checkbox}
               checked={acceptsDirectRequests}
               onChange={(e) => setAcceptsDirectRequests(e.target.checked)}
             />
-            <span style={{ fontSize: 13 }}>Accept direct requests</span>
+            Accept direct requests from hosts
           </label>
-          <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
-            <Button onClick={handleSaveProfile} disabled={profileBusy}>
-              {profileBusy ? "Saving..." : "Save profile"}
-            </Button>
-            <div className={ui.help}>
-              Status: {profileReady ? "Complete" : "Not finished"}
-            </div>
-          </div>
-        </section>
+        </div>
 
-        <section
-          className={[ui.card, ui.cardPad].join(" ")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: spacing.md,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <h2 className={ui.sectionTitle} style={{ marginBottom: 4 }}>
-              Step 3: Finish
-            </h2>
-            <p className={ui.help}>
-              You can access the musician dashboard after payouts and profile
-              are set up.
-            </p>
-          </div>
-          <Button
-            onClick={() => navigate("/dashboard")}
-            disabled={!onboardingReady}
+        {/* Error Display */}
+        {error && (
+          <div
+            className={ui.error}
+            style={{ marginBottom: 24, fontSize: "14px" }}
           >
-            Go to dashboard
-          </Button>
-        </section>
+            {error}
+          </div>
+        )}
 
-        {loading && <p className={ui.help}>Loading onboarding details…</p>}
-      </div>
+        {/* Single Submit Button */}
+        <Button
+          type="submit"
+          disabled={!onboardingReady || busy}
+          size="lg"
+          style={{ width: "100%", marginTop: 8 }}
+        >
+          {busy ? "Completing setup..." : "Complete setup →"}
+        </Button>
+
+        {loading && (
+          <p className={ui.help} style={{ textAlign: "center", marginTop: 16 }}>
+            Loading onboarding details…
+          </p>
+        )}
+      </form>
     </AppShell>
   );
 }

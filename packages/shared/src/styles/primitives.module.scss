@@ -1052,3 +1052,479 @@
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Apple/Uber-Inspired Enhanced Primitives
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Elevated card with subtle shadow */
+.cardElevated {
+  composes: card;
+  box-shadow: var(--shadow-1);
+  transition:
+    box-shadow var(--transition-normal),
+    border-color var(--transition-normal),
+    transform var(--transition-normal);
+}
+
+.cardElevated:hover {
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-strong);
+}
+
+/* Step indicator for onboarding/wizard flows */
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  position: relative;
+}
+
+.step::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+}
+
+.step:last-child::after {
+  display: none;
+}
+
+.stepDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+  transition: all var(--transition-normal);
+}
+
+.stepActive .stepDot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-contrast);
+}
+
+.stepComplete .stepDot {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.stepComplete::after {
+  background: var(--success);
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.stepActive .stepLabel {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.stepComplete .stepLabel {
+  color: var(--success);
+}
+
+/* Metric card - Apple Health/Uber style */
+.metricCard {
+  composes: card;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metricLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metricValue {
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.metricSubtext {
+  font-size: 12px;
+  color: var(--text-subtle);
+  margin-top: 4px;
+}
+
+/* Timeline item for activity feeds */
+.timelineItem {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.timelineItem:last-child {
+  border-bottom: none;
+}
+
+.timelineDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.timelineContent {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Action list - clean settings/menu style */
+.actionList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  color: var(--text);
+  text-decoration: none;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+
+.actionItem:last-child {
+  border-bottom: none;
+}
+
+.actionItem:hover {
+  background: var(--surface-2);
+}
+
+.actionItemIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.actionItemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.actionItemTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.actionItemDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.actionItemChevron {
+  color: var(--text-subtle);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Pill tabs - Apple style segmented control */
+.pillTabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.pillTab {
+  padding: 8px 18px;
+  border-radius: calc(var(--radius-lg) - 3px);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pillTab:hover {
+  color: var(--text);
+}
+
+.pillTabActive {
+  composes: pillTab;
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Avatar */
+.avatar {
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--accent);
+  overflow: hidden;
+}
+
+.avatarSm {
+  composes: avatar;
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+}
+
+.avatarMd {
+  composes: avatar;
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+}
+
+.avatarLg {
+  composes: avatar;
+  width: 80px;
+  height: 80px;
+  font-size: 28px;
+}
+
+/* Notification dot */
+.notifDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: inline-block;
+}
+
+/* Inline status indicator */
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.statusActive {
+  background: var(--success);
+}
+.statusPending {
+  background: var(--warning);
+}
+.statusInactive {
+  background: var(--taa-gray-600);
+}
+
+/* Page header with breadcrumb-style subtitle */
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.pageSubtitle {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+/* Content grid for dashboard layouts */
+.dashboardGrid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebarCard {
+  composes: card;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebarTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+/* Toast / inline alert */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.alertSuccess {
+  composes: alert;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  color: var(--success);
+}
+
+.alertWarning {
+  composes: alert;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  color: var(--warning);
+}
+
+.alertError {
+  composes: alert;
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  color: var(--error);
+}
+
+.alertInfo {
+  composes: alert;
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+  color: var(--info);
+}
+
+/* Form section - grouped form fields with a title */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.formSectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.formSectionDesc {
+  margin: -8px 0 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform var(--transition-fast);
+}
+
+.toggleChecked {
+  composes: toggle;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.toggleChecked::after {
+  transform: translateX(18px);
+}

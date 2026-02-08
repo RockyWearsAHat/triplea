@@ -10,11 +10,14 @@
   cursor: pointer;
   font-weight: 600;
   letter-spacing: 0;
+  user-select: none;
+  white-space: nowrap;
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
     color 150ms ease,
-    opacity 150ms ease;
+    opacity 150ms ease,
+    transform 120ms ease;
 }
 
 .button:disabled {
@@ -50,6 +53,12 @@
   background: var(--primary);
   color: var(--primary-contrast);
   border-color: color-mix(in srgb, var(--primary) 65%, var(--border-strong));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .secondary {
@@ -72,6 +81,28 @@
   border-color: var(--border-strong);
 }
 
+.secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .ghost:hover:not(:disabled) {
   color: var(--text);
+}
+
+.ghost:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.danger {
+  background: var(--error);
+  color: white;
+  border-color: color-mix(in srgb, var(--error) 65%, var(--border-strong));
+}
+
+.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error) 88%, #000);
+}
+
+.danger:active:not(:disabled) {
+  transform: scale(0.98);
 }

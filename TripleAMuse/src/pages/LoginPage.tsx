@@ -1,5 +1,5 @@
 import React from "react";
-import { AppShell, Button, spacing, useAuth } from "@shared";
+import { AppShell, Button, useAuth } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { MUSIC_ORIGIN, MUSICIAN_ORIGIN } from "../lib/urls";
@@ -37,15 +37,12 @@ export function LoginPage() {
   // If already logged in, show account info
   if (user) {
     return (
-      <AppShell title="Welcome back">
+      <AppShell title="Welcome back" centered>
         <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            maxWidth: 420,
-          }}
+          className={ui.formSection}
+          style={{ maxWidth: 420, width: "100%" }}
         >
+          <h2 className={ui.formSectionTitle}>Welcome back</h2>
           <p>
             Signed in as <strong>{user.name}</strong> ({user.email})
           </p>
@@ -65,20 +62,16 @@ export function LoginPage() {
     <AppShell title="Sign in to Triple A" centered>
       <form
         onSubmit={handleSubmit}
-        style={{
-          maxWidth: 360,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
+        className={ui.formSection}
+        style={{ maxWidth: 400, width: "100%" }}
       >
-        <p className={ui.help}>
+        <h2 className={ui.formSectionTitle}>Sign in</h2>
+        <p className={ui.formSectionDesc}>
           Sign in to request rentals/services and access staff dashboards.
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Email</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Email</label>
           <input
             type="email"
             required
@@ -88,8 +81,8 @@ export function LoginPage() {
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 13 }}>Password</label>
+        <div className={ui.field}>
+          <label className={ui.label}>Password</label>
           <input
             type="password"
             required
@@ -104,14 +97,13 @@ export function LoginPage() {
               color: "var(--gold)",
               textDecoration: "none",
               alignSelf: "flex-end",
-              marginTop: 4,
             }}
           >
             Forgot password?
           </Link>
         </div>
 
-        {error && <p className={ui.error}>{error}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
@@ -125,14 +117,12 @@ export function LoginPage() {
         </Button>
 
         {/* Cross-app links */}
+        <div className={ui.divider} />
         <div
           style={{
-            marginTop: spacing.xl,
-            paddingTop: spacing.md,
-            borderTop: "1px solid var(--border)",
             display: "flex",
             flexDirection: "column",
-            gap: spacing.sm,
+            gap: 8,
             textAlign: "center",
           }}
         >
