@@ -357,19 +357,27 @@ export function StripeOnboardingForm({
             >
               <span
                 style={{
-                  fontSize: 18,
+                  fontSize: 16,
                   color: "var(--text-muted)",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.02em",
                   fontFamily: "monospace",
                   lineHeight: 1,
+                  transform: "translateY(1.5px)",
+                  display: "inline-block",
                 }}
               >
                 ••• ••
               </span>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="\\d*"
+                aria-label="Last 4 digits of SSN"
                 value={ssnLast4}
-                onChange={(e) => setSsnLast4(e.target.value)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  setSsnLast4(digits);
+                }}
                 maxLength={4}
                 placeholder="____"
                 required
@@ -394,7 +402,7 @@ export function StripeOnboardingForm({
               </p>
             ) : (
               <p className={ui.help} style={{ marginTop: 4 }}>
-                Required for tax reporting (1099)
+                Used for tax reporting (last 4 digits of SSN)
               </p>
             )}
           </div>
@@ -624,16 +632,24 @@ export function StripeOnboardingForm({
         </div>
       )}
 
-      <p className={ui.help} style={{ textAlign: "center" }}>
+      <div style={{ textAlign: "right", marginTop: 8 }}>
         <a
           href="https://stripe.com"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: "var(--text-base)", textDecoration: "underline" }}
+          style={{
+            color: "var(--text-muted)",
+            textDecoration: "none",
+            fontSize: 12,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
         >
-          Protected by Stripe
+          <span style={{ fontSize: 13 }}>🔒</span>
+          <span>Secured with Stripe</span>
         </a>
-      </p>
+      </div>
     </div>
   );
 }

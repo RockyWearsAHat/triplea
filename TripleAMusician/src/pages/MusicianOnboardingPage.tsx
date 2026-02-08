@@ -269,119 +269,130 @@ export function MusicianOnboardingPage() {
           steps={["Payouts", "Profile", "Go Live"]}
         />
 
-        {/* Step 1: Stripe Payouts */}
-        <div className={ui.formSection} style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <h2 className={ui.formSectionTitle}>
-              {stripeComplete ? "✓ " : "1. "}Connect payouts
-            </h2>
-            {stripeComplete && (
-              <span className={ui.badgeSuccess}>Complete</span>
+        {/* Contiguous form card with sections */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            overflow: "hidden",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ padding: 24, borderBottom: "1px solid var(--border)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <h2 className={ui.formSectionTitle}>
+                {stripeComplete ? "✓ " : "1. "}Connect payouts
+              </h2>
+              {stripeComplete && (
+                <span className={ui.badgeSuccess}>Complete</span>
+              )}
+            </div>
+            <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
+              Connect payouts so you can receive payments automatically after
+              each gig.
+            </p>
+            {!hasStripeInfo && user?.stripeAccountId ? (
+              <StripeOnboardingForm
+                accountId={user.stripeAccountId}
+                onSuccess={() => window.location.reload()}
+                onValidationChange={handleStripeValidationChange}
+                onSubmitReady={handleStripeSubmitReady}
+              />
+            ) : hasStripeInfo ? (
+              <p className={ui.help}>✓ Stripe account connected and ready</p>
+            ) : (
+              <p className={ui.help}>Setting up your Stripe account...</p>
             )}
           </div>
-          <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
-            Set up your Stripe account so we can pay you automatically after
-            each gig.
-          </p>
-          {!hasStripeInfo && user?.stripeAccountId ? (
-            <StripeOnboardingForm
-              accountId={user.stripeAccountId}
-              onSuccess={() => window.location.reload()}
-              onValidationChange={handleStripeValidationChange}
-              onSubmitReady={handleStripeSubmitReady}
-            />
-          ) : hasStripeInfo ? (
-            <p className={ui.help}>✓ Stripe account connected and ready</p>
-          ) : (
-            <p className={ui.help}>Setting up your Stripe account...</p>
-          )}
-        </div>
 
-        {/* Step 2: Profile */}
-        <div className={ui.formSection} style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <h2 className={ui.formSectionTitle}>
-              {profileReady ? "✓ " : "2. "}Performer profile
-            </h2>
-            {profileReady && <span className={ui.badgeSuccess}>Complete</span>}
+          <div style={{ padding: 24 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <h2 className={ui.formSectionTitle}>
+                {profileReady ? "✓ " : "2. "}Performer profile
+              </h2>
+              {profileReady && (
+                <span className={ui.badgeSuccess}>Complete</span>
+              )}
+            </div>
+            <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
+              Let hosts know what you play and the styles you specialize in.
+            </p>
+
+            <div className={ui.field}>
+              <label className={ui.label}>Instruments</label>
+              <input
+                className={ui.input}
+                value={instruments}
+                onChange={(e) => setInstruments(e.target.value)}
+                placeholder="Drums, Piano, Vocals"
+              />
+              <span className={ui.help}>
+                Separate multiple instruments with commas
+              </span>
+            </div>
+
+            <div className={ui.field}>
+              <label className={ui.label}>Genres</label>
+              <input
+                className={ui.input}
+                value={genres}
+                onChange={(e) => setGenres(e.target.value)}
+                placeholder="Jazz, Gospel, Pop"
+              />
+            </div>
+
+            <div className={ui.field}>
+              <label className={ui.label}>Bio</label>
+              <textarea
+                className={ui.input}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="A short professional bio about your experience and style"
+                rows={4}
+                style={{ resize: "vertical" }}
+              />
+            </div>
+
+            <div className={ui.field}>
+              <label className={ui.label}>Hourly rate (optional)</label>
+              <input
+                className={ui.input}
+                type="number"
+                min={0}
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="150"
+              />
+              <span className={ui.help}>
+                Your default rate — can be adjusted per gig
+              </span>
+            </div>
+
+            <label className={ui.checkboxLabel}>
+              <input
+                type="checkbox"
+                className={ui.checkbox}
+                checked={acceptsDirectRequests}
+                onChange={(e) => setAcceptsDirectRequests(e.target.checked)}
+              />
+              Accept direct requests from hosts
+            </label>
           </div>
-          <p className={ui.formSectionDesc} style={{ marginBottom: 16 }}>
-            Tell hosts what you play and the genres you specialize in.
-          </p>
-
-          <div className={ui.field}>
-            <label className={ui.label}>Instruments</label>
-            <input
-              className={ui.input}
-              value={instruments}
-              onChange={(e) => setInstruments(e.target.value)}
-              placeholder="Drums, Piano, Vocals"
-            />
-            <span className={ui.help}>
-              Separate multiple instruments with commas
-            </span>
-          </div>
-
-          <div className={ui.field}>
-            <label className={ui.label}>Genres</label>
-            <input
-              className={ui.input}
-              value={genres}
-              onChange={(e) => setGenres(e.target.value)}
-              placeholder="Jazz, Gospel, Pop"
-            />
-          </div>
-
-          <div className={ui.field}>
-            <label className={ui.label}>Bio</label>
-            <textarea
-              className={ui.input}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="A short professional bio about your experience and style"
-              rows={4}
-              style={{ resize: "vertical" }}
-            />
-          </div>
-
-          <div className={ui.field}>
-            <label className={ui.label}>Hourly rate (optional)</label>
-            <input
-              className={ui.input}
-              type="number"
-              min={0}
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(e.target.value)}
-              placeholder="150"
-            />
-            <span className={ui.help}>
-              Your default rate — can be adjusted per gig
-            </span>
-          </div>
-
-          <label className={ui.checkboxLabel}>
-            <input
-              type="checkbox"
-              className={ui.checkbox}
-              checked={acceptsDirectRequests}
-              onChange={(e) => setAcceptsDirectRequests(e.target.checked)}
-            />
-            Accept direct requests from hosts
-          </label>
         </div>
 
         {/* Error Display */}
