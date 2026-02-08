@@ -75,6 +75,80 @@ router.post(
   },
 );
 
+// List gigs created by the authenticated host
+router.get(
+  "/mine",
+  requireRole("customer"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.authUser!.id);
+      const gigs = await Gig.find({ createdByUserId: userId })
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .exec();
+
+      // Get ticket stats for all gigs in a single aggregation
+      const gigIds = gigs.map((g) => g._id);
+      const ticketStats = await Ticket.aggregate([
+        {
+          $match: {
+            gigId: { $in: gigIds },
+            status: { $in: ["valid", "used"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$gigId",
+            ticketsSold: { $sum: "$quantity" },
+            ticketRevenue: { $sum: "$totalPaid" },
+          },
+        },
+      ]);
+
+      // Get application counts
+      const applicationCounts = await GigApplication.aggregate([
+        { $match: { gigId: { $in: gigIds } } },
+        { $group: { _id: "$gigId", count: { $sum: 1 } } },
+      ]);
+
+      // Create lookup maps
+      const ticketStatsMap = new Map(
+        ticketStats.map((s) => [String(s._id), s]),
+      );
+      const applicationCountMap = new Map(
+        applicationCounts.map((a) => [String(a._id), a.count]),
+      );
+
+      return res.json({
+        gigs: gigs.map((g) => {
+          const stats = ticketStatsMap.get(String(g._id));
+          return {
+            id: g.id,
+            title: g.title,
+            description: g.description,
+            date: g.date,
+            time: g.time,
+            budget: g.budget,
+            status: g.status,
+            gigType: g.gigType,
+            openForTickets: g.openForTickets,
+            ticketPrice: g.ticketPrice,
+            locationId: g.locationId ? String(g.locationId) : null,
+            // Stats
+            ticketsSold: stats?.ticketsSold ?? 0,
+            ticketRevenue: stats?.ticketRevenue ?? 0,
+            applicantCount: applicationCountMap.get(String(g._id)) ?? 0,
+          };
+        }),
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("GET /gigs/mine error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
 // Get a single gig by ID (host/admin only for their own gigs)
 router.get(
   "/:id",
@@ -83,6 +157,10 @@ router.get(
     try {
       const { id } = req.params as { id: string };
       const userId = req.authUser!.id;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid gig id" });
+      }
 
       const gig = await Gig.findById(id).exec();
       if (!gig) {
@@ -158,79 +236,6 @@ router.get(
   },
 );
 
-router.get(
-  "/mine",
-  requireRole("customer"),
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = new mongoose.Types.ObjectId(req.authUser!.id);
-      const gigs = await Gig.find({ createdByUserId: userId })
-        .sort({ createdAt: -1 })
-        .limit(200)
-        .exec();
-
-      // Get ticket stats for all gigs in a single aggregation
-      const gigIds = gigs.map((g) => g._id);
-      const ticketStats = await Ticket.aggregate([
-        {
-          $match: {
-            gigId: { $in: gigIds },
-            status: { $in: ["valid", "used"] },
-          },
-        },
-        {
-          $group: {
-            _id: "$gigId",
-            ticketsSold: { $sum: "$quantity" },
-            ticketRevenue: { $sum: "$totalPaid" },
-          },
-        },
-      ]);
-
-      // Get application counts
-      const applicationCounts = await GigApplication.aggregate([
-        { $match: { gigId: { $in: gigIds } } },
-        { $group: { _id: "$gigId", count: { $sum: 1 } } },
-      ]);
-
-      // Create lookup maps
-      const ticketStatsMap = new Map(
-        ticketStats.map((s) => [String(s._id), s]),
-      );
-      const applicationCountMap = new Map(
-        applicationCounts.map((a) => [String(a._id), a.count]),
-      );
-
-      return res.json({
-        gigs: gigs.map((g) => {
-          const stats = ticketStatsMap.get(String(g._id));
-          return {
-            id: g.id,
-            title: g.title,
-            description: g.description,
-            date: g.date,
-            time: g.time,
-            budget: g.budget,
-            status: g.status,
-            gigType: g.gigType,
-            openForTickets: g.openForTickets,
-            ticketPrice: g.ticketPrice,
-            locationId: g.locationId ? String(g.locationId) : null,
-            // Stats
-            ticketsSold: stats?.ticketsSold ?? 0,
-            ticketRevenue: stats?.ticketRevenue ?? 0,
-            applicantCount: applicationCountMap.get(String(g._id)) ?? 0,
-          };
-        }),
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("GET /gigs/mine error", err);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  },
-);
-
 router.post(
   "/:id/apply",
   requireRole("musician"),
@@ -238,6 +243,10 @@ router.post(
     try {
       const { id } = req.params as { id: string };
       const { message } = req.body as { message?: string };
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid gig id" });
+      }
 
       const gig = await Gig.findById(id).exec();
       if (!gig) return res.status(404).json({ message: "Gig not found" });
@@ -286,6 +295,11 @@ router.get(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params as { id: string };
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid gig id" });
+      }
+
       const gig = await Gig.findById(id).exec();
       if (!gig) return res.status(404).json({ message: "Gig not found" });
 
@@ -354,6 +368,14 @@ router.post(
         applicationId: string;
       };
       const { decision } = req.body as { decision: "accept" | "deny" };
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid gig id" });
+      }
+      if (!mongoose.isValidObjectId(applicationId)) {
+        return res.status(400).json({ message: "Invalid application id" });
+      }
+
       if (decision !== "accept" && decision !== "deny") {
         return res.status(400).json({ message: "Invalid decision" });
       }
@@ -412,8 +434,16 @@ router.post(
         message?: string;
       };
 
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Invalid gig id" });
+      }
+
       if (!musicianUserId) {
         return res.status(400).json({ message: "musicianUserId is required" });
+      }
+
+      if (!mongoose.isValidObjectId(musicianUserId)) {
+        return res.status(400).json({ message: "Invalid musicianUserId" });
       }
 
       const gig = await Gig.findById(id).exec();

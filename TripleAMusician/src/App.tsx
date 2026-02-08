@@ -16,6 +16,7 @@ import "./App.css";
 import ui from "@shared/styles/primitives.module.scss";
 import { NavBar } from "./components/NavBar";
 import { DashboardPage } from "./pages/DashboardPage";
+import { MusicianOnboardingPage } from "./pages/MusicianOnboardingPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { createApiClient, getAssetUrl, getMusicOrigin } from "./lib/urls";
 
@@ -35,6 +36,196 @@ function Section({
 }
 
 const MUSIC_ORIGIN = getMusicOrigin();
+
+function MusicianAccessGate() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const api = React.useMemo(() => createApiClient(), []);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function handleEnableAccess() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.enableMusicianAccess();
+      await refreshUser();
+      navigate("/onboarding");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to enable musician access. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!user) {
+    return (
+      <div
+        className={ui.section}
+        style={{ display: "flex", justifyContent: "center" }}
+      >
+        <div
+          className={[ui.card, ui.cardPad].join(" ")}
+          style={{ maxWidth: 560, width: "100%" }}
+        >
+          <h2 className={ui.sectionTitle}>Sign in to access Musician</h2>
+          <p className={ui.help}>
+            Use your existing account or create a new musician profile.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.sm,
+              flexWrap: "wrap",
+              marginTop: spacing.md,
+            }}
+          >
+            <Button onClick={() => navigate("/login")}>Sign in</Button>
+            <Button variant="secondary" onClick={() => navigate("/register")}>
+              Create musician account
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={ui.section}
+      style={{ display: "flex", justifyContent: "center" }}
+    >
+      <div
+        className={[ui.card, ui.cardPad].join(" ")}
+        style={{ maxWidth: 620, width: "100%" }}
+      >
+        <h2 className={ui.sectionTitle}>Musician access required</h2>
+        <p className={ui.help}>
+          {user.email} doesn&apos;t have performer access yet. Enable musician
+          access to continue.
+        </p>
+        {error && <p className={ui.error}>{error}</p>}
+        <div
+          style={{
+            display: "flex",
+            gap: spacing.sm,
+            flexWrap: "wrap",
+            marginTop: spacing.md,
+          }}
+        >
+          <Button onClick={handleEnableAccess} disabled={submitting}>
+            {submitting ? "Enabling..." : "Enable musician access"}
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            Back to home
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MusicianSetupGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const api = React.useMemo(() => createApiClient(), []);
+  const [loading, setLoading] = React.useState(true);
+  const [stripeReady, setStripeReady] = React.useState(false);
+  const [profileReady, setProfileReady] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!user?.role.includes("musician")) return;
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [stripe, profile] = await Promise.all([
+          api.getMusicianStripeStatus(),
+          api.getMyMusicianProfile(),
+        ]);
+        if (cancelled) return;
+        setStripeReady(!!stripe.chargesEnabled && !!stripe.payoutsEnabled);
+        setProfileReady(
+          (profile.instruments?.length ?? 0) > 0 &&
+            (profile.genres?.length ?? 0) > 0 &&
+            !!profile.bio?.trim(),
+        );
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to check onboarding status.",
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [api, user]);
+
+  if (loading) {
+    return (
+      <div
+        className={ui.section}
+        style={{ display: "flex", justifyContent: "center" }}
+      >
+        <div className={[ui.card, ui.cardPad].join(" ")}>
+          <p className={ui.help}>Checking musician setup…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (stripeReady && profileReady) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div
+      className={ui.section}
+      style={{ display: "flex", justifyContent: "center" }}
+    >
+      <div
+        className={[ui.card, ui.cardPad].join(" ")}
+        style={{ maxWidth: 640, width: "100%" }}
+      >
+        <h2 className={ui.sectionTitle}>Finish musician onboarding</h2>
+        <p className={ui.help}>
+          Complete payouts and your performer profile to access the dashboard.
+        </p>
+        {error && <p className={ui.error}>{error}</p>}
+        <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
+          <Button onClick={() => navigate("/onboarding")}>
+            Go to onboarding
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            Back to home
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequireMusician({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireRole role="musician" fallback={<MusicianAccessGate />}>
+      <MusicianSetupGate>{children}</MusicianSetupGate>
+    </RequireRole>
+  );
+}
 
 function LoginPage() {
   const { login, user } = useAuth();
@@ -1025,56 +1216,57 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/onboarding" element={<MusicianOnboardingPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/" element={<MusicianLandingPage />} />
             <Route
               path="/dashboard"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <DashboardPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
             <Route
               path="/bookings"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <BookingsPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
             <Route
               path="/perks"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <PerksPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
             <Route
               path="/gigs"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <BrowseGigsPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
             <Route
               path="/gigs/:id"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <GigDetailPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
 
             <Route
               path="/rentals"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <RentalsPage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
             <Route
@@ -1090,9 +1282,9 @@ function App() {
             <Route
               path="/profile"
               element={
-                <RequireRole role="musician">
+                <RequireMusician>
                   <ProfilePage />
-                </RequireRole>
+                </RequireMusician>
               }
             />
           </Routes>

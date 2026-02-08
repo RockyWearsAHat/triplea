@@ -22,12 +22,31 @@
   border-radius: var(--radius-md);
 }
 
+.statCardLink {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.statCardLink:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.statCardLink:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .statIcon {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
+  color: var(--text-muted);
   font-size: clamp(1.25rem, 3vw, 1.5rem);
 }
 
@@ -210,7 +229,7 @@
   align-items: center;
   gap: 0.375rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text);
 }
 
 /* Musician Grid */
@@ -346,6 +365,98 @@
   gap: 20px;
 }
 
+/* Venues grid and cards */
+.venuesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.venueCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.venueCard:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.venueCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.venueThumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.venueThumbPlaceholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.venueInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.venueName {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.venueMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Quick actions grid (tidy action tiles) */
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.actionTile {
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
 .formRow {
   display: flex;
   flex-wrap: wrap;
@@ -356,25 +467,6 @@
 .formRow input {
   flex: 1;
   min-width: 120px;
-}
-
-.venueThumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-
-.venueThumbPlaceholder {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
 }
 
 /* Staff Tab */
@@ -423,16 +515,28 @@
 
 /* Legacy Classes (keep for backwards compatibility if needed) */
 .viewAllLink {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .viewAllLink:hover {
-  text-decoration: underline;
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
 }
 
 .viewAllLink:focus-visible {
@@ -550,19 +654,28 @@
 
 /* Inline Link */
 .inlineLink {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent);
-  font-size: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .inlineLink:hover {
-  opacity: 0.8;
-  text-decoration: underline;
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
 }
 
 .inlineLink:focus-visible {

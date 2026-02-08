@@ -29,6 +29,18 @@ export interface User {
   role: UserRole[];
   permissions?: Permission[];
   employeeRoles?: EmployeeRole[];
+  stripeAccountId?: string | null;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeOnboardingComplete?: boolean;
+}
+
+export interface StripeOnboardingStatus {
+  stripeAccountId?: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  requirements?: string[];
 }
 
 export interface ChatConversation {

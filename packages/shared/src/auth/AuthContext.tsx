@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { Permission, User, UserRole } from "../types";
 import { TripleAApiClient } from "../api/client";
 import { getApiBaseUrl } from "../lib/env";
@@ -17,6 +23,7 @@ interface AuthContextValue extends AuthState {
     roles?: string[];
   }): Promise<void>;
   logout(): void;
+  refreshUser(): Promise<void>;
   hasRole(role: UserRole): boolean;
   hasAnyRole(roles: UserRole[]): boolean;
   hasPermission(permission: Permission): boolean;
@@ -30,19 +37,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: true,
   });
 
-  const api = new TripleAApiClient({
-    baseUrl: getApiBaseUrl(),
-  });
+  const api = useMemo(
+    () => new TripleAApiClient({ baseUrl: getApiBaseUrl() }),
+    [],
+  );
+
+  const refreshUser = async () => {
+    try {
+      const remoteUser = await api.getCurrentUser();
+      setState({ user: remoteUser, loading: false });
+    } catch {
+      setState({ user: null, loading: false });
+    }
+  };
 
   useEffect(() => {
-    api
-      .getCurrentUser()
-      .then((remoteUser) => {
+    let cancelled = false;
+
+    const guardedRefresh = async () => {
+      try {
+        const remoteUser = await api.getCurrentUser();
+        if (cancelled) return;
         setState({ user: remoteUser, loading: false });
-      })
-      .catch(() => {
+      } catch {
+        if (cancelled) return;
         setState({ user: null, loading: false });
-      });
+      }
+    };
+
+    void guardedRefresh();
+
+    const handleFocus = () => {
+      void guardedRefresh();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void guardedRefresh();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    const interval = window.setInterval(guardedRefresh, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -87,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     register,
     logout,
+    refreshUser,
     hasRole,
     hasAnyRole,
     hasPermission,

@@ -1,7 +1,7 @@
 ---
 name: "Audit"
 description: "Security-focused code review specialist with OWASP Top 10, Zero Trust, LLM security, and enterprise security standards"
-model: Claude Opus 4.5 (copilot)
+model: Claude Opus 4.6 (fast mode) (Preview) (copilot)
 tools: ["search/codebase", "edit/editFiles", "search", "read/problems"]
 ---
 

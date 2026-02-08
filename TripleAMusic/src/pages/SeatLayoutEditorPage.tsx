@@ -3,6 +3,7 @@ import type { Location } from "@shared";
 import { Button, spacing } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, useParams } from "react-router-dom";
+import { useBeforeUnload, useBlocker } from "react-router";
 import { HostDashboardShell } from "../components/HostDashboardShell";
 import { createApiClient, getAssetUrl } from "../lib/urls";
 import styles from "./SeatLayoutEditorPage.module.scss";
@@ -61,7 +62,14 @@ type EditableSection = {
   seatsPerRow: number[];
 };
 
-type BuilderTool = "select" | "pan" | "row" | "measure" | "stage" | "aisle";
+type BuilderTool =
+  | "select"
+  | "pan"
+  | "row"
+  | "measure"
+  | "stage"
+  | "aisle"
+  | "path";
 
 type ViewState = {
   scale: number;
@@ -147,8 +155,9 @@ function normalizeSeatPositions(
 
   const cols = Math.max(1, Math.ceil(Math.sqrt(normalized.length)));
   const rows = Math.max(1, Math.ceil(normalized.length / cols));
-  const startX = -((cols - 1) * gridSize) / 2;
-  const startY = -((rows - 1) * gridSize) / 2;
+  // Keep placements aligned to the 1ft grid.
+  const startX = -Math.floor(cols / 2) * gridSize;
+  const startY = -Math.floor(rows / 2) * gridSize;
 
   return normalized.map((s, i) => {
     if (typeof s.posX === "number" && typeof s.posY === "number") return s;
@@ -196,6 +205,29 @@ function snap(n: number, gridSize: number) {
   return Math.round(n / gridSize) * gridSize;
 }
 
+function quantizeAngle45(rad: number): number {
+  const step = Math.PI / 4;
+  return Math.round(rad / step) * step;
+}
+
+function closestPointOnRectEdge(
+  p: { x: number; y: number },
+  rect: { left: number; right: number; top: number; bottom: number },
+): { x: number; y: number } {
+  const cx = Math.max(rect.left, Math.min(rect.right, p.x));
+  const cy = Math.max(rect.top, Math.min(rect.bottom, p.y));
+  const dLeft = Math.abs(p.x - rect.left);
+  const dRight = Math.abs(p.x - rect.right);
+  const dTop = Math.abs(p.y - rect.top);
+  const dBottom = Math.abs(p.y - rect.bottom);
+
+  const m = Math.min(dLeft, dRight, dTop, dBottom);
+  if (m === dLeft) return { x: rect.left, y: cy };
+  if (m === dRight) return { x: rect.right, y: cy };
+  if (m === dTop) return { x: cx, y: rect.top };
+  return { x: cx, y: rect.bottom };
+}
+
 function dist(a: { x: number; y: number }, b: { x: number; y: number }) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -225,6 +257,9 @@ export function SeatLayoutEditorPage() {
   const navigate = useNavigate();
   const api = useMemo(() => createApiClient(), []);
 
+  const allowNavigationRef = useRef(false);
+  const savedSnapshotRef = useRef<string>("");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -246,6 +281,7 @@ export function SeatLayoutEditorPage() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showSeatText, setShowSeatText] = useState<boolean>(true);
   const [showAllFloors, setShowAllFloors] = useState<boolean>(false);
+  const [toolsOpen, setToolsOpen] = useState<boolean>(false);
 
   const [seatSizeFeet, setSeatSizeFeet] = useState<number>(2.5);
   const [seatPitchFeet, setSeatPitchFeet] = useState<number>(3);
@@ -285,6 +321,16 @@ export function SeatLayoutEditorPage() {
     done?: boolean;
   } | null>(null);
 
+  const [pathDraft, setPathDraft] = useState<{
+    points: Array<{ x: number; y: number }>;
+    floorId: string;
+  } | null>(null);
+  const [pathHover, setPathHover] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [pathSpacingFeet, setPathSpacingFeet] = useState<number>(0);
+  const [pathSeatCount, setPathSeatCount] = useState<number>(0);
+
   const [rowDraft, setRowDraft] = useState<{
     start: { x: number; y: number };
     end: { x: number; y: number };
@@ -294,6 +340,77 @@ export function SeatLayoutEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
+
+  function getLayoutSnapshotString(args?: {
+    name?: string;
+    description?: string;
+    stagePosition?: StagePosition;
+    floors?: EditableFloor[];
+    elements?: LayoutElement[];
+    backgroundImageUrl?: string;
+    stage?: StageConfig;
+    seats?: EditableSeat[];
+  }): string {
+    const snapshot = {
+      name: (args?.name ?? name).trim() || "Seating",
+      description: (args?.description ?? description).trim() || "",
+      stagePosition: args?.stagePosition ?? stagePosition,
+      floors: args?.floors ?? floors,
+      elements: args?.elements ?? elements,
+      backgroundImageUrl: (args?.backgroundImageUrl ?? backgroundImageUrl)
+        .trim()
+        .toString(),
+      stage: args?.stage ?? stage,
+      seats: args?.seats ?? seats,
+    };
+
+    return JSON.stringify(snapshot);
+  }
+
+  function hasUnsavedChanges(): boolean {
+    if (!savedSnapshotRef.current) return false;
+    return getLayoutSnapshotString() !== savedSnapshotRef.current;
+  }
+
+  function navigateToVenueLayouts() {
+    allowNavigationRef.current = true;
+    navigate(`/venues/${encodeURIComponent(locationId || "")}/seating`);
+  }
+
+  function handleDone() {
+    if (hasUnsavedChanges()) {
+      const ok = window.confirm(
+        "You have unsaved changes. Exit the seat editor without saving?",
+      );
+      if (!ok) return;
+    }
+    navigateToVenueLayouts();
+  }
+
+  useBeforeUnload((event) => {
+    if (!hasUnsavedChanges()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (allowNavigationRef.current) return false;
+    if (currentLocation.pathname === nextLocation.pathname) return false;
+    return hasUnsavedChanges();
+  });
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    const ok = window.confirm(
+      "You have unsaved changes. Leave this page without saving?",
+    );
+    if (ok) {
+      allowNavigationRef.current = true;
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }, [blocker]);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragSeatIdRef = useRef<string | null>(null);
@@ -344,28 +461,47 @@ export function SeatLayoutEditorPage() {
         if (cancelled) return;
 
         const layout = layoutRes.layout;
-        setName(layout.name);
-        setDescription(layout.description ?? "");
-        setStagePosition((layout.stagePosition ?? "top") as StagePosition);
 
-        setElements((layout as any).elements ?? []);
-        setBackgroundImageUrl((layout as any).backgroundImageUrl ?? "");
-        setStage((layout as any).stage ?? stage);
+        const loadedName = layout.name;
+        const loadedDescription = layout.description ?? "";
+        const loadedStagePosition = (layout.stagePosition ??
+          "top") as StagePosition;
+        const loadedElements = ((layout as any).elements ??
+          []) as LayoutElement[];
+        const loadedBackgroundImageUrl = ((layout as any).backgroundImageUrl ??
+          "") as string;
+        const loadedStage = ((layout as any).stage ?? stage) as StageConfig;
 
         const loadedFloors = ensureDefaultFloor(
           (layout.floors as EditableFloor[] | undefined) ?? undefined,
         );
-        setFloors(loadedFloors);
         const defaultFloorId = loadedFloors[0]?.floorId || "floor-1";
-        setActiveFloorId(defaultFloorId);
-
-        setSeats(
-          normalizeSeatPositions(
-            (layout.seats as EditableSeat[]) ?? [],
-            defaultFloorId,
-            gridSize,
-          ),
+        const normalizedSeats = normalizeSeatPositions(
+          (layout.seats as EditableSeat[]) ?? [],
+          defaultFloorId,
+          gridSize,
         );
+
+        setName(loadedName);
+        setDescription(loadedDescription);
+        setStagePosition(loadedStagePosition);
+        setElements(loadedElements);
+        setBackgroundImageUrl(loadedBackgroundImageUrl);
+        setStage(loadedStage);
+        setFloors(loadedFloors);
+        setActiveFloorId(defaultFloorId);
+        setSeats(normalizedSeats);
+
+        savedSnapshotRef.current = getLayoutSnapshotString({
+          name: loadedName,
+          description: loadedDescription,
+          stagePosition: loadedStagePosition,
+          floors: loadedFloors,
+          elements: loadedElements,
+          backgroundImageUrl: loadedBackgroundImageUrl,
+          stage: loadedStage,
+          seats: normalizedSeats,
+        });
 
         if (locationId) {
           const myLocations = await api.listMyStageLocations();
@@ -554,8 +690,9 @@ export function SeatLayoutEditorPage() {
     const sectionGap = gridSize * 6;
     const blockTopY = sectionIndex * (rows * gridSize + sectionGap);
 
-    const startX = -((perRow - 1) * gridSize) / 2;
-    const startY = -((rows - 1) * gridSize) / 2 + blockTopY;
+    // Keep generator aligned to the 1ft grid.
+    const startX = -Math.floor(perRow / 2) * gridSize;
+    const startY = -Math.floor(rows / 2) * gridSize + blockTopY;
 
     const generated: EditableSeat[] = [];
 
@@ -607,6 +744,7 @@ export function SeatLayoutEditorPage() {
         sections,
         seats,
       });
+      savedSnapshotRef.current = getLayoutSnapshotString();
       setSaveOk(true);
       setTimeout(() => setSaveOk(false), 2500);
     } catch (e) {
@@ -630,10 +768,249 @@ export function SeatLayoutEditorPage() {
     };
   }
 
+  function getNearestObjectSnapPoint(
+    p: { x: number; y: number },
+    floorId: string,
+  ): { x: number; y: number } | null {
+    const snapThreshold = 0.85 * gridSize; // ~0.85ft
+    let best: { x: number; y: number } | null = null;
+    let bestD = Number.POSITIVE_INFINITY;
+
+    const seatW = seatSizeFeet * gridSize;
+    const seatH = seatSizeFeet * gridSize;
+
+    for (const s of seats) {
+      if ((s.floorId || activeFloorId) !== floorId) continue;
+      const cx = typeof s.posX === "number" ? s.posX : 0;
+      const cy = typeof s.posY === "number" ? s.posY : 0;
+      const rect = {
+        left: cx - seatW / 2,
+        right: cx + seatW / 2,
+        top: cy - seatH / 2,
+        bottom: cy + seatH / 2,
+      };
+      const q = closestPointOnRectEdge(p, rect);
+      const d = dist(p, q);
+      if (d < bestD) {
+        bestD = d;
+        best = q;
+      }
+    }
+
+    for (const el of elements) {
+      if (el.type !== "aisle") continue;
+      if ((el.floorId || activeFloorId) !== floorId) continue;
+      const w = el.orientation === "vertical" ? el.thickness : el.length;
+      const h = el.orientation === "vertical" ? el.length : el.thickness;
+      const rect = {
+        left: el.x - w / 2,
+        right: el.x + w / 2,
+        top: el.y - h / 2,
+        bottom: el.y + h / 2,
+      };
+      const q = closestPointOnRectEdge(p, rect);
+      const d = dist(p, q);
+      if (d < bestD) {
+        bestD = d;
+        best = q;
+      }
+    }
+
+    if (floorId === activeFloorId) {
+      const rect = {
+        left: stage.x - stage.width / 2,
+        right: stage.x + stage.width / 2,
+        top: stage.y - stage.height / 2,
+        bottom: stage.y + stage.height / 2,
+      };
+      const q = closestPointOnRectEdge(p, rect);
+      const d = dist(p, q);
+      if (d < bestD) {
+        bestD = d;
+        best = q;
+      }
+    }
+
+    if (!best || bestD > snapThreshold) return null;
+    return best;
+  }
+
+  function applyMeasureModifiers(
+    raw: { x: number; y: number },
+    start: { x: number; y: number } | null,
+    e: Pick<React.PointerEvent, "altKey" | "metaKey" | "shiftKey">,
+  ): { x: number; y: number } {
+    let p = raw;
+
+    if (start && e.shiftKey) {
+      const dx = p.x - start.x;
+      const dy = p.y - start.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 1e-6) {
+        const a = quantizeAngle45(Math.atan2(dy, dx));
+        p = { x: start.x + Math.cos(a) * len, y: start.y + Math.sin(a) * len };
+      }
+    }
+
+    // Cmd = fully freehand: no snapping/nudging.
+    if (e.metaKey) return p;
+
+    // Alt = force grid snap (no object nudging).
+    if (e.altKey) {
+      return { x: snap(p.x, gridSize), y: snap(p.y, gridSize) };
+    }
+
+    // Default = nudge to nearest object edge when close.
+    return getNearestObjectSnapPoint(p, activeFloorId) ?? p;
+  }
+
+  function polylineLength(points: Array<{ x: number; y: number }>): number {
+    let sum = 0;
+    for (let i = 1; i < points.length; i++) {
+      sum += dist(points[i - 1]!, points[i]!);
+    }
+    return sum;
+  }
+
+  function minNonOverlapSpacingFeetForAngle(angleRad: number): number {
+    const c = Math.abs(Math.cos(angleRad));
+    const s = Math.abs(Math.sin(angleRad));
+    const maxComp = Math.max(1e-6, Math.max(c, s));
+    return seatSizeFeet / maxComp;
+  }
+
+  function computeAutoPathSpacingFeet(points: Array<{ x: number; y: number }>) {
+    let worst = seatSizeFeet;
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1]!;
+      const b = points[i]!;
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      worst = Math.max(worst, minNonOverlapSpacingFeetForAngle(ang));
+    }
+    return worst;
+  }
+
+  function samplePolyline(
+    points: Array<{ x: number; y: number }>,
+    spacingPx: number,
+  ): Array<{ x: number; y: number }> {
+    if (points.length < 2 || !(spacingPx > 0)) return [];
+    const out: Array<{ x: number; y: number }> = [points[0]!];
+    let carried = 0;
+
+    for (let i = 1; i < points.length; i++) {
+      let a = points[i - 1]!;
+      const b = points[i]!;
+      let segLen = dist(a, b);
+      if (segLen < 1e-6) continue;
+      const ux = (b.x - a.x) / segLen;
+      const uy = (b.y - a.y) / segLen;
+
+      while (carried + segLen >= spacingPx) {
+        const need = spacingPx - carried;
+        const nx = a.x + ux * need;
+        const ny = a.y + uy * need;
+        out.push({ x: nx, y: ny });
+        a = { x: nx, y: ny };
+        segLen = dist(a, b);
+        carried = 0;
+        if (segLen < 1e-6) break;
+      }
+
+      carried += segLen;
+    }
+
+    return out;
+  }
+
+  function generateSeatsAlongPath(opts: {
+    points: Array<{ x: number; y: number }>;
+    floorId: string;
+    spacingFeet?: number;
+    count?: number;
+  }) {
+    if (opts.points.length < 2) return;
+    const totalPx = polylineLength(opts.points);
+    const totalFeet = totalPx / gridSize;
+    const autoSpacingFeet = computeAutoPathSpacingFeet(opts.points);
+
+    let spacingFeet = opts.spacingFeet ?? 0;
+    const count = opts.count ?? 0;
+    if (count >= 2) {
+      spacingFeet = totalFeet / (count - 1);
+      if (spacingFeet < autoSpacingFeet) {
+        // Largest seat size that fits at this spacing across the worst segment direction.
+        let maxComp = 0.000001;
+        for (let i = 1; i < opts.points.length; i++) {
+          const a = opts.points[i - 1]!;
+          const b = opts.points[i]!;
+          const ang = Math.atan2(b.y - a.y, b.x - a.x);
+          maxComp = Math.max(
+            maxComp,
+            Math.max(Math.abs(Math.cos(ang)), Math.abs(Math.sin(ang))),
+          );
+        }
+        const maxSeatSize = spacingFeet * maxComp;
+        const ok = window.confirm(
+          `These ${count} seats would overlap at the current seat size (${seatSizeFeet.toFixed(2)} ft).\n\nResize seats automatically to ~${maxSeatSize.toFixed(2)} ft to fit?`,
+        );
+        if (!ok) return;
+        // Snap to quarter-foot increments.
+        setSeatSizeFeet(Math.max(1, Math.floor(maxSeatSize * 4) / 4));
+      }
+    }
+
+    if (!(spacingFeet > 0)) spacingFeet = Math.max(0.5, autoSpacingFeet);
+    const spacingPx = spacingFeet * gridSize;
+    const centers = samplePolyline(opts.points, spacingPx);
+    if (centers.length < 2) return;
+
+    const section = newSectionName.trim() || "Main";
+    const stamp = Date.now();
+    const generated: EditableSeat[] = centers.map((c, idx) => {
+      let x = c.x;
+      let y = c.y;
+      if (snapToGrid) {
+        x = snap(x, gridSize);
+        y = snap(y, gridSize);
+      }
+      return {
+        seatId: `path-${opts.floorId}-${stamp}-${idx + 1}`,
+        section,
+        floorId: opts.floorId,
+        row: "P",
+        seatNumber: String(idx + 1),
+        posX: x,
+        posY: y,
+        isAvailable: true,
+      };
+    });
+
+    setSeats((prev) => [...prev, ...generated]);
+    setSelectedSeatId(generated[0]?.seatId ?? null);
+  }
+
+  function finalizePathDraft() {
+    if (!pathDraft || pathDraft.points.length < 2) return;
+    const points = [...pathDraft.points];
+
+    const count = pathSeatCount >= 2 ? pathSeatCount : undefined;
+    const spacingFeet = pathSpacingFeet > 0 ? pathSpacingFeet : undefined;
+    generateSeatsAlongPath({
+      points,
+      floorId: pathDraft.floorId,
+      count,
+      spacingFeet,
+    });
+    setPathDraft(null);
+    setPathHover(null);
+  }
+
   function handleSeatPointerDown(e: React.PointerEvent, seatId: string) {
     if (
       tool === "pan" ||
       tool === "measure" ||
+      tool === "path" ||
       tool === "aisle" ||
       tool === "stage" ||
       spaceDownRef.current
@@ -709,16 +1086,36 @@ export function SeatLayoutEditorPage() {
   function handleViewportPointerDown(e: React.PointerEvent) {
     if (e.button !== 0) return;
 
-    // Measure tool
+    // Measure tool: click once to place point A, click again to place point B.
     if (tool === "measure") {
       const world = screenToWorld(e);
       if (!world) return;
-      const snapped =
+      setMeasure((prev) => {
+        if (!prev || prev.done) {
+          const p = applyMeasureModifiers(world, null, e);
+          return { start: p, end: p, floorId: activeFloorId, done: false };
+        }
+        const p = applyMeasureModifiers(world, prev.start, e);
+        return { ...prev, end: p, done: true };
+      });
+      return;
+    }
+
+    // Path tool: click to add points (double-click will finalize).
+    if (tool === "path") {
+      const world = screenToWorld(e);
+      if (!world) return;
+      const p =
         snapToGrid && !e.altKey
           ? { x: snap(world.x, gridSize), y: snap(world.y, gridSize) }
           : world;
-      setMeasure({ start: snapped, end: snapped, floorId: activeFloorId });
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setPathDraft((prev) => {
+        if (!prev || prev.floorId !== activeFloorId) {
+          return { points: [p], floorId: activeFloorId };
+        }
+        return { ...prev, points: [...prev.points, p] };
+      });
+      setPathHover(null);
       return;
     }
 
@@ -751,11 +1148,19 @@ export function SeatLayoutEditorPage() {
     if (tool === "measure" && measureDraft) {
       const world = screenToWorld(e);
       if (!world) return;
-      const snapped =
+      const end = applyMeasureModifiers(world, measureDraft.start, e);
+      setMeasure((prev) => (prev ? { ...prev, end } : prev));
+      return;
+    }
+
+    if (tool === "path" && pathDraft) {
+      const world = screenToWorld(e);
+      if (!world) return;
+      const p =
         snapToGrid && !e.altKey
           ? { x: snap(world.x, gridSize), y: snap(world.y, gridSize) }
           : world;
-      setMeasure((prev) => (prev ? { ...prev, end: snapped } : prev));
+      setPathHover(p);
       return;
     }
 
@@ -880,9 +1285,7 @@ export function SeatLayoutEditorPage() {
     dragElementRef.current = null;
   }
 
-  function finalizeMeasure() {
-    setMeasure((prev) => (prev ? { ...prev, done: true } : prev));
-  }
+  // Measure now finalizes on second click; no implicit finalize on leave.
 
   function generateRowFromDraft(draft: {
     start: { x: number; y: number };
@@ -933,13 +1336,23 @@ export function SeatLayoutEditorPage() {
   }
 
   function handleWheel(e: React.WheelEvent) {
-    // macOS pinch-to-zoom often sets ctrlKey.
-    const zoomIntent = e.ctrlKey || e.metaKey;
-    if (!zoomIntent) return;
+    // Trackpad:
+    // - two-finger scroll = pan
+    // - pinch zoom = WheelEvent with ctrlKey=true (macOS)
     e.preventDefault();
 
     const el = viewportRef.current;
     if (!el) return;
+
+    if (!e.ctrlKey) {
+      setView((prev) => ({
+        ...prev,
+        offsetX: prev.offsetX - e.deltaX,
+        offsetY: prev.offsetY - e.deltaY,
+      }));
+      return;
+    }
+
     const rect = el.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
@@ -1013,7 +1426,11 @@ export function SeatLayoutEditorPage() {
 
   if (loading) {
     return (
-      <HostDashboardShell title="Seat map editor" subtitle="Loading...">
+      <HostDashboardShell
+        title="Seat map editor"
+        subtitle="Loading..."
+        hideTabs
+      >
         <p className={ui.help}>Loading seat map…</p>
       </HostDashboardShell>
     );
@@ -1029,6 +1446,7 @@ export function SeatLayoutEditorPage() {
       subtitle={
         location ? `Editing ${location.name}` : "Edit your venue seating"
       }
+      hideTabs
     >
       <div className={styles.page}>
         {error ? <p className={ui.error}>{error}</p> : null}
@@ -1062,21 +1480,14 @@ export function SeatLayoutEditorPage() {
               placeholder="Description (optional)"
             />
             <div className={ui.help}>
-              Drag seats to place them. Hold Space to pan. Pinch/⌘+scroll to
-              zoom.
+              Drag seats to place them. Trackpad scroll pans. Pinch zooms. Hold
+              Space to drag-pan.
             </div>
           </div>
 
           <div className={styles.headerRight}>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                navigate(
-                  `/venues/${encodeURIComponent(locationId || "")}/seating`,
-                )
-              }
-            >
-              Back
+            <Button variant="secondary" onClick={handleDone}>
+              Done
             </Button>
             <Button onClick={handleSave} disabled={saving || !layoutId}>
               {saving ? "Saving…" : "Save"}
@@ -1155,6 +1566,13 @@ export function SeatLayoutEditorPage() {
                 </Button>
                 <Button
                   size="sm"
+                  variant={tool === "path" ? "secondary" : "ghost"}
+                  onClick={() => setTool("path")}
+                >
+                  Path
+                </Button>
+                <Button
+                  size="sm"
                   variant={tool === "aisle" ? "secondary" : "ghost"}
                   onClick={() => setTool("aisle")}
                 >
@@ -1170,30 +1588,13 @@ export function SeatLayoutEditorPage() {
                 <Button size="sm" variant="ghost" onClick={clearArrangement}>
                   Clear
                 </Button>
-                <label className={styles.toggle}>
-                  <input
-                    type="checkbox"
-                    checked={showGrid}
-                    onChange={(e) => setShowGrid(e.target.checked)}
-                  />
-                  Grid
-                </label>
-                <label className={styles.toggle}>
-                  <input
-                    type="checkbox"
-                    checked={snapToGrid}
-                    onChange={(e) => setSnapToGrid(e.target.checked)}
-                  />
-                  Snap
-                </label>
-                <label className={styles.toggle}>
-                  <input
-                    type="checkbox"
-                    checked={showSeatText}
-                    onChange={(e) => setShowSeatText(e.target.checked)}
-                  />
-                  Labels
-                </label>
+                <Button
+                  size="sm"
+                  variant={toolsOpen ? "secondary" : "ghost"}
+                  onClick={() => setToolsOpen((v) => !v)}
+                >
+                  Tools
+                </Button>
               </div>
             </div>
 
@@ -1205,12 +1606,15 @@ export function SeatLayoutEditorPage() {
               onPointerMove={handleViewportPointerMove}
               onPointerUp={handleViewportPointerUp}
               onPointerCancel={handleViewportPointerUp}
+              onDoubleClick={() => {
+                if (tool === "path") finalizePathDraft();
+              }}
               onPointerLeave={() => {
-                if (tool === "measure") finalizeMeasure();
                 if (tool === "row" && rowDraft) {
                   generateRowFromDraft(rowDraft);
                   setRowDraft(null);
                 }
+                if (tool === "path") setPathHover(null);
               }}
               onWheel={handleWheel}
               style={{
@@ -1298,21 +1702,77 @@ export function SeatLayoutEditorPage() {
                 {measure &&
                 (showAllFloors || measure.floorId === activeFloorId) ? (
                   <div className={styles.measureLayer}>
-                    <div
-                      className={styles.measureLine}
-                      style={{
-                        left: measure.start.x,
-                        top: measure.start.y,
-                        width: Math.max(1, dist(measure.start, measure.end)),
-                        transformOrigin: "0 50%",
-                        transform: `rotate(${Math.atan2(measure.end.y - measure.start.y, measure.end.x - measure.start.x)}rad)`,
-                      }}
-                    />
+                    {(() => {
+                      const dx = measure.end.x - measure.start.x;
+                      const dy = measure.end.y - measure.start.y;
+                      const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+                      const angle = Math.atan2(dy, dx);
+                      // Keep stroke/dots roughly constant in screen pixels.
+                      const strokeW = Math.max(
+                        1,
+                        2 / Math.max(0.25, view.scale),
+                      );
+                      const dotSize = Math.max(
+                        6,
+                        9 / Math.max(0.25, view.scale),
+                      );
+                      const dotBorder = Math.max(
+                        1,
+                        1.5 / Math.max(0.25, view.scale),
+                      );
+
+                      return (
+                        <>
+                          <div
+                            className={styles.measureLine}
+                            style={{
+                              left: measure.start.x,
+                              top: measure.start.y,
+                              width: len,
+                              height: strokeW,
+                              transformOrigin: "0 50%",
+                              transform: `rotate(${angle}rad) translateY(-50%)`,
+                              borderRadius: strokeW,
+                              boxShadow: `0 0 0 ${dotBorder}px rgba(0,0,0,0.35)`,
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: measure.start.x,
+                              top: measure.start.y,
+                              width: dotSize,
+                              height: dotSize,
+                              transform: "translate(-50%, -50%)",
+                              borderRadius: 999,
+                              background: "var(--accent)",
+                              border: `${dotBorder}px solid var(--surface-3)`,
+                              boxShadow: `0 0 0 ${dotBorder}px rgba(0,0,0,0.35)`,
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: measure.end.x,
+                              top: measure.end.y,
+                              width: dotSize,
+                              height: dotSize,
+                              transform: "translate(-50%, -50%)",
+                              borderRadius: 999,
+                              background: "var(--accent)",
+                              border: `${dotBorder}px solid var(--surface-3)`,
+                              boxShadow: `0 0 0 ${dotBorder}px rgba(0,0,0,0.35)`,
+                            }}
+                          />
+                        </>
+                      );
+                    })()}
                     <div
                       className={styles.measureLabel}
                       style={{
                         left: (measure.start.x + measure.end.x) / 2,
                         top: (measure.start.y + measure.end.y) / 2,
+                        transform: "translate(-50%, -50%)",
                       }}
                     >
                       {formatFeet(dist(measure.start, measure.end) / gridSize)}
@@ -1346,6 +1806,33 @@ export function SeatLayoutEditorPage() {
                       )}
                       )
                     </div>
+                  </div>
+                ) : null}
+
+                {/* Path draw preview */}
+                {pathDraft && pathDraft.points.length ? (
+                  <div className={styles.pathDraft}>
+                    {[
+                      ...pathDraft.points,
+                      ...(pathHover ? [pathHover] : []),
+                    ].map((p, idx, arr) => {
+                      if (idx === 0) return null;
+                      const a = arr[idx - 1]!;
+                      const b = p;
+                      return (
+                        <div
+                          key={`seg-${idx}`}
+                          className={styles.pathDraftLine}
+                          style={{
+                            left: a.x,
+                            top: a.y,
+                            width: Math.max(1, dist(a, b)),
+                            transformOrigin: "0 50%",
+                            transform: `rotate(${Math.atan2(b.y - a.y, b.x - a.x)}rad)`,
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 ) : null}
 
@@ -1386,442 +1873,152 @@ export function SeatLayoutEditorPage() {
                 })}
               </div>
             </div>
-          </div>
 
-          <aside className={[ui.card, ui.cardPad].join(" ")}>
-            <h3
-              className={ui.sectionTitle}
-              style={{ marginBottom: spacing.sm }}
-            >
-              Tools
-            </h3>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.md,
-              }}
-            >
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  View
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      if (!viewportRef.current) return;
-                      const rect = viewportRef.current.getBoundingClientRect();
-                      setView({
-                        scale: 1,
-                        offsetX: rect.width / 2,
-                        offsetY: rect.height / 2,
-                      });
-                    }}
-                  >
-                    Reset view
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setView((prev) => ({ ...prev, scale: 1 }));
-                    }}
-                  >
-                    100%
-                  </Button>
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Grid & snapping
-                </div>
-                <div className={ui.help}>
-                  1 tile = 1 ft. Seats snap to grid by default. Hold Alt to move
-                  off-grid.
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Seat size
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    className={ui.input}
-                    type="number"
-                    min={1}
-                    step={0.5}
-                    value={seatSizeFeet}
-                    onChange={(e) =>
-                      setSeatSizeFeet(Number(e.target.value) || 2.5)
-                    }
-                    aria-label="Seat size (ft)"
-                  />
-                  <div className={ui.help} style={{ alignSelf: "center" }}>
-                    ft
-                  </div>
-                </div>
-                <div className={ui.help} style={{ marginTop: 6 }}>
-                  Default is ~2.5 ft per seat.
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Row spacing
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    className={ui.input}
-                    type="number"
-                    min={2}
-                    step={0.5}
-                    value={seatPitchFeet}
-                    onChange={(e) =>
-                      setSeatPitchFeet(Number(e.target.value) || 3)
-                    }
-                    aria-label="Seat pitch (ft)"
-                  />
-                  <div className={ui.help} style={{ alignSelf: "center" }}>
-                    ft
-                  </div>
-                </div>
-                <div className={ui.help} style={{ marginTop: 6 }}>
-                  Used when drawing/reflowing rows.
-                </div>
-
-                {selectedRowGroupId ? (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "flex",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={reflowSelectedRow}
-                    >
-                      Reflow row
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedRowGroupId(null)}
-                    >
-                      Clear row select
-                    </Button>
-                    <div className={ui.help} style={{ alignSelf: "center" }}>
-                      Seats:{" "}
-                      <strong style={{ color: "var(--text)" }}>
-                        {selectedRowSeats.length}
-                      </strong>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={ui.help} style={{ marginTop: 10 }}>
-                    Use the Row tool to select/drag a row.
-                  </div>
-                )}
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Background image
-                </div>
-                <label
-                  className={ui.help}
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
+            {toolsOpen ? (
+              <div
+                className={[ui.card, ui.cardPad, styles.toolsOverlay].join(" ")}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                <h3
+                  className={ui.sectionTitle}
+                  style={{ marginBottom: spacing.sm }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={showBackgroundImage}
-                    onChange={(e) => setShowBackgroundImage(e.target.checked)}
-                  />
-                  Show layout image
-                </label>
-                <input
-                  className={ui.input}
-                  value={backgroundImageUrl}
-                  onChange={(e) => setBackgroundImageUrl(e.target.value)}
-                  placeholder="/api/... or https://..."
-                  style={{ marginTop: 8 }}
-                />
-                <div className={ui.help} style={{ marginTop: 6 }}>
-                  This is NOT the venue cover photo.
-                </div>
-              </div>
+                  Tools
+                </h3>
 
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Floor
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  <select
-                    className={ui.input}
-                    value={activeFloorId}
-                    onChange={(e) => setActiveFloorId(e.target.value)}
-                  >
-                    {stableSortFloors(floors).map((f) => (
-                      <option key={f.floorId} value={f.floorId}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                  <label
-                    className={ui.help}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingLeft: 4,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={showAllFloors}
-                      onChange={(e) => setShowAllFloors(e.target.checked)}
-                    />
-                    Show all floors
-                  </label>
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Aisles
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      const id = `aisle-${Date.now()}`;
-                      setElements((prev) => [
-                        ...prev,
-                        {
-                          elementId: id,
-                          type: "aisle",
-                          floorId: activeFloorId,
-                          orientation: "vertical",
-                          x: 0,
-                          y: 0,
-                          length: 24 * 40,
-                          thickness: 24,
-                          label: "Aisle",
-                        },
-                      ]);
-                      setSelectedElementId(id);
-                      setTool("aisle");
-                    }}
-                  >
-                    Add aisle
-                  </Button>
-                  {selectedElementId ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setElements((prev) =>
-                          prev.filter((e) => e.elementId !== selectedElementId),
-                        );
-                        setSelectedElementId(null);
-                      }}
-                    >
-                      Delete aisle
-                    </Button>
-                  ) : null}
-                </div>
-                <div className={ui.help} style={{ marginTop: 6 }}>
-                  Use the Aisle tool to drag guides.
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Stage
-                </div>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.md,
                   }}
                 >
-                  <input
-                    className={ui.input}
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={Math.round(stage.width / gridSize)}
-                    onChange={(e) => {
-                      const ft = Number(e.target.value) || 20;
-                      setStage((prev) => ({ ...prev, width: ft * gridSize }));
-                    }}
-                    aria-label="Stage width (ft)"
-                  />
-                  <input
-                    className={ui.input}
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={Math.round(stage.height / gridSize)}
-                    onChange={(e) => {
-                      const ft = Number(e.target.value) || 6;
-                      setStage((prev) => ({ ...prev, height: ft * gridSize }));
-                    }}
-                    aria-label="Stage depth (ft)"
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <Button
-                    size="sm"
-                    variant={tool === "stage" ? "secondary" : "ghost"}
-                    onClick={() => setTool("stage")}
-                  >
-                    Edit stage
-                  </Button>
-                  <select
-                    className={ui.input}
-                    value={stage.shape || "rect"}
-                    onChange={(e) =>
-                      setStage((prev) => ({
-                        ...prev,
-                        shape: e.target.value as any,
-                      }))
-                    }
-                    style={{ height: 30, paddingTop: 0, paddingBottom: 0 }}
-                    aria-label="Stage shape"
-                  >
-                    <option value="rect">Rect</option>
-                    <option value="rounded">Rounded</option>
-                  </select>
-                </div>
-                <div className={ui.help} style={{ marginTop: 6 }}>
-                  Stage is fixed in the layout; drag it only in Stage tool.
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Quick generator
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  <input
-                    className={ui.input}
-                    value={newSectionName}
-                    onChange={(e) => setNewSectionName(e.target.value)}
-                    placeholder="Section name"
-                  />
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 8,
-                    }}
-                  >
-                    <input
-                      className={ui.input}
-                      type="number"
-                      min={1}
-                      value={newSectionRows}
-                      onChange={(e) =>
-                        setNewSectionRows(Number(e.target.value))
-                      }
-                      placeholder="Rows"
-                    />
-                    <input
-                      className={ui.input}
-                      type="number"
-                      min={1}
-                      value={newSectionSeatsPerRow}
-                      onChange={(e) =>
-                        setNewSectionSeatsPerRow(Number(e.target.value))
-                      }
-                      placeholder="Seats/row"
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={generateSection}
-                    >
-                      Add section seats
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={addSeat}>
-                      Add one seat
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Labeling
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={autoLabelActiveFloor}
-                  >
-                    Auto-label active floor
-                  </Button>
-                  <div className={ui.help}>
-                    Uses seat Y to form rows (A, B, C…) and seat X to number
-                    left→right.
-                  </div>
-                </div>
-              </div>
-
-              <div className={ui.divider} />
-
-              <div>
-                <div className={ui.help} style={{ marginBottom: 6 }}>
-                  Selected seat
-                </div>
-
-                {!selectedSeat ? (
-                  <p className={ui.help}>Click a seat to edit.</p>
-                ) : (
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
-                    <div className={ui.cardText}>
-                      <strong>{selectedSeat.seatId}</strong>
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Canvas
                     </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <label className={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={showGrid}
+                          onChange={(e) => setShowGrid(e.target.checked)}
+                        />
+                        Grid
+                      </label>
+                      <label className={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={snapToGrid}
+                          onChange={(e) => setSnapToGrid(e.target.checked)}
+                        />
+                        Snap
+                      </label>
+                      <label className={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={showSeatText}
+                          onChange={(e) => setShowSeatText(e.target.checked)}
+                        />
+                        Labels
+                      </label>
+                    </div>
+                  </div>
 
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      View
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          if (!viewportRef.current) return;
+                          const rect =
+                            viewportRef.current.getBoundingClientRect();
+                          setView({
+                            scale: 1,
+                            offsetX: rect.width / 2,
+                            offsetY: rect.height / 2,
+                          });
+                        }}
+                      >
+                        Reset view
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setView((prev) => ({ ...prev, scale: 1 }));
+                        }}
+                      >
+                        100%
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Navigation
+                    </div>
+                    <div className={ui.help}>
+                      Trackpad scroll pans. Pinch zooms. Hold Space to drag-pan.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Measure tool
+                    </div>
+                    <div className={ui.help}>
+                      Click A, move, click B. Shift locks to 0/45/90°. Alt snaps
+                      to grid. ⌘ disables snapping.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Seat size
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        className={ui.input}
+                        type="number"
+                        min={1}
+                        step={0.5}
+                        value={seatSizeFeet}
+                        onChange={(e) =>
+                          setSeatSizeFeet(Number(e.target.value) || 2.5)
+                        }
+                        aria-label="Seat size (ft)"
+                      />
+                      <div className={ui.help} style={{ alignSelf: "center" }}>
+                        ft
+                      </div>
+                    </div>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Default is ~2.5 ft per seat.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Path tool
+                    </div>
+                    <div className={ui.help} style={{ marginBottom: 8 }}>
+                      Click to add points, then double-click to place seats.
+                    </div>
                     <div
                       style={{
                         display: "grid",
@@ -1831,42 +2028,152 @@ export function SeatLayoutEditorPage() {
                     >
                       <input
                         className={ui.input}
-                        value={selectedSeat.section}
+                        type="number"
+                        min={0}
+                        step={0.25}
+                        value={pathSpacingFeet}
                         onChange={(e) =>
-                          updateSeat(selectedSeat.seatId, {
-                            section: e.target.value,
-                          })
+                          setPathSpacingFeet(Number(e.target.value) || 0)
                         }
-                        placeholder="Section"
+                        placeholder="Spacing (ft)"
+                        aria-label="Path spacing (ft)"
                       />
                       <input
                         className={ui.input}
-                        value={selectedSeat.row}
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={pathSeatCount}
                         onChange={(e) =>
-                          updateSeat(selectedSeat.seatId, {
-                            row: e.target.value,
-                          })
+                          setPathSeatCount(Number(e.target.value) || 0)
                         }
-                        placeholder="Row"
+                        placeholder="# Seats"
+                        aria-label="Path seat count"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tool === "path")
+                            finalizePathDraft();
+                        }}
                       />
+                    </div>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Leave spacing at 0 for auto-min spacing.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Row spacing
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
                       <input
                         className={ui.input}
-                        value={selectedSeat.seatNumber}
+                        type="number"
+                        min={2}
+                        step={0.5}
+                        value={seatPitchFeet}
                         onChange={(e) =>
-                          updateSeat(selectedSeat.seatId, {
-                            seatNumber: e.target.value,
-                          })
+                          setSeatPitchFeet(Number(e.target.value) || 3)
                         }
-                        placeholder="Seat #"
+                        aria-label="Seat pitch (ft)"
                       />
+                      <div className={ui.help} style={{ alignSelf: "center" }}>
+                        ft
+                      </div>
+                    </div>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Used when drawing/reflowing rows.
+                    </div>
+
+                    {selectedRowGroupId ? (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={reflowSelectedRow}
+                        >
+                          Reflow row
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedRowGroupId(null)}
+                        >
+                          Clear row select
+                        </Button>
+                        <div
+                          className={ui.help}
+                          style={{ alignSelf: "center" }}
+                        >
+                          Seats:{" "}
+                          <strong style={{ color: "var(--text)" }}>
+                            {selectedRowSeats.length}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={ui.help} style={{ marginTop: 10 }}>
+                        Use the Row tool to select/drag a row.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Background image
+                    </div>
+                    <label
+                      className={ui.help}
+                      style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showBackgroundImage}
+                        onChange={(e) =>
+                          setShowBackgroundImage(e.target.checked)
+                        }
+                      />
+                      Show layout image
+                    </label>
+                    <input
+                      className={ui.input}
+                      value={backgroundImageUrl}
+                      onChange={(e) => setBackgroundImageUrl(e.target.value)}
+                      placeholder="/api/... or https://..."
+                      style={{ marginTop: 8 }}
+                    />
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      This is NOT the venue cover photo.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Floor
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
                       <select
                         className={ui.input}
-                        value={selectedSeat.floorId || activeFloorId}
-                        onChange={(e) =>
-                          updateSeat(selectedSeat.seatId, {
-                            floorId: e.target.value,
-                          })
-                        }
+                        value={activeFloorId}
+                        onChange={(e) => setActiveFloorId(e.target.value)}
                       >
                         {stableSortFloors(floors).map((f) => (
                           <option key={f.floorId} value={f.floorId}>
@@ -1885,70 +2192,385 @@ export function SeatLayoutEditorPage() {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedSeat.isAvailable}
-                          onChange={(e) =>
-                            updateSeat(selectedSeat.seatId, {
-                              isAvailable: e.target.checked,
-                            })
-                          }
+                          checked={showAllFloors}
+                          onChange={(e) => setShowAllFloors(e.target.checked)}
                         />
-                        Available
+                        Show all floors
                       </label>
+                    </div>
+                  </div>
 
-                      {selectedSeat.rowGroupId ? (
-                        <label
-                          className={ui.help}
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Aisles
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          const id = `aisle-${Date.now()}`;
+                          setElements((prev) => [
+                            ...prev,
+                            {
+                              elementId: id,
+                              type: "aisle",
+                              floorId: activeFloorId,
+                              orientation: "vertical",
+                              x: 0,
+                              y: 0,
+                              length: 24 * 40,
+                              thickness: 24,
+                              label: "Aisle",
+                            },
+                          ]);
+                          setSelectedElementId(id);
+                          setTool("aisle");
+                        }}
+                      >
+                        Add aisle
+                      </Button>
+                      {selectedElementId ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setElements((prev) =>
+                              prev.filter(
+                                (e) => e.elementId !== selectedElementId,
+                              ),
+                            );
+                            setSelectedElementId(null);
+                          }}
+                        >
+                          Delete aisle
+                        </Button>
+                      ) : null}
+                    </div>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Use the Aisle tool to drag guides.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Stage
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 8,
+                      }}
+                    >
+                      <input
+                        className={ui.input}
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={Math.round(stage.width / gridSize)}
+                        onChange={(e) => {
+                          const ft = Number(e.target.value) || 20;
+                          setStage((prev) => ({
+                            ...prev,
+                            width: ft * gridSize,
+                          }));
+                        }}
+                        aria-label="Stage width (ft)"
+                      />
+                      <input
+                        className={ui.input}
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={Math.round(stage.height / gridSize)}
+                        onChange={(e) => {
+                          const ft = Number(e.target.value) || 6;
+                          setStage((prev) => ({
+                            ...prev,
+                            height: ft * gridSize,
+                          }));
+                        }}
+                        aria-label="Stage depth (ft)"
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <Button
+                        size="sm"
+                        variant={tool === "stage" ? "secondary" : "ghost"}
+                        onClick={() => setTool("stage")}
+                      >
+                        Edit stage
+                      </Button>
+                      <select
+                        className={ui.input}
+                        value={stage.shape || "rect"}
+                        onChange={(e) =>
+                          setStage((prev) => ({
+                            ...prev,
+                            shape: e.target.value as any,
+                          }))
+                        }
+                        style={{ height: 30, paddingTop: 0, paddingBottom: 0 }}
+                        aria-label="Stage shape"
+                      >
+                        <option value="rect">Rect</option>
+                        <option value="rounded">Rounded</option>
+                      </select>
+                    </div>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Stage is fixed in the layout; drag it only in Stage tool.
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Quick generator
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <input
+                        className={ui.input}
+                        value={newSectionName}
+                        onChange={(e) => setNewSectionName(e.target.value)}
+                        placeholder="Section name"
+                      />
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 8,
+                        }}
+                      >
+                        <input
+                          className={ui.input}
+                          type="number"
+                          min={1}
+                          value={newSectionRows}
+                          onChange={(e) =>
+                            setNewSectionRows(Number(e.target.value))
+                          }
+                          placeholder="Rows"
+                        />
+                        <input
+                          className={ui.input}
+                          type="number"
+                          min={1}
+                          value={newSectionSeatsPerRow}
+                          onChange={(e) =>
+                            setNewSectionSeatsPerRow(Number(e.target.value))
+                          }
+                          placeholder="Seats/row"
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={generateSection}
+                        >
+                          Add section seats
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={addSeat}>
+                          Add one seat
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Labeling
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={autoLabelActiveFloor}
+                      >
+                        Auto-label active floor
+                      </Button>
+                      <div className={ui.help}>
+                        Uses seat Y to form rows (A, B, C…) and seat X to number
+                        left→right.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={ui.divider} />
+
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Selected seat
+                    </div>
+
+                    {!selectedSeat ? (
+                      <p className={ui.help}>Click a seat to edit.</p>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                        }}
+                      >
+                        <div className={ui.cardText}>
+                          <strong>{selectedSeat.seatId}</strong>
+                        </div>
+
+                        <div
                           style={{
-                            display: "flex",
-                            alignItems: "center",
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
                             gap: 8,
-                            paddingLeft: 4,
                           }}
                         >
                           <input
-                            type="checkbox"
-                            checked={!!selectedSeat.detachedFromRow}
+                            className={ui.input}
+                            value={selectedSeat.section}
                             onChange={(e) =>
                               updateSeat(selectedSeat.seatId, {
-                                detachedFromRow: e.target.checked,
+                                section: e.target.value,
                               })
                             }
+                            placeholder="Section"
                           />
-                          Detached
-                        </label>
-                      ) : null}
-                    </div>
+                          <input
+                            className={ui.input}
+                            value={selectedSeat.row}
+                            onChange={(e) =>
+                              updateSeat(selectedSeat.seatId, {
+                                row: e.target.value,
+                              })
+                            }
+                            placeholder="Row"
+                          />
+                          <input
+                            className={ui.input}
+                            value={selectedSeat.seatNumber}
+                            onChange={(e) =>
+                              updateSeat(selectedSeat.seatId, {
+                                seatNumber: e.target.value,
+                              })
+                            }
+                            placeholder="Seat #"
+                          />
+                          <select
+                            className={ui.input}
+                            value={selectedSeat.floorId || activeFloorId}
+                            onChange={(e) =>
+                              updateSeat(selectedSeat.seatId, {
+                                floorId: e.target.value,
+                              })
+                            }
+                          >
+                            {stableSortFloors(floors).map((f) => (
+                              <option key={f.floorId} value={f.floorId}>
+                                {f.name}
+                              </option>
+                            ))}
+                          </select>
+                          <label
+                            className={ui.help}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              paddingLeft: 4,
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSeat.isAvailable}
+                              onChange={(e) =>
+                                updateSeat(selectedSeat.seatId, {
+                                  isAvailable: e.target.checked,
+                                })
+                              }
+                            />
+                            Available
+                          </label>
 
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          updateSeat(selectedSeat.seatId, { posX: 0, posY: 0 });
-                        }}
-                      >
-                        Center
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteSeat(selectedSeat.seatId)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                          {selectedSeat.rowGroupId ? (
+                            <label
+                              className={ui.help}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                paddingLeft: 4,
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={!!selectedSeat.detachedFromRow}
+                                onChange={(e) =>
+                                  updateSeat(selectedSeat.seatId, {
+                                    detachedFromRow: e.target.checked,
+                                  })
+                                }
+                              />
+                              Detached
+                            </label>
+                          ) : null}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              updateSeat(selectedSeat.seatId, {
+                                posX: 0,
+                                posY: 0,
+                              });
+                            }}
+                          >
+                            Center
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteSeat(selectedSeat.seatId)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div className={ui.divider} />
+                  <div className={ui.divider} />
 
-              <div className={ui.help}>
-                Total seats:{" "}
-                <strong style={{ color: "var(--text)" }}>{seats.length}</strong>
+                  <div className={ui.help}>
+                    Total seats:{" "}
+                    <strong style={{ color: "var(--text)" }}>
+                      {seats.length}
+                    </strong>
+                  </div>
+                </div>
               </div>
-            </div>
-          </aside>
+            ) : null}
+          </div>
         </div>
       </div>
     </HostDashboardShell>

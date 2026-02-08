@@ -8,7 +8,7 @@ import { Location } from "../models/Location";
 import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
-import type { AuthenticatedRequest } from "../middleware/auth";
+import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
 import { checkoutLimiter } from "../middleware/rateLimiter";
 
 const router: Router = express.Router();
@@ -30,6 +30,126 @@ function getStripe(): Stripe {
   }
   return stripeClient;
 }
+
+function getMusicianOrigin(req: Request): string {
+  return (
+    req.get("origin") || process.env.MUSICIAN_ORIGIN || "http://localhost:5175"
+  );
+}
+
+async function ensureStripeAccount(user: any): Promise<Stripe.Account> {
+  if (user.stripeAccountId) {
+    return await getStripe().accounts.retrieve(user.stripeAccountId);
+  }
+
+  const account = await getStripe().accounts.create({
+    type: "express",
+    country: "US",
+    email: user.email,
+    business_type: "individual",
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+  });
+
+  user.stripeAccountId = account.id;
+  user.stripeChargesEnabled = account.charges_enabled;
+  user.stripePayoutsEnabled = account.payouts_enabled;
+  user.stripeOnboardingComplete = account.details_submitted;
+  await user.save();
+
+  return account;
+}
+
+async function syncStripeAccountStatus(user: any, account: Stripe.Account) {
+  user.stripeChargesEnabled = account.charges_enabled;
+  user.stripePayoutsEnabled = account.payouts_enabled;
+  user.stripeOnboardingComplete = account.details_submitted;
+  await user.save();
+}
+
+// --- Musician Connect (payouts) ---
+router.post(
+  "/musicians/account",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      const account = await ensureStripeAccount(user);
+      await syncStripeAccountStatus(user, account);
+      return res.json({
+        stripeAccountId: user.stripeAccountId ?? null,
+        chargesEnabled: user.stripeChargesEnabled ?? false,
+        payoutsEnabled: user.stripePayoutsEnabled ?? false,
+        detailsSubmitted: user.stripeOnboardingComplete ?? false,
+        requirements: account.requirements?.currently_due ?? [],
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /stripe/musicians/account error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+router.post(
+  "/musicians/onboarding-link",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      const account = await ensureStripeAccount(user);
+      const origin = getMusicianOrigin(req);
+      const link = await getStripe().accountLinks.create({
+        account: account.id,
+        refresh_url: `${origin}/onboarding?step=stripe&refresh=true`,
+        return_url: `${origin}/onboarding?step=stripe&return=true`,
+        type: "account_onboarding",
+      });
+
+      return res.json({ url: link.url });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /stripe/musicians/onboarding-link error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+router.get(
+  "/musicians/status",
+  requireRole("musician"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      if (!user.stripeAccountId) {
+        return res.json({
+          stripeAccountId: null,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+          requirements: [],
+        });
+      }
+
+      const account = await getStripe().accounts.retrieve(user.stripeAccountId);
+      await syncStripeAccountStatus(user, account);
+
+      return res.json({
+        stripeAccountId: user.stripeAccountId ?? null,
+        chargesEnabled: user.stripeChargesEnabled ?? false,
+        payoutsEnabled: user.stripePayoutsEnabled ?? false,
+        detailsSubmitted: user.stripeOnboardingComplete ?? false,
+        requirements: account.requirements?.currently_due ?? [],
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("GET /stripe/musicians/status error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
 /**
  * Parse a fee value from environment variable.

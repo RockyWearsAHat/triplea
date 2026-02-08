@@ -3,7 +3,7 @@ import type { GigWithStats, Location, MusicianProfile } from "@shared";
 import { Button, useAuth } from "@shared";
 import { useNavigate, Link } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
-import { createApiClient } from "../lib/urls";
+import { createApiClient, getAssetUrl } from "../lib/urls";
 import { HostDashboardShell } from "../components/HostDashboardShell";
 import styles from "./ManagePage.module.scss";
 import {
@@ -168,7 +168,10 @@ export default function ManagePage() {
       <div className={styles.dashboard}>
         {/* Stats Overview */}
         <div className={styles.statsGrid}>
-          <Link to="/my-gigs" className={styles.statCard}>
+          <Link
+            to="/my-gigs"
+            className={`${styles.statCard} ${styles.statCardLink}`}
+          >
             <div className={styles.statIcon}>
               <Calendar size={20} />
             </div>
@@ -198,7 +201,10 @@ export default function ManagePage() {
             </div>
           </div>
 
-          <Link to="/venues" className={styles.statCard}>
+          <Link
+            to="/venues"
+            className={`${styles.statCard} ${styles.statCardLink}`}
+          >
             <div className={styles.statIcon}>
               <MapPin size={20} />
             </div>
@@ -283,6 +289,68 @@ export default function ManagePage() {
               <ScanLine size={14} /> Scan Tickets
             </Button>
           </div>
+        </Section>
+
+        {/* Venues Preview */}
+        <Section
+          title={`Venues (${venues.length})`}
+          icon={<MapPin size={16} />}
+          action={
+            venues.length > 4 ? (
+              <Link to="/venues" className={styles.viewAllLink}>
+                View all →
+              </Link>
+            ) : null
+          }
+        >
+          {venues.length === 0 ? (
+            <div className={styles.emptyState}>
+              <MapPin size={24} />
+              <p>No venues yet</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate("/venues")}
+              >
+                <Plus size={14} /> Add Venue
+              </Button>
+            </div>
+          ) : (
+            <div className={styles.venuesGrid}>
+              {venues.slice(0, 4).map((v) => (
+                <div
+                  key={v.id}
+                  className={styles.venueCard}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/venues/${v.id}/seating`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/venues/${v.id}/seating`);
+                    }
+                  }}
+                >
+                  {v.imageUrl ? (
+                    <img
+                      src={getAssetUrl(v.imageUrl)}
+                      alt=""
+                      className={styles.venueThumb}
+                    />
+                  ) : (
+                    <div className={styles.venueThumbPlaceholder} />
+                  )}
+                  <div className={styles.venueInfo}>
+                    <p className={styles.venueName}>{v.name}</p>
+                    <p className={styles.venueMeta}>
+                      {v.city}
+                      {v.seatCapacity ? ` · ${v.seatCapacity} seats` : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Section>
 
         {/* Two-column layout for Pending and Scheduled */}
@@ -432,7 +500,9 @@ export default function ManagePage() {
                     navigate(`/musicians/${r.musician.userId}?request=true`)
                   }
                 >
-                  <div className={styles.avatarPlaceholder}>🎵</div>
+                  <div className={styles.avatarPlaceholder} aria-hidden="true">
+                    <Users size={16} />
+                  </div>
                   <div className={styles.musicianInfo}>
                     <p className={styles.musicianName}>
                       {r.musician.instruments.slice(0, 2).join(", ") ||

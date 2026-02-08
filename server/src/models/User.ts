@@ -8,6 +8,10 @@ export interface IUser extends Document {
   roles: string[];
   permissions: Permission[];
   employeeRoles: EmployeeRole[];
+  stripeAccountId?: string;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeOnboardingComplete?: boolean;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
 }
@@ -20,6 +24,10 @@ const UserSchema = new Schema<IUser>(
     roles: { type: [String], default: ["customer"] },
     permissions: { type: [String], default: [] },
     employeeRoles: { type: [String], default: [] },
+    stripeAccountId: { type: String },
+    stripeChargesEnabled: { type: Boolean, default: false },
+    stripePayoutsEnabled: { type: Boolean, default: false },
+    stripeOnboardingComplete: { type: Boolean, default: false },
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },
   },

@@ -44,13 +44,8 @@
   align-items: start;
 }
 
-@media (min-width: 980px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
-}
-
 .viewportCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: min(70vh, 560px);
@@ -58,6 +53,7 @@
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius-lg);
+  isolation: isolate;
 }
 
 .viewportToolbar {
@@ -122,6 +118,17 @@
   flex-wrap: wrap;
 }
 
+.toolsOverlay {
+  position: absolute;
+  top: clamp(56px, 8vh, 90px);
+  right: clamp(12px, 2vw, 18px);
+  width: clamp(220px, 28vw, 360px);
+  max-height: calc(100% - 84px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: 140;
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -161,7 +168,7 @@
 .viewport {
   position: relative;
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   background-color: var(--surface);
   touch-action: none;
   overscroll-behavior: contain;
@@ -221,7 +228,7 @@
   color: var(--text);
   pointer-events: none;
   box-shadow: var(--shadow-1);
-  z-index: 2;
+  z-index: 110;
 }
 
 .stageWorld {
@@ -232,7 +239,7 @@
   cursor: move;
   pointer-events: auto;
   box-shadow: var(--shadow-1);
-  z-index: 2;
+  z-index: 100;
   transition: border-color 0.15s;
 }
 
@@ -297,6 +304,7 @@
     border-color 0.15s,
     background-color 0.15s,
     transform 0.15s;
+  z-index: 80;
 }
 
 .seat:hover {
@@ -341,7 +349,7 @@
   position: absolute;
   cursor: move;
   pointer-events: auto;
-  z-index: 1;
+  z-index: 70;
   transition: border-color 0.15s;
 }
 
@@ -401,13 +409,13 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 10;
+  z-index: 120;
 }
 
 .measureLine {
   position: absolute;
   background: var(--accent);
-  opacity: 0.8;
+  opacity: 0.95;
 }
 
 .measureLine[data-orientation="vertical"] {
@@ -420,27 +428,47 @@
 
 .measureLabel {
   position: absolute;
-  padding: 3px 7px;
-  background: var(--accent);
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-3) 88%);
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
   border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--taa-black);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
   white-space: nowrap;
   box-shadow: var(--shadow-1);
+  transform-origin: center;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
 }
 
 .rowDraft {
   position: absolute;
   pointer-events: none;
-  z-index: 3;
+  z-index: 118;
 }
 
 .rowDraftLine {
   position: absolute;
-  height: 1px;
+  height: 2px;
   background: var(--accent);
-  opacity: 0.6;
+  opacity: 0.85;
+}
+
+.pathDraft {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 119;
+}
+
+.pathDraftLine {
+  position: absolute;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0.85;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .rowDraftHint {

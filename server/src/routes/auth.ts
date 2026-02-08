@@ -7,6 +7,7 @@ import { User } from "../models/User";
 import { Invite } from "../models/Invite";
 import { deriveDefaultPermissions } from "../lib/access";
 import { sendPasswordResetEmail } from "../lib/email";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
 import {
   authLimiter,
   registrationLimiter,
@@ -103,6 +104,10 @@ router.post(
         roles: user.roles,
         permissions: user.permissions,
         employeeRoles: user.employeeRoles,
+        stripeAccountId: user.stripeAccountId ?? null,
+        stripeChargesEnabled: user.stripeChargesEnabled ?? false,
+        stripePayoutsEnabled: user.stripePayoutsEnabled ?? false,
+        stripeOnboardingComplete: user.stripeOnboardingComplete ?? false,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -147,6 +152,10 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
       roles: user.roles,
       permissions: user.permissions,
       employeeRoles: user.employeeRoles,
+      stripeAccountId: user.stripeAccountId ?? null,
+      stripeChargesEnabled: user.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: user.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: user.stripeOnboardingComplete ?? false,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -154,6 +163,44 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+router.post(
+  "/enable-musician",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.authUser!;
+      if (!user.roles.includes("musician")) {
+        user.roles = Array.from(new Set(["musician", ...user.roles]));
+        user.permissions = deriveDefaultPermissions(user.roles);
+        await user.save();
+      }
+
+      issueAuthCookie(res, {
+        id: user.id,
+        email: user.email,
+        roles: user.roles,
+      });
+
+      return res.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        permissions: user.permissions,
+        employeeRoles: user.employeeRoles,
+        stripeAccountId: user.stripeAccountId ?? null,
+        stripeChargesEnabled: user.stripeChargesEnabled ?? false,
+        stripePayoutsEnabled: user.stripePayoutsEnabled ?? false,
+        stripeOnboardingComplete: user.stripeOnboardingComplete ?? false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("/enable-musician error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
 // Invite-only registration for internal employees.
 // The invite token is one-time-use, email-bound, and expires.
@@ -240,6 +287,10 @@ router.post(
         roles: user.roles,
         permissions: user.permissions,
         employeeRoles: user.employeeRoles,
+        stripeAccountId: user.stripeAccountId ?? null,
+        stripeChargesEnabled: user.stripeChargesEnabled ?? false,
+        stripePayoutsEnabled: user.stripePayoutsEnabled ?? false,
+        stripeOnboardingComplete: user.stripeOnboardingComplete ?? false,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -284,6 +335,10 @@ router.get("/me", async (req: Request, res: Response) => {
         roles: user.roles,
         permissions: user.permissions,
         employeeRoles: user.employeeRoles,
+        stripeAccountId: user.stripeAccountId ?? null,
+        stripeChargesEnabled: user.stripeChargesEnabled ?? false,
+        stripePayoutsEnabled: user.stripePayoutsEnabled ?? false,
+        stripeOnboardingComplete: user.stripeOnboardingComplete ?? false,
       },
     });
   } catch (err) {

@@ -34,7 +34,7 @@
   background: linear-gradient(
     135deg,
     var(--taa-blue-900) 0%,
-    var(--taa-purple-900) 100%
+    color-mix(in srgb, var(--taa-blue-900) 75%, var(--accent) 25%) 100%
   );
   color: var(--taa-white);
   padding: 24px;

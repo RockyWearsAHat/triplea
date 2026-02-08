@@ -15,6 +15,7 @@ import type {
   Instrument,
   Location,
   MusicianProfile,
+  StripeOnboardingStatus,
   Perk,
   Permission,
   User,
@@ -112,6 +113,10 @@ export class TripleAApiClient {
       roles: string[];
       permissions?: string[];
       employeeRoles?: string[];
+      stripeAccountId?: string | null;
+      stripeChargesEnabled?: boolean;
+      stripePayoutsEnabled?: boolean;
+      stripeOnboardingComplete?: boolean;
     }>("/auth/register", {
       method: "POST",
       body: JSON.stringify(params),
@@ -124,6 +129,10 @@ export class TripleAApiClient {
       role: data.roles as User["role"],
       permissions: data.permissions as Permission[] | undefined,
       employeeRoles: data.employeeRoles as User["employeeRoles"],
+      stripeAccountId: data.stripeAccountId ?? null,
+      stripeChargesEnabled: data.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: data.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: data.stripeOnboardingComplete ?? false,
     };
   }
 
@@ -140,6 +149,10 @@ export class TripleAApiClient {
       roles: string[];
       permissions?: string[];
       employeeRoles?: string[];
+      stripeAccountId?: string | null;
+      stripeChargesEnabled?: boolean;
+      stripePayoutsEnabled?: boolean;
+      stripeOnboardingComplete?: boolean;
     }>("/auth/register-invite", {
       method: "POST",
       body: JSON.stringify(params),
@@ -152,6 +165,10 @@ export class TripleAApiClient {
       role: data.roles as User["role"],
       permissions: data.permissions as Permission[] | undefined,
       employeeRoles: data.employeeRoles as User["employeeRoles"],
+      stripeAccountId: data.stripeAccountId ?? null,
+      stripeChargesEnabled: data.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: data.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: data.stripeOnboardingComplete ?? false,
     };
   }
 
@@ -163,6 +180,10 @@ export class TripleAApiClient {
       roles: string[];
       permissions?: string[];
       employeeRoles?: string[];
+      stripeAccountId?: string | null;
+      stripeChargesEnabled?: boolean;
+      stripePayoutsEnabled?: boolean;
+      stripeOnboardingComplete?: boolean;
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -175,11 +196,43 @@ export class TripleAApiClient {
       role: data.roles as User["role"],
       permissions: data.permissions as Permission[] | undefined,
       employeeRoles: data.employeeRoles as User["employeeRoles"],
+      stripeAccountId: data.stripeAccountId ?? null,
+      stripeChargesEnabled: data.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: data.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: data.stripeOnboardingComplete ?? false,
     };
   }
 
   async logout(): Promise<void> {
     await this.request<void>("/auth/logout", { method: "POST" });
+  }
+
+  async enableMusicianAccess(): Promise<User> {
+    const data = await this.request<{
+      id: string;
+      name: string;
+      email: string;
+      roles: string[];
+      permissions?: string[];
+      employeeRoles?: string[];
+      stripeAccountId?: string | null;
+      stripeChargesEnabled?: boolean;
+      stripePayoutsEnabled?: boolean;
+      stripeOnboardingComplete?: boolean;
+    }>("/auth/enable-musician", { method: "POST" });
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.roles as User["role"],
+      permissions: data.permissions as Permission[] | undefined,
+      employeeRoles: data.employeeRoles as User["employeeRoles"],
+      stripeAccountId: data.stripeAccountId ?? null,
+      stripeChargesEnabled: data.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: data.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: data.stripeOnboardingComplete ?? false,
+    };
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
@@ -208,6 +261,10 @@ export class TripleAApiClient {
         roles: string[];
         permissions?: string[];
         employeeRoles?: string[];
+        stripeAccountId?: string | null;
+        stripeChargesEnabled?: boolean;
+        stripePayoutsEnabled?: boolean;
+        stripeOnboardingComplete?: boolean;
       } | null;
     }>("/auth/me", { method: "GET" });
 
@@ -220,7 +277,32 @@ export class TripleAApiClient {
       role: data.user.roles as User["role"],
       permissions: data.user.permissions as Permission[] | undefined,
       employeeRoles: data.user.employeeRoles as User["employeeRoles"],
+      stripeAccountId: data.user.stripeAccountId ?? null,
+      stripeChargesEnabled: data.user.stripeChargesEnabled ?? false,
+      stripePayoutsEnabled: data.user.stripePayoutsEnabled ?? false,
+      stripeOnboardingComplete: data.user.stripeOnboardingComplete ?? false,
     };
+  }
+
+  async createMusicianStripeAccount(): Promise<StripeOnboardingStatus> {
+    return await this.request<StripeOnboardingStatus>(
+      "/stripe/musicians/account",
+      { method: "POST" },
+    );
+  }
+
+  async getMusicianStripeOnboardingLink(): Promise<{ url: string }> {
+    return await this.request<{ url: string }>(
+      "/stripe/musicians/onboarding-link",
+      { method: "POST" },
+    );
+  }
+
+  async getMusicianStripeStatus(): Promise<StripeOnboardingStatus> {
+    return await this.request<StripeOnboardingStatus>(
+      "/stripe/musicians/status",
+      { method: "GET" },
+    );
   }
 
   // --- Admin ---

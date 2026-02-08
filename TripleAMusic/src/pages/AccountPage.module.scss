@@ -41,8 +41,8 @@
   border-radius: 50%;
   background: linear-gradient(
     135deg,
-    var(--taa-purple-900) 0%,
-    var(--taa-purple-400) 100%
+    color-mix(in srgb, var(--accent) 18%, var(--surface-3)) 0%,
+    var(--accent) 100%
   );
   color: var(--text);
   font-weight: 600;

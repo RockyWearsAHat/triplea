@@ -1,7 +1,7 @@
 ---
 name: plan
 description: "Research, diagnose, and create executable code plans."
-model: Claude Opus 4.5 (copilot)
+model: Claude Sonnet 4.5 (copilot)
 tools:
   - search/codebase
   - web/fetch
