@@ -109,7 +109,7 @@ export function ProfilePage() {
         const data = await api.getMyMusicianProfile();
         setProfile(data);
       } catch (err) {
-        console.error("Failed to fetch profile:", err);
+        // Profile fetch failed - user may need to complete onboarding
       }
     }
 

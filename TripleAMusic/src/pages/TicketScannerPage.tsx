@@ -51,7 +51,7 @@ export default function TicketScannerPage() {
           }
         }
       } catch (err) {
-        console.error("Failed to fetch gigs", err);
+        // Failed to fetch gigs - will show empty state
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -275,7 +275,6 @@ export default function TicketScannerPage() {
                     }
                   }}
                   onError={(error) => {
-                    console.error("Camera error:", error);
                     const errorMessage =
                       error instanceof Error
                         ? error.message

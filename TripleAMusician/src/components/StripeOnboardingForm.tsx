@@ -344,15 +344,47 @@ export function StripeOnboardingForm({
 
           <div className={ui.field}>
             <label className={ui.label}>Last 4 digits of SSN</label>
-            <input
-              type="text"
-              className={ui.input}
-              value={ssnLast4}
-              onChange={(e) => setSsnLast4(e.target.value)}
-              maxLength={4}
-              placeholder="1234"
-              required
-            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 18,
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.05em",
+                  fontFamily: "monospace",
+                  lineHeight: 1,
+                }}
+              >
+                ••• ••
+              </span>
+              <input
+                type="text"
+                value={ssnLast4}
+                onChange={(e) => setSsnLast4(e.target.value)}
+                maxLength={4}
+                placeholder="____"
+                required
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  fontSize: 14,
+                  color: "var(--text-primary)",
+                  padding: 0,
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
             {fieldErrors.ssnLast4 ? (
               <p
                 className={ui.error}
