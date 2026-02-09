@@ -39,6 +39,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
 import AccountPage from "./pages/AccountPage";
 import EventTicketsPage from "./pages/EventTicketsPage";
+import HostOnboardingPage from "./pages/HostOnboardingPage";
 import { CartProvider } from "./context/CartContext";
 import { createApiClient } from "./lib/urls";
 
@@ -771,6 +772,25 @@ function RatingsPage() {
 /* TicketsPage, EventsPage, and MyGigsPage removed - functionality consolidated into ManagePage */
 
 // Removed unused AccountPage
+
+/**
+ * Gate component that redirects hosts to /onboarding if Stripe payouts aren't set up.
+ */
+function HostSetupGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && !(user.stripeChargesEnabled && user.stripePayoutsEnabled)) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
+
+  if (!user) return null;
+  if (!(user.stripeChargesEnabled && user.stripePayoutsEnabled)) return null;
+
+  return <>{children}</>;
+}
 
 function MusicianDetailsPage() {
   const { id } = useParams();
@@ -2247,10 +2267,20 @@ function App() {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/musicians/:id" element={<MusicianDetailsPage />} />
               <Route
+                path="/onboarding"
+                element={
+                  <RequireRole role="customer">
+                    <HostOnboardingPage />
+                  </RequireRole>
+                }
+              />
+              <Route
                 path="/manage"
                 element={
                   <RequireRole role="customer">
-                    <ManagePage />
+                    <HostSetupGate>
+                      <ManagePage />
+                    </HostSetupGate>
                   </RequireRole>
                 }
               />

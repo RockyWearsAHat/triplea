@@ -133,8 +133,12 @@ export function AccountPage() {
     {
       name: "Host",
       description: "Post events & manage venues",
-      // On Music app: go to /manage if host, or onboarding if not
-      url: isHost ? "/manage" : "/register?become=host",
+      // On Music app: go to /manage if onboarded, or /onboarding if host but not onboarded
+      url: isHost
+        ? user.stripeChargesEnabled && user.stripePayoutsEnabled
+          ? "/manage"
+          : "/onboarding"
+        : "/register?become=host",
       active: isHost,
       current: false,
       needsRegistration: !isHost,

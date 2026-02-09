@@ -1,10 +1,17 @@
 import type { Response, Router } from "express";
 import express from "express";
+import multer from "multer";
 import mongoose from "mongoose";
 import { Location } from "../models/Location";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
 
 const router: Router = express.Router();
+
+// Multer instance for parsing multipart/form-data uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+});
 
 // Helper to ensure only appropriate roles can create stage/location listings.
 function ensureStageCreator(req: AuthenticatedRequest, res: Response): boolean {
@@ -60,6 +67,57 @@ router.post(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("POST /locations error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+// Upload images for a given location (owner only)
+router.post(
+  "/:id/images",
+  requireAuth,
+  upload.array("images", 8),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!ensureStageCreator(req, res)) return;
+
+      const { id } = req.params as { id: string };
+      if (!id) return res.status(400).json({ message: "Missing location id" });
+
+      const location = await Location.findById(id).exec();
+      if (!location) return res.status(404).json({ message: "Not found" });
+
+      // Only owner or admin may upload images
+      const userId = new mongoose.Types.ObjectId(req.authUser!.id);
+      if (
+        location.createdByUserId &&
+        String(location.createdByUserId) !== String(userId) &&
+        !(req.authUser!.roles ?? []).includes("admin")
+      ) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const files = (req.files as Express.Multer.File[]) || [];
+      if (!files.length)
+        return res.status(400).json({ message: "No files uploaded" });
+
+      const added = files.map((f) => ({
+        filename: f.originalname,
+        mimeType: f.mimetype,
+        data: f.buffer,
+      }));
+      location.images = [...(location.images || []), ...added];
+      await location.save();
+
+      return res
+        .status(201)
+        .json({
+          uploaded: added.length,
+          total: (location.images || []).length,
+        });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("POST /locations/:id/images error", err);
       return res.status(500).json({ message: "Internal server error" });
     }
   },

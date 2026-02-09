@@ -133,9 +133,11 @@ export function AccountPage() {
     {
       name: "Host",
       description: "Post events & manage venues",
-      // Go to Music manage page if host, or Music host registration if not
+      // Go to Music onboarding if not set up, or /manage if onboarded
       url: isHost
-        ? `${getMusicOrigin()}/manage`
+        ? user.stripeChargesEnabled && user.stripePayoutsEnabled
+          ? `${getMusicOrigin()}/manage`
+          : `${getMusicOrigin()}/onboarding`
         : `${getMusicOrigin()}/register?become=host`,
       active: isHost,
       needsRegistration: !isHost,

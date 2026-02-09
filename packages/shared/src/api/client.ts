@@ -807,6 +807,29 @@ export class TripleAApiClient {
     return data;
   }
 
+  /** Upload images for an existing location. Accepts File[] and returns upload summary. */
+  async uploadLocationImages(
+    locationId: string,
+    files: File[],
+  ): Promise<{ uploaded: number; total: number }> {
+    const url = `${this.baseUrl}/locations/${encodeURIComponent(locationId)}/images`;
+    const fd = new FormData();
+    files.forEach((f) => fd.append("images", f, f.name));
+
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Upload failed with ${res.status}`);
+    }
+
+    return (await res.json()) as { uploaded: number; total: number };
+  }
+
   async listMyStageLocations(): Promise<Location[]> {
     const data = await this.request<{ locations: Location[] }>(
       "/locations/mine",

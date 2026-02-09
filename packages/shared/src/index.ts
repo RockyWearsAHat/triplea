@@ -26,6 +26,7 @@ export * from "./components/ProductCard";
 export * from "./components/StatusCard";
 export * from "./components/SearchBar";
 export * from "./components/SeatSelector";
+export { StripeOnboardingForm } from "./components/StripeOnboardingForm";
 export {
   getStripeElementsAppearance,
   getStripeConnectAppearance,

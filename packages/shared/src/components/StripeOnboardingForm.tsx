@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { createApiClient } from "../lib/urls";
-import ui from "../../../packages/shared/src/styles/primitives.module.scss";
-import { Button } from "../../../packages/shared/src/components/Button";
+import ui from "../styles/primitives.module.scss";
+import { Button } from "./Button";
+import type { TripleAApiClient } from "../api/client";
 
 interface StripeOnboardingFormProps {
   accountId: string;
+  apiClient: TripleAApiClient;
   onSuccess: () => void;
   onValidationChange?: (isValid: boolean) => void;
   onSubmitReady?: (submitFn: () => Promise<void>) => void;
@@ -13,7 +14,8 @@ interface StripeOnboardingFormProps {
 
 export function StripeOnboardingForm({
   accountId,
-  onSuccess,
+  apiClient,
+  onSuccess: _onSuccess,
   onValidationChange,
   onSubmitReady,
 }: StripeOnboardingFormProps) {
@@ -47,8 +49,6 @@ export function StripeOnboardingForm({
     accountType?: string;
   } | null>(null);
 
-  const apiClient = createApiClient();
-
   useEffect(() => {
     if (showBankLink) {
       initializeBankLinking();
@@ -64,11 +64,9 @@ export function StripeOnboardingForm({
         throw new Error("Stripe publishable key not configured");
       }
 
-      // Get client secret for Financial Connections
       const { clientSecret } =
         await apiClient.createFinancialConnectionsSession(accountId);
 
-      // Load Stripe.js
       const stripe = await loadStripe(pubKey);
       if (!stripe) {
         throw new Error("Failed to load Stripe");
@@ -76,7 +74,6 @@ export function StripeOnboardingForm({
 
       setBusy(false);
 
-      // Collect Financial Connections account
       const { financialConnectionsSession, error: fcError } =
         await stripe.collectFinancialConnectionsAccounts({
           clientSecret,
@@ -112,50 +109,43 @@ export function StripeOnboardingForm({
 
     const errors: Record<string, string> = {};
 
-    // Basic validation
     if (!firstName) errors.firstName = "First name is required";
     if (!lastName) errors.lastName = "Last name is required";
     if (!dobDay || !dobMonth || !dobYear) {
       errors.dob = "Date of birth is required";
     } else {
-      // Validate DOB
       const day = parseInt(dobDay);
       const month = parseInt(dobMonth);
       const year = parseInt(dobYear);
-
       if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
         errors.dob = "Invalid date of birth";
       }
     }
 
-    // Validate SSN last 4
     if (!ssnLast4) {
       errors.ssnLast4 = "SSN last 4 is required";
     } else if (!/^\d{4}$/.test(ssnLast4)) {
       errors.ssnLast4 = "Must be exactly 4 digits";
     }
 
-    // Validate phone
     if (!phone) {
       errors.phone = "Phone number is required";
     } else if (phone.length < 10) {
       errors.phone = "Invalid phone number";
     }
 
-    // Validate address
     if (!addressLine1) errors.addressLine1 = "Street address is required";
     if (!city) errors.city = "City is required";
     if (!state) errors.state = "State is required";
     if (!postalCode) errors.postalCode = "ZIP code is required";
 
-    // Validate bank account
     if (!bankAccountToken) {
       errors.bankAccount = "Please link your bank account";
     }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      throw new Error("Please complete all required Stripe onboarding fields");
+      throw new Error("Please complete all required fields");
     }
 
     setBusy(true);
@@ -195,20 +185,17 @@ export function StripeOnboardingForm({
     apiClient,
   ]);
 
-  // Store the latest submit function in a ref
   const submitFnRef = useRef(validateAndSubmit);
   useEffect(() => {
     submitFnRef.current = validateAndSubmit;
   }, [validateAndSubmit]);
 
-  // Expose submit function to parent (only once)
   useEffect(() => {
     if (onSubmitReady) {
       onSubmitReady(() => submitFnRef.current());
     }
   }, [onSubmitReady]);
 
-  // Notify parent of validation state
   useEffect(() => {
     if (onValidationChange) {
       const isValid =

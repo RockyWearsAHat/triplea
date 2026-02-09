@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "baseUrl": ".",
+    "paths": {
+      "@stripe/stripe-js": ["../../node_modules/@stripe/stripe-js"]
+    },
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../TripleAMusician/node_modules/@types",
+      "../../TripleAMusic/node_modules/@types"
+    ]
+  },
+  "include": ["src"]
+}

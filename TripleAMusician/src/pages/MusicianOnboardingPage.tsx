@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { StripeOnboardingStatus } from "@shared";
-import { AppShell, Button, useAuth } from "@shared";
+import { AppShell, Button, useAuth, StripeOnboardingForm } from "@shared";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate } from "react-router-dom";
 import { createApiClient } from "../lib/urls";
-import { StripeOnboardingForm } from "../components/StripeOnboardingForm";
 
 function parseList(value: string): string[] {
   return value
@@ -302,6 +301,7 @@ export function MusicianOnboardingPage() {
             {!hasStripeInfo && user?.stripeAccountId ? (
               <StripeOnboardingForm
                 accountId={user.stripeAccountId}
+                apiClient={api}
                 onSuccess={() => window.location.reload()}
                 onValidationChange={handleStripeValidationChange}
                 onSubmitReady={handleStripeSubmitReady}
