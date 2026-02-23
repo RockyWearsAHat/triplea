@@ -1,6 +1,6 @@
 ---
-name: plan
-description: "Research, diagnose, and create executable code plans."
+name: Plan
+description: "Research, diagnose, and create executable code plans, then run those code plans with the Implement.agent.md agent."
 model: Claude Sonnet 4.5 (copilot)
 tools:
   - search/codebase

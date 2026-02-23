@@ -1,5 +1,5 @@
 ---
-name: implement
+name: Implement
 description: "Execute plans from plan.md with documentation-first TDD discipline."
 model: GPT-5 mini (copilot)
 tools:

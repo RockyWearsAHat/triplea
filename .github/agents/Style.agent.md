@@ -1,7 +1,7 @@
 ---
 name: Style
 description: Kevin Powell-style modern CSS. Uses project tokens, intrinsic sizing, minimal media queries.
-model: Claude Sonnet 4.5 (copilot)
+model: GPT-5 mini (copilot)
 ---
 
 # APPLY TO
