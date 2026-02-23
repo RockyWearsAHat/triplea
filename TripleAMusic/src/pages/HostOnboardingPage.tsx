@@ -550,8 +550,7 @@ export function HostOnboardingPage() {
                           <Button
                             variant="secondary"
                             onClick={() =>
-                              v.id &&
-                              navigate(`/manage/locations/${v.id}/seating`)
+                              v.id && navigate(`/venues/${v.id}/seating`)
                             }
                             disabled={!v.id}
                           >

@@ -538,7 +538,12 @@ export class TripleAApiClient {
   }
 
   // Customers: discovery and booking search
-  async musicDiscovery(params: { genre?: string; maxBudget?: number }): Promise<
+  async musicDiscovery(params: {
+    genre?: string;
+    maxBudget?: number;
+    /** ISO date-only (yyyy-mm-dd). Used to filter by learnSpeed. */
+    eventDate?: string;
+  }): Promise<
     Array<{
       musician: MusicianProfile;
       priceEstimate: number;
@@ -549,6 +554,7 @@ export class TripleAApiClient {
     if (params.genre) qs.set("genre", params.genre);
     if (typeof params.maxBudget === "number")
       qs.set("maxBudget", String(params.maxBudget));
+    if (params.eventDate) qs.set("eventDate", params.eventDate);
 
     const data = await this.request<{
       results: Array<{

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Gig, Location } from "@shared";
 import { Button } from "@shared";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import ui from "@shared/styles/primitives.module.scss";
 import { createApiClient } from "../lib/urls";
 import { HostDashboardShell } from "../components/HostDashboardShell";
@@ -31,6 +31,7 @@ function Section({
 export function MyGigsPage() {
   const api = useMemo(() => createApiClient(), []);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // State for data
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -61,9 +62,14 @@ export function MyGigsPage() {
       .then(([gigsData, venuesData]) => {
         setGigs(gigsData);
         setVenues(venuesData);
+
+        const requestedGigId = searchParams.get("gig");
+        if (requestedGigId && gigsData.some((g) => g.id === requestedGigId)) {
+          setExpandedGigId(requestedGigId);
+        }
       })
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, searchParams]);
 
   async function handleCreateGig(e: React.FormEvent) {
     e.preventDefault();

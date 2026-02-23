@@ -4,8 +4,8 @@ import path from "node:path";
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  // Use /musician/ base path on Netlify (unified deployment), / locally
-  base: process.env.NETLIFY ? "/musician/" : "/",
+  // Serve at domain root (e.g., https://tripleamusician.com/)
+  base: "/",
   plugins: [react()],
   envDir: path.resolve(__dirname, ".."),
   server: {

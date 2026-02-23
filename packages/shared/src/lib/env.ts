@@ -15,6 +15,8 @@ const isNetlify =
       import.meta.env.VITE_NETLIFY === "true"
     : false;
 
+const normalizeOrigin = (origin: string): string => origin.replace(/\/+$/, "");
+
 // Base Netlify domain (will be set via VITE_NETLIFY_SITE_NAME or detected)
 const getNetlifySiteName = (): string => {
   if (typeof window === "undefined") return "triplea.netlify.app";
@@ -47,11 +49,10 @@ const getCurrentApp = (): "muse" | "music" | "musician" | null => {
 
 // URL generators
 export const getServerOrigin = (): string => {
-  if (isNetlify) {
-    // On Netlify, use relative path to functions
-    return "";
-  }
-  return import.meta.env.VITE_SERVER_ORIGIN || "http://localhost:4000";
+  const override = import.meta.env.VITE_SERVER_ORIGIN;
+  if (override) return normalizeOrigin(override);
+  if (isNetlify) return "";
+  return "http://localhost:4000";
 };
 
 export const getApiBaseUrl = (): string => {
@@ -59,31 +60,39 @@ export const getApiBaseUrl = (): string => {
     // On Netlify, /api/* is redirected to the function
     return "/api";
   }
-  return `${getServerOrigin()}/api`;
+  const origin = getServerOrigin();
+  if (!origin) return "/api";
+  return `${origin}/api`;
 };
 
 export const getMuseOrigin = (): string => {
+  const override = import.meta.env.VITE_MUSE_ORIGIN;
+  if (override) return normalizeOrigin(override);
   if (isNetlify) {
     const siteName = getNetlifySiteName();
     return `https://muse.${siteName}`;
   }
-  return import.meta.env.VITE_MUSE_ORIGIN || "http://localhost:5175";
+  return "http://localhost:5175";
 };
 
 export const getMusicOrigin = (): string => {
+  const override = import.meta.env.VITE_MUSIC_ORIGIN;
+  if (override) return normalizeOrigin(override);
   if (isNetlify) {
     const siteName = getNetlifySiteName();
     return `https://music.${siteName}`;
   }
-  return import.meta.env.VITE_MUSIC_ORIGIN || "http://localhost:5173";
+  return "http://localhost:5173";
 };
 
 export const getMusicianOrigin = (): string => {
+  const override = import.meta.env.VITE_MUSICIAN_ORIGIN;
+  if (override) return normalizeOrigin(override);
   if (isNetlify) {
     const siteName = getNetlifySiteName();
     return `https://musician.${siteName}`;
   }
-  return import.meta.env.VITE_MUSICIAN_ORIGIN || "http://localhost:5174";
+  return "http://localhost:5174";
 };
 
 /**
@@ -125,18 +134,32 @@ export const currentApp = getCurrentApp();
 
 // All allowed origins for CORS
 export const getAllowedOrigins = (): string[] => {
+  const origins = new Set<string>();
+
+  // Always allow current origin (prevents false negatives in useSafeBack)
+  if (typeof window !== "undefined") origins.add(window.location.origin);
+
+  // Explicit app origins (works for custom domains)
+  origins.add(getMusicOrigin());
+  origins.add(getMusicianOrigin());
+  origins.add(getMuseOrigin());
+
+  // Netlify subdomain pattern (deploy previews / netlify.app)
   if (isNetlify) {
     const siteName = getNetlifySiteName();
-    return [
-      `https://muse.${siteName}`,
-      `https://music.${siteName}`,
-      `https://musician.${siteName}`,
-      `https://${siteName}`,
-    ];
+    origins.add(`https://muse.${siteName}`);
+    origins.add(`https://music.${siteName}`);
+    origins.add(`https://musician.${siteName}`);
+    origins.add(`https://${siteName}`);
   }
-  return [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-  ];
+
+  // Local dev convenience
+  origins.add("http://localhost:5173");
+  origins.add("http://localhost:5174");
+  origins.add("http://localhost:5175");
+
+  // Remove any empty strings
+  origins.delete("");
+
+  return Array.from(origins);
 };

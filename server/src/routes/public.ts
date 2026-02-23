@@ -13,16 +13,38 @@ function toNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function parseIsoDateOnly(value: unknown): Date | undefined {
+  if (typeof value !== "string") return undefined;
+  const s = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
+  const [yy, mm, dd] = s.split("-").map((p) => Number(p));
+  if (!yy || !mm || !dd) return undefined;
+  const d = new Date(Date.UTC(yy, mm - 1, dd, 0, 0, 0));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+function daysBetweenUtc(from: Date, to: Date): number {
+  const ms = to.getTime() - from.getTime();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
 // --- Triple A Music (customer/organizer) public discovery ---
 router.get("/music/discovery", async (req: Request, res: Response) => {
   try {
     const genre =
       typeof req.query.genre === "string" ? req.query.genre : undefined;
     const maxBudget = toNumber(req.query.maxBudget);
+    const eventDate = parseIsoDateOnly(req.query.eventDate);
+    const daysUntilEvent = eventDate
+      ? Math.max(0, daysBetweenUtc(new Date(), eventDate))
+      : undefined;
 
     const query: Record<string, unknown> = {};
     if (genre) {
       query.genres = genre;
+    }
+    if (typeof daysUntilEvent === "number") {
+      query.learnSpeed = { $lte: daysUntilEvent };
     }
 
     const musicians = await MusicianProfile.find(query)
@@ -46,6 +68,9 @@ router.get("/music/discovery", async (req: Request, res: Response) => {
             bio: m.bio,
             averageRating: m.averageRating,
             reviewCount: m.reviewCount,
+            colorRating: m.colorRating,
+            learnSpeed: m.learnSpeed,
+            skillLevel: m.skillLevel,
             defaultHourlyRate: m.defaultHourlyRate ?? undefined,
             acceptsDirectRequests: m.acceptsDirectRequests ?? false,
           },
@@ -80,6 +105,9 @@ router.get("/musicians/:id", async (req: Request, res: Response) => {
         bio: musician.bio,
         averageRating: musician.averageRating,
         reviewCount: musician.reviewCount,
+        colorRating: musician.colorRating,
+        learnSpeed: musician.learnSpeed,
+        skillLevel: musician.skillLevel,
         defaultHourlyRate: musician.defaultHourlyRate ?? undefined,
         acceptsDirectRequests: musician.acceptsDirectRequests ?? false,
       },

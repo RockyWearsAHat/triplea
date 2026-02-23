@@ -12,6 +12,7 @@
   "dependencies": {
     "@stripe/react-connect-js": "^3.3.33",
     "@stripe/stripe-js": "^8.7.0",
+    "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"

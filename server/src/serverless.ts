@@ -28,35 +28,59 @@ import ticketsRoutes from "./routes/tickets";
 import stripeRoutes from "./routes/stripe";
 import seatingRoutes from "./routes/seating";
 import staffRoutes from "./routes/staff";
+import rehearsalsRoutes from "./routes/rehearsals";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 import { globalLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
+const parseAllowedOriginsEnv = (): string[] => {
+  const raw =
+    process.env.TRIPLEA_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || "";
+  return raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+};
+
 // Determine allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
+  const extra = parseAllowedOriginsEnv();
   const netlifyUrl = process.env.URL || process.env.DEPLOY_PRIME_URL;
 
   if (netlifyUrl) {
     // Extract base domain from Netlify URL
-    const url = new URL(netlifyUrl);
-    const baseDomain = url.hostname.replace(/^(muse\.|music\.|musician\.)/, "");
-    return [
-      `https://muse.${baseDomain}`,
-      `https://music.${baseDomain}`,
-      `https://musician.${baseDomain}`,
-      `https://${baseDomain}`,
-      netlifyUrl,
-    ];
+    try {
+      const url = new URL(netlifyUrl);
+      const baseDomain = url.hostname.replace(
+        /^(muse\.|music\.|musician\.)/,
+        "",
+      );
+      return Array.from(
+        new Set([
+          `https://muse.${baseDomain}`,
+          `https://music.${baseDomain}`,
+          `https://musician.${baseDomain}`,
+          `https://${baseDomain}`,
+          netlifyUrl,
+          ...extra,
+        ]),
+      );
+    } catch {
+      // Fallback to extras below
+    }
   }
 
   // Local development
-  return [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-  ];
+  return Array.from(
+    new Set([
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      ...extra,
+    ]),
+  );
 };
 
 app.use(
@@ -148,6 +172,7 @@ app.use("/api/tickets", ticketsRoutes);
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/seating", seatingRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/rehearsals", rehearsalsRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

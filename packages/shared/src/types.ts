@@ -58,6 +58,14 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+export type ColorRating =
+  | "gold"
+  | "light-gold"
+  | "blue"
+  | "light-blue"
+  | "purple"
+  | "light-purple";
+
 export interface MusicianProfile {
   id: string;
   userId: string;
@@ -66,6 +74,12 @@ export interface MusicianProfile {
   bio?: string;
   averageRating: number;
   reviewCount: number;
+  // Dual rating system (Discord 2/8/26)
+  colorRating?: ColorRating;
+  // Typical time needed to learn/memorize a piece (in days)
+  learnSpeed?: number;
+  // Optional skill indicator (1-10)
+  skillLevel?: number;
   // Marketplace settings for direct artist requests
   defaultHourlyRate?: number; // suggested hourly rate for direct bookings
   acceptsDirectRequests?: boolean; // whether hosts can request this artist directly

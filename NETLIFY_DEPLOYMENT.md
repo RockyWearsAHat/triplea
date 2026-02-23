@@ -2,6 +2,29 @@
 
 This guide explains how to deploy the Triple A Apps suite to Netlify.
 
+## Two deployment options (pick one)
+
+You can deploy this repo to **three independent URLs** in either of these ways:
+
+### Option A (recommended): ONE Netlify site + 3 custom domains
+
+- **What you get:** 3 URLs (`muse.*`, `music.*`, `musician.*`) served by **one** Netlify site.
+- **How it works:** a unified build outputs `dist/muse`, `dist/music`, `dist/musician`, then `netlify.toml` routes requests based on the **Host** header.
+- **Pros:** simplest, one Functions/API deployment, one env-var set, easiest Stripe webhook setup.
+- **Cons:** all apps deploy together (one pipeline).
+
+This is the **current/default** setup described in this doc.
+
+### Option B: THREE Netlify sites (still one Git repo)
+
+- **What you get:** 3 URLs served by **3 separate** Netlify sites (independent deploys/rollbacks).
+- **Pros:** each app can deploy independently.
+- **Cons (important):** you must decide how the API is hosted:
+  - **Duplicate API on all 3 sites** (each site also deploys Netlify Functions), or
+  - **Host the API on one site (or elsewhere)** and configure the other apps to call that origin.
+
+Today, the frontends assume Netlify uses a **same-origin** API (`/api` → `/.netlify/functions/api`). That aligns naturally with **Option A**. Option B is doable, but it requires extra plumbing (see “Option B notes” near the end).
+
 ## Architecture Overview
 
 The project consists of three frontend apps and one serverless backend, deployed as a **single Netlify site** with **host-based subdomain routing**:
@@ -178,3 +201,29 @@ If you use different domains, update the `conditions.Host` arrays in `netlify.to
   force = true
   conditions = {Host = ["muse.yourdomain.com", "muse.yourdomain.org"]}
 ```
+
+## Option B notes (THREE Netlify sites)
+
+If you want three completely separate Netlify sites (one per app), you can keep a single GitHub repo and create three Netlify sites pointing to it.
+
+- **Netlify Site 1 (Muse)**
+  - Base directory: `TripleAMuse`
+  - Build command: `npm ci && npm run build`
+  - Publish directory: `dist`
+
+- **Netlify Site 2 (Music)**
+  - Base directory: `TripleAMusic`
+  - Build command: `npm ci && npm run build`
+  - Publish directory: `dist`
+
+- **Netlify Site 3 (Musician)**
+  - Base directory: `TripleAMusician`
+  - Build command: `npm ci && npm run build`
+  - Publish directory: `dist`
+
+API hosting choices:
+
+- **Duplicate Functions on each site**: copy the repo’s `netlify/functions` folder into each app folder (or otherwise ensure each site has a Functions directory). Then keep using relative `/api`.
+- **Single API site**: deploy the API (Netlify Functions or another host) once and set `VITE_SERVER_ORIGIN` / `VITE_*_ORIGIN` accordingly so cross-app links and API calls resolve correctly.
+
+If you want Option B, tell me which API approach you prefer and I can implement the minimal code/config changes.

@@ -3,6 +3,16 @@ import ui from "@shared/styles/primitives.module.scss";
 import { useAuth } from "@shared";
 import React from "react";
 import { createApiClient } from "../lib/urls";
+import {
+  Home,
+  Wrench,
+  LayoutDashboard,
+  Music,
+  Guitar,
+  MessageSquare,
+  LogIn,
+  User,
+} from "lucide-react";
 
 export function NavBar() {
   const { user } = useAuth();
@@ -57,7 +67,8 @@ export function NavBar() {
           [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
         }
       >
-        Home
+        <Home size={18} />
+        <span>Home</span>
       </NavLink>
 
       {isMusicianWithoutSetup && (
@@ -67,7 +78,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Setup
+          <Wrench size={18} />
+          <span>Setup</span>
         </NavLink>
       )}
 
@@ -79,7 +91,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Dashboard
+            <LayoutDashboard size={18} />
+            <span>Dashboard</span>
           </NavLink>
           <NavLink
             to="/gigs"
@@ -87,7 +100,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Find gigs
+            <Music size={18} />
+            <span>Find gigs</span>
           </NavLink>
           <NavLink
             to="/rentals"
@@ -95,7 +109,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Rentals
+            <Guitar size={18} />
+            <span>Rentals</span>
           </NavLink>
           <NavLink
             to="/messages"
@@ -103,7 +118,8 @@ export function NavBar() {
               [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
             }
           >
-            Messages
+            <MessageSquare size={18} />
+            <span>Messages</span>
           </NavLink>
         </>
       )}
@@ -115,7 +131,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Login
+          <LogIn size={18} />
+          <span>Login</span>
         </NavLink>
       ) : isMusicianWithSetup ? (
         <NavLink
@@ -124,7 +141,8 @@ export function NavBar() {
             [ui.navLink, isActive ? ui.navLinkActive : ""].join(" ")
           }
         >
-          Account
+          <User size={18} />
+          <span>Account</span>
         </NavLink>
       ) : null}
     </nav>

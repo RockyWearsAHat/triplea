@@ -1,32 +1,28 @@
 # Triple A Apps - Unified Netlify Configuration
-# Single site with host-based subdomain routing
 #
-# Deploy domains:
-#   - tripleaevents.netlify.app (current Netlify domain)
-#   - muse.tripleamusic.org  → /muse/*
-#   - music.tripleamusic.org → /music/*
-#   - musician.tripleamusic.org → /musician/*
-#   - tripleamusic.org (root) → /music/* (default)
+# One Netlify site serves three apps by routing based on the request Host.
+# This allows you to attach separate domains like:
+#   - tripleamusic.com        → Music app
+#   - tripleamuse.com         → Muse app
+#   - tripleamusician.com     → Musician app
 #
-# Note: Subdomain routing (music.tripleaevents.netlify.app) requires
-# custom domain setup in Netlify. Use the main domain for testing.
+# The shared API is hosted as Netlify Functions and exposed at /api/*.
 
 [build]
   publish = "dist"
-  command = "npm install && npm install --prefix server && npm install --prefix TripleAMusic && npm install --prefix TripleAMusician && npm install --prefix TripleAMuse && npm run build"
+  command = "npm ci && npm ci --prefix server && npm ci --prefix TripleAMusic && npm ci --prefix TripleAMusician && npm ci --prefix TripleAMuse && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   NETLIFY = "true"
+  VITE_NETLIFY = "true"
 
-# Netlify Functions configuration (shared API)
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
   external_node_modules = ["mongoose", "bcryptjs"]
 
-# Security headers for all routes
 [[headers]]
   for = "/*"
   [headers.values]
@@ -34,69 +30,80 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# ============================================
-# API REDIRECTS (must come first - highest priority)
-# ============================================
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
 
-# ============================================
-# HOST-BASED SUBDOMAIN ROUTING
-# ============================================
+# ----------------------------
+# Host-based app routing
+# ----------------------------
 
-# MUSE subdomain → /muse/*
 [[redirects]]
   from = "/*"
   to = "/muse/:splat"
   status = 200
   force = true
-  conditions = {Host = ["muse.tripleamusic.org", "muse.tripleamusic.com", "muse.triplea.netlify.app", "muse.tripleaevents.netlify.app"]}
+  conditions = { Host = [
+    "muse.tripleamusic.org",
+    "muse.tripleamusic.com",
+    "muse.triplea.netlify.app",
+    "muse.tripleaevents.netlify.app",
+    "tripleamuse.com",
+    "www.tripleamuse.com",
+  ] }
 
-# MUSICIAN subdomain → /musician/*
 [[redirects]]
   from = "/*"
   to = "/musician/:splat"
   status = 200
   force = true
-  conditions = {Host = ["musician.tripleamusic.org", "musician.tripleamusic.com", "musician.triplea.netlify.app", "musician.tripleaevents.netlify.app"]}
+  conditions = { Host = [
+    "musician.tripleamusic.org",
+    "musician.tripleamusic.com",
+    "musician.triplea.netlify.app",
+    "musician.tripleaevents.netlify.app",
+    "tripleamusician.com",
+    "www.tripleamusician.com",
+  ] }
 
-# MUSIC subdomain → /music/*
 [[redirects]]
   from = "/*"
   to = "/music/:splat"
   status = 200
   force = true
-  conditions = {Host = ["music.tripleamusic.org", "music.tripleamusic.com", "music.triplea.netlify.app", "music.tripleaevents.netlify.app"]}
+  conditions = { Host = [
+    "music.tripleamusic.org",
+    "music.tripleamusic.com",
+    "music.triplea.netlify.app",
+    "music.tripleaevents.netlify.app",
+    "tripleamusic.org",
+    "www.tripleamusic.org",
+    "tripleamusic.com",
+    "www.tripleamusic.com",
+  ] }
 
-# ============================================
-# SPA FALLBACK RULES (per-app)
-# These ensure client-side routing works for each app
-# ============================================
+# ----------------------------
+# SPA fallbacks
+# ----------------------------
 
-# MUSE app SPA fallback
 [[redirects]]
   from = "/muse/*"
   to = "/muse/index.html"
   status = 200
 
-# MUSICIAN app SPA fallback
 [[redirects]]
   from = "/musician/*"
   to = "/musician/index.html"
   status = 200
 
-# MUSIC app SPA fallback
 [[redirects]]
   from = "/music/*"
   to = "/music/index.html"
   status = 200
 
-# ============================================
-# DEFAULT / ROOT DOMAIN → MUSIC (fallback)
-# ============================================
+# Default/root domain → Music
 [[redirects]]
   from = "/*"
   to = "/music/index.html"

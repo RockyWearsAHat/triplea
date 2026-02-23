@@ -14,12 +14,17 @@ function getJwtSecret(): string {
 
 export type AuthenticatedRequest = Request & {
   authUser?: IUser;
+  // Multer file upload properties
+  file?: Express.Multer.File;
+  files?:
+    | Express.Multer.File[]
+    | { [fieldname: string]: Express.Multer.File[] };
 };
 
 export async function attachUser(
   req: AuthenticatedRequest,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const token = (req as any).cookies?.[JWT_COOKIE];
@@ -44,7 +49,7 @@ export async function attachUser(
 export function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   if (!req.authUser) {
     return res.status(401).json({ message: "Not authenticated" });

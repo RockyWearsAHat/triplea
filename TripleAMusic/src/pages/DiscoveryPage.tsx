@@ -21,16 +21,20 @@ export function DiscoveryPage() {
 
   const [query, setQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>("All");
+  const [eventDate, setEventDate] = useState<string>("");
 
   useEffect(() => {
     setError(null);
     setLoading(true);
     api
-      .musicDiscovery({ genre: query })
+      .musicDiscovery({
+        genre: query,
+        eventDate: eventDate.trim() ? eventDate.trim() : undefined,
+      })
       .then((r) => setResults(r))
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, [api, query]);
+  }, [api, query, eventDate]);
 
   const genres = useMemo(() => {
     const vals = Array.from(
@@ -50,7 +54,13 @@ export function DiscoveryPage() {
   }, [results, selectedGenre]);
 
   const contentRef = React.useRef<HTMLDivElement | null>(null);
-  useScrollReveal(contentRef, [results.length, loading, query, selectedGenre]);
+  useScrollReveal(contentRef, [
+    results.length,
+    loading,
+    query,
+    selectedGenre,
+    eventDate,
+  ]);
 
   return (
     <div
@@ -70,6 +80,17 @@ export function DiscoveryPage() {
             placeholder="Search musicians, genres, cities…"
             onSearch={(q) => setQuery(q)}
           />
+
+          <div className={ui.field} style={{ maxWidth: 240 }}>
+            <label className={ui.label}>Event date</label>
+            <input
+              className={ui.input}
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+            <span className={ui.help}>Filters by learning speed.</span>
+          </div>
         </div>
       </section>
 

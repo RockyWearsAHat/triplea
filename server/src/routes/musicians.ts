@@ -1,10 +1,23 @@
 import type { Response, Router } from "express";
 import express from "express";
 import mongoose from "mongoose";
-import { MusicianProfile } from "../models/MusicianProfile";
+import { MusicianProfile, type ColorRating } from "../models/MusicianProfile";
 import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
 
 const router: Router = express.Router();
+
+const COLOR_RATINGS: ReadonlySet<ColorRating> = new Set([
+  "gold",
+  "light-gold",
+  "blue",
+  "light-blue",
+  "purple",
+  "light-purple",
+]);
+
+function isColorRating(value: unknown): value is ColorRating {
+  return typeof value === "string" && (COLOR_RATINGS as Set<string>).has(value);
+}
 
 function serializeMusicianProfile(doc: any) {
   return {
@@ -15,6 +28,15 @@ function serializeMusicianProfile(doc: any) {
     bio: doc.bio ?? undefined,
     averageRating: doc.averageRating ?? 0,
     reviewCount: doc.reviewCount ?? 0,
+    colorRating: doc.colorRating ?? undefined,
+    learnSpeed:
+      typeof doc.learnSpeed === "number" && doc.learnSpeed > 0
+        ? doc.learnSpeed
+        : undefined,
+    skillLevel:
+      typeof doc.skillLevel === "number" && doc.skillLevel > 0
+        ? doc.skillLevel
+        : undefined,
     defaultHourlyRate:
       typeof doc.defaultHourlyRate === "number" && doc.defaultHourlyRate > 0
         ? doc.defaultHourlyRate
@@ -35,6 +57,9 @@ async function getOrCreateProfileForUser(userId: string) {
     // New profiles start with neutral rating; updated by future review system.
     averageRating: 5.0,
     reviewCount: 0,
+    colorRating: "light-blue",
+    learnSpeed: 14,
+    skillLevel: 5,
     defaultHourlyRate: null,
     acceptsDirectRequests: false,
   });
@@ -72,12 +97,18 @@ router.patch(
         instruments,
         genres,
         bio,
+        colorRating,
+        learnSpeed,
+        skillLevel,
         defaultHourlyRate,
         acceptsDirectRequests,
       } = req.body as {
         instruments?: string[];
         genres?: string[];
         bio?: string;
+        colorRating?: string;
+        learnSpeed?: number;
+        skillLevel?: number;
         defaultHourlyRate?: number | null;
         acceptsDirectRequests?: boolean;
       };
@@ -90,6 +121,20 @@ router.patch(
       }
       if (typeof bio === "string") {
         profile.bio = bio;
+      }
+      if (typeof colorRating !== "undefined") {
+        if (!isColorRating(colorRating)) {
+          return res.status(400).json({ message: "Invalid colorRating" });
+        }
+        profile.colorRating = colorRating;
+      }
+      if (typeof learnSpeed === "number") {
+        profile.learnSpeed =
+          Number.isFinite(learnSpeed) && learnSpeed > 0 ? learnSpeed : 14;
+      }
+      if (typeof skillLevel === "number") {
+        profile.skillLevel =
+          Number.isFinite(skillLevel) && skillLevel > 0 ? skillLevel : 5;
       }
       if (typeof defaultHourlyRate === "number") {
         profile.defaultHourlyRate =

@@ -23,14 +23,25 @@ import ticketsRoutes from "./routes/tickets";
 import stripeRoutes from "./routes/stripe";
 import seatingRoutes from "./routes/seating";
 import staffRoutes from "./routes/staff";
+import rehearsalsRoutes from "./routes/rehearsals";
 import { attachUser } from "./middleware/auth";
 import { seedDemoDataIfEnabled } from "./lib/seedDemo";
 import { globalLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
+const parseAllowedOriginsEnv = (): string[] => {
+  const raw =
+    process.env.TRIPLEA_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || "";
+  return raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+};
+
 // Determine allowed origins based on environment
 const getAllowedOrigins = (): string[] => {
+  const extra = parseAllowedOriginsEnv();
   const netlifyUrl = process.env.URL || process.env.DEPLOY_PRIME_URL;
 
   if (netlifyUrl) {
@@ -41,24 +52,30 @@ const getAllowedOrigins = (): string[] => {
         /^(muse\.|music\.|musician\.)/,
         "",
       );
-      return [
-        `https://muse.${baseDomain}`,
-        `https://music.${baseDomain}`,
-        `https://musician.${baseDomain}`,
-        `https://${baseDomain}`,
-        netlifyUrl,
-      ];
+      return Array.from(
+        new Set([
+          `https://muse.${baseDomain}`,
+          `https://music.${baseDomain}`,
+          `https://musician.${baseDomain}`,
+          `https://${baseDomain}`,
+          netlifyUrl,
+          ...extra,
+        ]),
+      );
     } catch {
       // Fallback if URL parsing fails
     }
   }
 
   // Local development
-  return [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-  ];
+  return Array.from(
+    new Set([
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      ...extra,
+    ]),
+  );
 };
 
 app.use(
@@ -139,6 +156,7 @@ app.use("/api/tickets", ticketsRoutes);
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/seating", seatingRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/rehearsals", rehearsalsRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const MONGO_URI = process.env.MONGO_URI ?? "";

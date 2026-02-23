@@ -385,7 +385,9 @@ export default function ManagePage() {
                   <div
                     key={g.id}
                     className={styles.eventCard}
-                    onClick={() => navigate(`/my-gigs/${g.id}`)}
+                    onClick={() =>
+                      navigate(`/my-gigs?gig=${encodeURIComponent(g.id)}`)
+                    }
                   >
                     <div className={styles.eventCardHeader}>
                       <p className={styles.eventCardTitle}>{g.title}</p>
@@ -451,7 +453,9 @@ export default function ManagePage() {
                   <div
                     key={g.id}
                     className={styles.eventCard}
-                    onClick={() => navigate(`/my-gigs/${g.id}`)}
+                    onClick={() =>
+                      navigate(`/my-gigs?gig=${encodeURIComponent(g.id)}`)
+                    }
                   >
                     <div className={styles.eventCardHeader}>
                       <p className={styles.eventCardTitle}>{g.title}</p>

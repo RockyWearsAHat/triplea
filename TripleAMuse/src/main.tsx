@@ -6,8 +6,8 @@ import "./index.css";
 import App from "./App.tsx";
 import { AuthProvider } from "@shared";
 
-// Use /muse/ basename on Netlify, / locally
-const basename = import.meta.env.PROD ? "/muse" : "/";
+// Serve at domain root (e.g., https://tripleamuse.com/)
+const basename = "/";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

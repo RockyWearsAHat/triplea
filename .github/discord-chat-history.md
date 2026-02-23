@@ -162,3 +162,70 @@ This is a better website than most ALREADY. I remember talking about Pizza Hut, 
 ﻿
 Man
 maniskind
+
+Rocky — 1/27/26, 2:08 AM
+gn
+Rocky — 1/27/26, 11:10 AM
+Image
+Rocky — 1/27/26, 11:20 AM
+better styling
+Image
+Image
+you want an invite? I got ticket scanning setup but I still need to test tickets
+Man — 1/27/26, 1:04 PM
+Yeah I want an invite!
+Man — 2/4/26, 10:09 AM
+I hade a few ideas for the website! If you are done with the project you intended, I can pay you and you can transfer full ownership over to me? Havent heard from you in a while! Checking to see if everything is okay?!?
+Rocky — 2/5/26, 2:24 PM
+Sorry, been busy with school, no need to pay me, I'll write a license so that the files technically belong to you, everything is fine it's just midterms so I've been stressed and busy, sorry for going AWOL for a bit
+& the project I wanted to work on isn't quite done I keep getting side tracked, but yes kinda I just have to bring my PC up to my parent's house which I can do soon, then I can have it running up there actually hosting the server which then I can have things like live chat running without having a monthly fee outside of electricity and internet (which is getting paid anyways), payment processing handling and such is already set up, now it's kinda just what services do you want to offer, how exactly do you want it laid out, which I have a pretty good idea of but it needs refinement, I'll send you an invite right now to test it but it's not in a finalized state, and it may take a couple days of setting up the project on my home server for it to be up running and working 100%
+If you want to own the servers and everything you can, idk how you'd set them up yourself but it's possible, or you can pay someone like amazon but then the server isn't technically yours, the way I'll have it set up will be secure and safe, and quick for development + essentially free, you don't need to worry about paying me I'll figure out the license thing tn, I'm sorry progress has been a bit slow over the past couple of weeks
+past week
+Rocky — 2/6/26, 12:31 AM
+Licensing has been added, also what happened in clash?? I got on today and you're gone from the main clan then Nat was doing her battles and you're gone from the second as well, everything ok you just need a break or what's up?
+Man — 2/6/26, 9:47 AM
+If the license came over to me, I would probably terminate it, as I do not desire to work on the website alone. I would only enjoy building this with someone who pours into it in a way that encourages me as you have! Im not interested in you publishing it; I would have you take a year before you finalize it, but Idk what sort of timeframe youre on with your deadlines. If anything, I would want to take myself completely off the project.
+I think it’s time for a new spark for Big Brain. New leadership is probably a good idea. There are some vibes Im feeling from people that are basic members that want to be elders, and when people become Co-Leader it’s often to go die off which you were exhibiting, and Nat immediately exhibited, and LeCream Exhibited, and 25ths, and Aries, and the list goes on and on… plus Ares built this club with Blake and his buddies, I bet they’ll come back and spark the team.. Also, I made a rule the first day that the lowest 400 on the team would get kicked, then Jimbo commented, and I told him it’s impossible to get 400, so I said I would kick myself if I did, and proceeded to get 400 to 3 level 16 matches and 1 hard counter match. I also think people hate the game now, and they just wanted to stick around to watch the club fall apart… I also have 3 girls and a wife that I need to focus more on. I left a one star review on the apple app server for Clash.
+Man — 2/6/26, 10:00 AM
+You dont have to work on the website, I just gotta know you arent abandoning it, or that you dont have a deadline that will make the site something we both cant confirm we agree on the finality of. I know you have school. I wanted to tell you some ideas, but I dont want to expect anything from you, so it’s easy to try to take responsibility from you so you can be free, or to give you full control so you can meet any goal that is less strenuous than what Im asking. Now that Im not playing Clash, it feels weird to just be all business with you bruv. Dont want you to feel Im going AWOL, or that Im on your back about it now that Im not playing the game.
+Rocky — 2/6/26, 5:26 PM
+mad resopect, clash is some honky bs, it's very little fun now-a-days, same thing happened with coc, I would get right to the verge of being max and in those upper leagues then they would introduce another town hall, it's disheartening tnh
+tbh\*
+it feels like the bar for being good keeps shifting and it's just not quite enough, but like spend a couple hundred and you could be above that bar, it takes alot of fun out of the game, respect for focusing on your family, and no I'm not quitting the site I've just been busy, I made the license agreement & I'm working on getting the host seat/stage setup working so users can actually set up their seating arrangements and reserved seats actually work/can be chosen
+Man — 2/7/26, 12:00 AM
+Oh, and, you and Nat can abandon the B team if you want. Didnt mean to put that on you!
+Rocky — 2/7/26, 8:22 PM
+lol, maybe, lotta people left
+honestly it's kinda nice to not have the stress of winning, but it's also rough to see everyone gone
+Image
+Man — 2/7/26, 9:35 PM
+Who left?
+Rocky — 2/7/26, 10:52 PM
+eman, green, chilledfetus, ridley, handingoutLs, eliteJXL and I think I'm missing 1 or two
+oh yea ultra iq and probably a couple more
+Rocky — 2/7/26, 11:20 PM
+bank account linking for automatic payouts from concerts is setup, I'll tie it into the host setup as well
+Image
+Rocky — 2/8/26, 12:50 AM
+musician onboarding is pretty much complete, users can now sign up and actually provide their linked account information so payments get sent directly to them after a gig
+Man — 2/8/26, 12:47 PM
+Should I come back, or is it over?
+Man — 2/8/26, 1:02 PM
+REHEARSAL/TRYOUT IDEA
+The people who are hiring musicians should be able to choose multiple drummers (Or whatever musician type they want) for rehearsal and pay a deposit of a particular amount for a group of drummers, and a particular amount for the hours of rehearsal for that group, and whichever person gets chosen receives a higher percentage of the total.
+
+CUSTOMER/MUSICIAN RATING IDEA
+5 star rating plus gold blue purple rating (a stars equate to professionalism, and color equates to like-ability. 4star Gold musician is a popular 4 star person)the stars are based on how fast a person can learn a piece, how good they are at playing it, etc. If someone couldnt learn music in two weeks, and a customer had an event in two weeks, the only people who would pop up in the search based on the chosen event date are the kind of people that can memorize in two weeks.
+Gold, light gold, Blue, light blue Purple, light purple is the popularity rating. This gradient rating scale could make a 1star musician famous like Ice JJ Fish (idk if you’ve heard about him, watch a youtube video lol)
+
+MUSIC SUGGESTIONS IDEA
+Having a wedding, or funeral, or party?? A few music composition pieces as suggestions for the kind of party the person is looking for would be nice.. When they pick the piece for the wedding, having interchangeable instruments playing the same piece would be interesting.. kinda like a tool for people to find their musician, and their song.. this might be too much, but just an idea.
+Man — 5:16 PM
+https://discord.gg/ANJzmxq3z
+Ms
+Man's server
+0 Online
+5 Members
+Est. Feb 2025
+
+Join
