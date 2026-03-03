@@ -4,6 +4,33 @@ import ui from "../styles/primitives.module.scss";
 import { Button } from "./Button";
 import type { TripleAApiClient } from "../api/client";
 
+/** Scroll to the first error field with a smooth animation */
+function scrollToFirstError(errors: Record<string, string>) {
+  const firstErrorKey = Object.keys(errors)[0];
+  if (!firstErrorKey) return;
+
+  const selectorForKey =
+    firstErrorKey === "dob" ? "[name='dobMonth']" : `[name='${firstErrorKey}']`;
+
+  const target =
+    firstErrorKey === "bankAccount"
+      ? document.querySelector<HTMLElement>("[data-field='bankAccount']")
+      : document.querySelector<HTMLElement>(selectorForKey);
+
+  if (!target) return;
+
+  // Prefer scrolling the containing field wrapper for consistent layout.
+  const field = target.closest('[class*="field"]') ?? target;
+  field.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  // Also focus the element (when possible) for accessibility.
+  try {
+    target.focus();
+  } catch {
+    // ignore
+  }
+}
+
 interface StripeOnboardingFormProps {
   accountId: string;
   apiClient: TripleAApiClient;
@@ -23,6 +50,20 @@ export function StripeOnboardingForm({
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Refs help capture browser autofill values that may not trigger React events.
+  const firstNameRef = useRef<HTMLInputElement | null>(null);
+  const lastNameRef = useRef<HTMLInputElement | null>(null);
+  const dobMonthRef = useRef<HTMLInputElement | null>(null);
+  const dobDayRef = useRef<HTMLInputElement | null>(null);
+  const dobYearRef = useRef<HTMLInputElement | null>(null);
+  const ssnLast4Ref = useRef<HTMLInputElement | null>(null);
+  const phoneRef = useRef<HTMLInputElement | null>(null);
+  const addressLine1Ref = useRef<HTMLInputElement | null>(null);
+  const addressLine2Ref = useRef<HTMLInputElement | null>(null);
+  const cityRef = useRef<HTMLInputElement | null>(null);
+  const stateRef = useRef<HTMLInputElement | null>(null);
+  const postalCodeRef = useRef<HTMLInputElement | null>(null);
+
   // Personal info
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -39,14 +80,13 @@ export function StripeOnboardingForm({
   const [state, setState] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  // Bank account token from Financial Connections
+  // Bank account token from Financial Connections (btok_...)
   const [bankAccountToken, setBankAccountToken] = useState("");
   const [bankLinked, setBankLinked] = useState(false);
   const [showBankLink, setShowBankLink] = useState(false);
   const [bankDetails, setBankDetails] = useState<{
     bankName: string;
     last4: string;
-    accountType?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -74,22 +114,19 @@ export function StripeOnboardingForm({
 
       setBusy(false);
 
-      const { financialConnectionsSession, error: fcError } =
-        await stripe.collectFinancialConnectionsAccounts({
-          clientSecret,
-        });
+      const { token, error: fcError } = await stripe.collectBankAccountToken({
+        clientSecret,
+      });
 
       if (fcError) {
         throw new Error(fcError.message);
       }
 
-      if (financialConnectionsSession?.accounts?.[0]) {
-        const account = financialConnectionsSession.accounts[0];
-        setBankAccountToken(account.id);
+      if (token?.id && token.bank_account) {
+        setBankAccountToken(token.id);
         setBankDetails({
-          bankName: account.display_name || account.institution_name || "Bank",
-          last4: account.last4 || "",
-          accountType: account.subcategory,
+          bankName: token.bank_account.bank_name || "Bank",
+          last4: token.bank_account.last4 || "",
         });
         setBankLinked(true);
         setShowBankLink(false);
@@ -107,37 +144,69 @@ export function StripeOnboardingForm({
     setError("");
     setFieldErrors({});
 
+    // Read current DOM values first (autofill can bypass onChange), then sync state.
+    const firstNameValue = (firstNameRef.current?.value ?? firstName).trim();
+    const lastNameValue = (lastNameRef.current?.value ?? lastName).trim();
+    const dobMonthValue = (dobMonthRef.current?.value ?? dobMonth).trim();
+    const dobDayValue = (dobDayRef.current?.value ?? dobDay).trim();
+    const dobYearValue = (dobYearRef.current?.value ?? dobYear).trim();
+    const ssnLast4Value = (ssnLast4Ref.current?.value ?? ssnLast4).trim();
+    const phoneValue = (phoneRef.current?.value ?? phone).trim();
+    const addressLine1Value = (
+      addressLine1Ref.current?.value ?? addressLine1
+    ).trim();
+    const addressLine2Value = (
+      addressLine2Ref.current?.value ?? addressLine2
+    ).trim();
+    const cityValue = (cityRef.current?.value ?? city).trim();
+    const stateValue = (stateRef.current?.value ?? state).trim();
+    const postalCodeValue = (postalCodeRef.current?.value ?? postalCode).trim();
+
+    // Keep controlled inputs in sync so a validation re-render doesn't wipe autofill.
+    if (firstNameValue !== firstName) setFirstName(firstNameValue);
+    if (lastNameValue !== lastName) setLastName(lastNameValue);
+    if (dobMonthValue !== dobMonth) setDobMonth(dobMonthValue);
+    if (dobDayValue !== dobDay) setDobDay(dobDayValue);
+    if (dobYearValue !== dobYear) setDobYear(dobYearValue);
+    if (ssnLast4Value !== ssnLast4) setSsnLast4(ssnLast4Value);
+    if (phoneValue !== phone) setPhone(phoneValue);
+    if (addressLine1Value !== addressLine1) setAddressLine1(addressLine1Value);
+    if (addressLine2Value !== addressLine2) setAddressLine2(addressLine2Value);
+    if (cityValue !== city) setCity(cityValue);
+    if (stateValue !== state) setState(stateValue);
+    if (postalCodeValue !== postalCode) setPostalCode(postalCodeValue);
+
     const errors: Record<string, string> = {};
 
-    if (!firstName) errors.firstName = "First name is required";
-    if (!lastName) errors.lastName = "Last name is required";
-    if (!dobDay || !dobMonth || !dobYear) {
+    if (!firstNameValue) errors.firstName = "First name is required";
+    if (!lastNameValue) errors.lastName = "Last name is required";
+    if (!dobDayValue || !dobMonthValue || !dobYearValue) {
       errors.dob = "Date of birth is required";
     } else {
-      const day = parseInt(dobDay);
-      const month = parseInt(dobMonth);
-      const year = parseInt(dobYear);
+      const day = parseInt(dobDayValue);
+      const month = parseInt(dobMonthValue);
+      const year = parseInt(dobYearValue);
       if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
         errors.dob = "Invalid date of birth";
       }
     }
 
-    if (!ssnLast4) {
+    if (!ssnLast4Value) {
       errors.ssnLast4 = "SSN last 4 is required";
-    } else if (!/^\d{4}$/.test(ssnLast4)) {
+    } else if (!/^\d{4}$/.test(ssnLast4Value)) {
       errors.ssnLast4 = "Must be exactly 4 digits";
     }
 
-    if (!phone) {
+    if (!phoneValue) {
       errors.phone = "Phone number is required";
-    } else if (phone.length < 10) {
+    } else if (phoneValue.length < 10) {
       errors.phone = "Invalid phone number";
     }
 
-    if (!addressLine1) errors.addressLine1 = "Street address is required";
-    if (!city) errors.city = "City is required";
-    if (!state) errors.state = "State is required";
-    if (!postalCode) errors.postalCode = "ZIP code is required";
+    if (!addressLine1Value) errors.addressLine1 = "Street address is required";
+    if (!cityValue) errors.city = "City is required";
+    if (!stateValue) errors.state = "State is required";
+    if (!postalCodeValue) errors.postalCode = "ZIP code is required";
 
     if (!bankAccountToken) {
       errors.bankAccount = "Please link your bank account";
@@ -145,26 +214,37 @@ export function StripeOnboardingForm({
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      // Scroll to first error after state update renders the error messages
+      setTimeout(() => scrollToFirstError(errors), 100);
       throw new Error("Please complete all required fields");
     }
 
     setBusy(true);
     try {
-      await apiClient.submitMusicianOnboarding({
-        firstName,
-        lastName,
-        dob: { day: dobDay, month: dobMonth, year: dobYear },
-        ssnLast4,
-        phone,
+      const submitRes = await apiClient.submitMusicianOnboarding({
+        firstName: firstNameValue,
+        lastName: lastNameValue,
+        dob: { day: dobDayValue, month: dobMonthValue, year: dobYearValue },
+        ssnLast4: ssnLast4Value,
+        phone: phoneValue,
         address: {
-          line1: addressLine1,
-          line2: addressLine2 || undefined,
-          city,
-          state,
-          postal_code: postalCode,
+          line1: addressLine1Value,
+          line2: addressLine2Value || undefined,
+          city: cityValue,
+          state: stateValue,
+          postal_code: postalCodeValue,
         },
         bankAccountToken,
       });
+
+      // If submission succeeded, invoke onSuccess handler
+      if (submitRes?.success) {
+        try {
+          _onSuccess();
+        } catch (e) {
+          // ignore errors from callback
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -248,9 +328,11 @@ export function StripeOnboardingForm({
             <input
               type="text"
               className={ui.input}
+              name="firstName"
+              ref={firstNameRef}
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              required
+              autoComplete="given-name"
             />
             {fieldErrors.firstName && (
               <p
@@ -267,9 +349,11 @@ export function StripeOnboardingForm({
             <input
               type="text"
               className={ui.input}
+              name="lastName"
+              ref={lastNameRef}
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              required
+              autoComplete="family-name"
             />
             {fieldErrors.lastName && (
               <p
@@ -287,32 +371,38 @@ export function StripeOnboardingForm({
               <input
                 type="text"
                 className={ui.input}
+                name="dobMonth"
+                ref={dobMonthRef}
                 placeholder="MM"
                 value={dobMonth}
                 onChange={(e) => setDobMonth(e.target.value)}
                 maxLength={2}
                 style={{ flex: 1 }}
-                required
+                autoComplete="bday-month"
               />
               <input
                 type="text"
                 className={ui.input}
+                name="dobDay"
+                ref={dobDayRef}
                 placeholder="DD"
                 value={dobDay}
                 onChange={(e) => setDobDay(e.target.value)}
                 maxLength={2}
                 style={{ flex: 1 }}
-                required
+                autoComplete="bday-day"
               />
               <input
                 type="text"
                 className={ui.input}
+                name="dobYear"
+                ref={dobYearRef}
                 placeholder="YYYY"
                 value={dobYear}
                 onChange={(e) => setDobYear(e.target.value)}
                 maxLength={4}
                 style={{ flex: 2 }}
-                required
+                autoComplete="bday-year"
               />
             </div>
             {fieldErrors.dob ? (
@@ -357,6 +447,8 @@ export function StripeOnboardingForm({
               </span>
               <input
                 type="text"
+                name="ssnLast4"
+                ref={ssnLast4Ref}
                 inputMode="numeric"
                 pattern="\\d*"
                 aria-label="Last 4 digits of SSN"
@@ -367,7 +459,7 @@ export function StripeOnboardingForm({
                 }}
                 maxLength={4}
                 placeholder="____"
-                required
+                autoComplete="off"
                 style={{
                   flex: 1,
                   background: "transparent",
@@ -399,10 +491,12 @@ export function StripeOnboardingForm({
             <input
               type="tel"
               className={ui.input}
+              name="phone"
+              ref={phoneRef}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
-              required
+              autoComplete="tel"
             />
             {fieldErrors.phone && (
               <p
@@ -429,9 +523,11 @@ export function StripeOnboardingForm({
             <input
               type="text"
               className={ui.input}
+              name="addressLine1"
+              ref={addressLine1Ref}
               value={addressLine1}
               onChange={(e) => setAddressLine1(e.target.value)}
-              required
+              autoComplete="address-line1"
             />
             {fieldErrors.addressLine1 && (
               <p
@@ -450,6 +546,8 @@ export function StripeOnboardingForm({
             <input
               type="text"
               className={ui.input}
+              name="addressLine2"
+              ref={addressLine2Ref}
               value={addressLine2}
               onChange={(e) => setAddressLine2(e.target.value)}
             />
@@ -460,9 +558,11 @@ export function StripeOnboardingForm({
             <input
               type="text"
               className={ui.input}
+              name="city"
+              ref={cityRef}
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              required
+              autoComplete="address-level2"
             />
             {fieldErrors.city && (
               <p
@@ -480,11 +580,13 @@ export function StripeOnboardingForm({
               <input
                 type="text"
                 className={ui.input}
+                name="state"
+                ref={stateRef}
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 maxLength={2}
                 placeholder="CA"
-                required
+                autoComplete="address-level1"
               />
               {fieldErrors.state && (
                 <p
@@ -501,10 +603,12 @@ export function StripeOnboardingForm({
               <input
                 type="text"
                 className={ui.input}
+                name="postalCode"
+                ref={postalCodeRef}
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 maxLength={5}
-                required
+                autoComplete="postal-code"
               />
               {fieldErrors.postalCode && (
                 <p
@@ -557,7 +661,6 @@ export function StripeOnboardingForm({
                   {bankDetails.bankName}
                 </div>
                 <div className={ui.help} style={{ marginTop: 2 }}>
-                  {bankDetails.accountType ? `${bankDetails.accountType} ` : ""}
                   {bankDetails.last4 ? `••••${bankDetails.last4}` : "Connected"}
                 </div>
               </div>
@@ -593,8 +696,14 @@ export function StripeOnboardingForm({
           </div>
         ) : (
           <>
+            {/*
+              Note: Financial Connections opens a Stripe-hosted modal which is
+              controlled by Stripe. We can style this trigger button, but the
+              popup UI itself cannot be reliably themed from our app.
+            */}
             <Button
               type="button"
+              data-field="bankAccount"
               onClick={() => setShowBankLink(true)}
               disabled={busy}
               style={{ width: "100%" }}

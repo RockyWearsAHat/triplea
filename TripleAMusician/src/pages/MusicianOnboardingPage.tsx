@@ -256,6 +256,7 @@ export function MusicianOnboardingPage() {
       subtitle="Complete these steps to go live as a performer"
     >
       <form
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           handleCompleteOnboarding();

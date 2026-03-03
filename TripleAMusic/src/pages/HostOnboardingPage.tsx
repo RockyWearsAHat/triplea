@@ -317,6 +317,7 @@ export function HostOnboardingPage() {
       subtitle="Complete these steps to start selling tickets and hosting events"
     >
       <form
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           handleCompleteOnboarding();

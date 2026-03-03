@@ -38,12 +38,51 @@ function getMusicianOrigin(req: Request): string {
 }
 
 async function ensureStripeAccount(user: any): Promise<Stripe.Account> {
+  const desiredType = (process.env.STRIPE_CONNECT_ACCOUNT_TYPE ??
+    "custom") as Stripe.AccountCreateParams.Type;
+
   if (user.stripeAccountId) {
-    return await getStripe().accounts.retrieve(user.stripeAccountId);
+    const existing = await getStripe().accounts.retrieve(user.stripeAccountId);
+
+    if (existing.type === desiredType) {
+      return existing;
+    }
+
+    // Express/Standard accounts can't be upgraded to Custom in place.
+    // If the existing account is unused (no onboarding submitted and no
+    // capabilities enabled), we can replace it to keep onboarding in-site.
+    if (
+      desiredType === "custom" &&
+      existing.type !== "custom" &&
+      !existing.details_submitted &&
+      !existing.charges_enabled &&
+      !existing.payouts_enabled
+    ) {
+      const replacement = await getStripe().accounts.create({
+        type: "custom",
+        country: "US",
+        email: user.email,
+        business_type: "individual",
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+
+      user.stripeAccountId = replacement.id;
+      user.stripeChargesEnabled = replacement.charges_enabled;
+      user.stripePayoutsEnabled = replacement.payouts_enabled;
+      user.stripeOnboardingComplete = replacement.details_submitted;
+      await user.save();
+
+      return replacement;
+    }
+
+    return existing;
   }
 
   const account = await getStripe().accounts.create({
-    type: "express",
+    type: desiredType,
     country: "US",
     email: user.email,
     business_type: "individual",
@@ -228,7 +267,8 @@ router.post(
         ssnLast4,
         phone,
         address, // { line1, line2?, city, state, postal_code }
-        bankAccountToken, // Financial Connections token
+        bankAccountToken, // Bank Account Token (btok_...) from Financial Connections
+        businessType,
       } = req.body;
 
       // Validate required fields
@@ -238,6 +278,17 @@ router.post(
 
       // Get or create Stripe account
       const account = await ensureStripeAccount(user);
+
+      // In-site onboarding via API requires a Custom Connect account.
+      // Express/Standard accounts require Stripe-hosted onboarding.
+      if (account.type !== "custom") {
+        return res.status(400).json({
+          message:
+            "This Stripe account isn't eligible for in-site onboarding. Please reset payouts setup (requires a Custom Connect account).",
+          stripeAccountId: account.id,
+          accountType: account.type,
+        });
+      }
 
       // Update account with personal information
       const updated = await getStripe().accounts.update(account.id, {
@@ -261,7 +312,7 @@ router.post(
             country: "US",
           },
         },
-        business_type: "individual",
+        business_type: businessType || "individual",
         tos_acceptance: {
           date: Math.floor(Date.now() / 1000),
           ip: req.ip || req.connection.remoteAddress || "0.0.0.0",
@@ -270,9 +321,18 @@ router.post(
 
       // Add bank account token if provided
       if (bankAccountToken) {
-        await getStripe().accounts.createExternalAccount(account.id, {
-          external_account: bankAccountToken,
-        });
+        try {
+          await getStripe().accounts.createExternalAccount(account.id, {
+            external_account: bankAccountToken,
+          });
+        } catch (e) {
+          // Non-fatal: bank linking may have been done already.
+          // eslint-disable-next-line no-console
+          console.warn(
+            "POST /stripe/musicians/onboarding/submit external account attach failed",
+            e,
+          );
+        }
       }
 
       // Sync status
@@ -281,9 +341,9 @@ router.post(
       return res.json({
         success: true,
         stripeAccountId: updated.id,
-        chargesEnabled: updated.charges_enabled,
-        payoutsEnabled: updated.payouts_enabled,
-        detailsSubmitted: updated.details_submitted,
+        chargesEnabled: updated.charges_enabled ?? false,
+        payoutsEnabled: updated.payouts_enabled ?? false,
+        detailsSubmitted: updated.details_submitted ?? false,
         requirements: updated.requirements?.currently_due ?? [],
       });
     } catch (err: any) {
