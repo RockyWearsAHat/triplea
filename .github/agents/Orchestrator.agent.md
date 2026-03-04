@@ -1,7 +1,7 @@
 ---
 name: Orchestrator
 description: "The central coordinator agent that manages the workflow between Plan, Implement, Style, and Audit agents to ensure smooth execution of tasks and handoffs, plus quick implementation and secure principles, while ensuring overall project coherence and well documented and fully tested code."
-model: GPT-5.2 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 tools:
   - todo
   - agent

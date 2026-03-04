@@ -8,7 +8,11 @@ import { Location } from "../models/Location";
 import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
 import { sendTicketConfirmationEmail } from "../lib/email";
-import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
+import {
+  requireAnyRole,
+  requireRole,
+  type AuthenticatedRequest,
+} from "../middleware/auth";
 import { checkoutLimiter } from "../middleware/rateLimiter";
 
 const router: Router = express.Router();
@@ -104,14 +108,20 @@ async function ensureStripeAccount(user: any): Promise<Stripe.Account> {
 async function syncStripeAccountStatus(user: any, account: Stripe.Account) {
   user.stripeChargesEnabled = account.charges_enabled;
   user.stripePayoutsEnabled = account.payouts_enabled;
-  user.stripeOnboardingComplete = account.details_submitted;
+  // `details_submitted` can remain false even after we successfully submit
+  // the required payload via API (Stripe may still list requirements).
+  // We treat a successful onboarding submission as "complete" for app gating,
+  // while still showing verification via charges/payouts and requirements.
+  user.stripeOnboardingComplete =
+    Boolean(user.stripeOnboardingComplete) ||
+    Boolean(account.details_submitted);
   await user.save();
 }
 
 // --- Musician Connect (payouts) ---
 router.post(
   "/musicians/account",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -134,7 +144,7 @@ router.post(
 
 router.post(
   "/musicians/onboarding-link",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -158,7 +168,7 @@ router.post(
 
 router.post(
   "/musicians/onboarding-session",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -183,7 +193,7 @@ router.post(
 
 router.get(
   "/musicians/status",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -218,7 +228,7 @@ router.get(
 // Financial Connections: create session for bank account linking
 router.post(
   "/musicians/financial-connections",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -256,7 +266,7 @@ router.post(
 // Custom onboarding: submit personal/business details directly to Stripe
 router.post(
   "/musicians/onboarding/submit",
-  requireRole("musician"),
+  requireAnyRole("musician", "customer"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.authUser!;
@@ -336,6 +346,8 @@ router.post(
       }
 
       // Sync status
+      // Mark as submitted for app gating; Stripe verification may still be pending.
+      user.stripeOnboardingComplete = true;
       await syncStripeAccountStatus(user, updated);
 
       return res.json({

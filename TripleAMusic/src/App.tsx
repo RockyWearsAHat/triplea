@@ -774,20 +774,20 @@ function RatingsPage() {
 // Removed unused AccountPage
 
 /**
- * Gate component that redirects hosts to /onboarding if Stripe payouts aren't set up.
+ * Gate component that redirects hosts to /onboarding if Stripe onboarding isn't submitted.
  */
 function HostSetupGate({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && !(user.stripeChargesEnabled && user.stripePayoutsEnabled)) {
+    if (user && !user.stripeOnboardingComplete) {
       navigate("/onboarding", { replace: true });
     }
   }, [user, navigate]);
 
   if (!user) return null;
-  if (!(user.stripeChargesEnabled && user.stripePayoutsEnabled)) return null;
+  if (!user.stripeOnboardingComplete) return null;
 
   return <>{children}</>;
 }

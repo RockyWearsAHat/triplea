@@ -118,7 +118,7 @@ function StepProgress({
 }
 
 export function HostOnboardingPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const api = useMemo(() => createApiClient(), []);
 
@@ -142,6 +142,23 @@ export function HostOnboardingPage() {
   const handleStripeSubmitReady = useCallback((fn: () => Promise<void>) => {
     setStripeSubmitFn(() => fn);
   }, []);
+
+  const handleStripeSuccess = useCallback(() => {
+    void (async () => {
+      try {
+        const stripeAfter = await api.getMusicianStripeStatus();
+        setStripeStatus(stripeAfter);
+      } catch {
+        // ignore
+      }
+
+      try {
+        await refreshUser();
+      } catch {
+        // ignore
+      }
+    })();
+  }, [api, refreshUser]);
 
   // Host-specific fields
   // Venues: support multiple venues per host
@@ -242,7 +259,9 @@ export function HostOnboardingPage() {
   const stripeReady =
     !!stripeStatus?.chargesEnabled && !!stripeStatus?.payoutsEnabled;
 
-  const hasStripeInfo = stripeReady;
+  const stripeSubmitted = !!stripeStatus?.detailsSubmitted;
+
+  const hasStripeInfo = stripeSubmitted;
   const stripeComplete = hasStripeInfo || stripeValid;
   const hasVenueInfo =
     venues.length > 0 &&
@@ -259,6 +278,16 @@ export function HostOnboardingPage() {
       // Step 1: Submit Stripe onboarding if needed
       if (!hasStripeInfo && stripeSubmitFn) {
         await stripeSubmitFn();
+
+        // Confirm server-side Stripe onboarding state before proceeding.
+        // This prevents a "looks complete" UI state from passing without persistence.
+        const stripeAfter = await api.getMusicianStripeStatus();
+        setStripeStatus(stripeAfter);
+        if (!stripeAfter.detailsSubmitted) {
+          throw new Error(
+            "Stripe onboarding isn't marked as submitted yet. Please review your details and try again.",
+          );
+        }
       }
 
       // Step 2: Create any new locations on the server
@@ -293,14 +322,8 @@ export function HostOnboardingPage() {
         }
       }
 
-      // Keep a lightweight profile update so host account is flagged as set up
-      await api.updateMyMusicianProfile({
-        instruments: [],
-        genres: [],
-        bio: `Host with ${venues.length} venue(s)`,
-      });
-
       // Step 3: Navigate to manage page
+      await refreshUser();
       navigate("/manage");
     } catch (err) {
       setError(
@@ -365,12 +388,15 @@ export function HostOnboardingPage() {
               <StripeOnboardingForm
                 accountId={user.stripeAccountId}
                 apiClient={api}
-                onSuccess={() => window.location.reload()}
+                onSuccess={handleStripeSuccess}
                 onValidationChange={handleStripeValidationChange}
                 onSubmitReady={handleStripeSubmitReady}
               />
             ) : hasStripeInfo ? (
-              <p className={ui.help}>✓ Stripe account connected and ready</p>
+              <p className={ui.help}>
+                ✓ Stripe details submitted
+                {stripeReady ? "" : " (verification pending)"}
+              </p>
             ) : (
               <p className={ui.help}>Setting up your Stripe account...</p>
             )}

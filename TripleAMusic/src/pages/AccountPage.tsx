@@ -135,7 +135,7 @@ export function AccountPage() {
       description: "Post events & manage venues",
       // On Music app: go to /manage if onboarded, or /onboarding if host but not onboarded
       url: isHost
-        ? user.stripeChargesEnabled && user.stripePayoutsEnabled
+        ? user.stripeOnboardingComplete
           ? "/manage"
           : "/onboarding"
         : "/register?become=host",

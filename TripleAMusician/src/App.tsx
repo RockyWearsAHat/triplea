@@ -151,7 +151,9 @@ function MusicianSetupGate({ children }: { children: React.ReactNode }) {
           api.getMyMusicianProfile(),
         ]);
         if (cancelled) return;
-        setStripeReady(!!stripe.chargesEnabled && !!stripe.payoutsEnabled);
+        // Treat Stripe onboarding as complete once details have been submitted.
+        // `chargesEnabled` / `payoutsEnabled` can lag due to verification timelines.
+        setStripeReady(!!stripe.detailsSubmitted);
         setProfileReady(
           (profile.instruments?.length ?? 0) > 0 &&
             (profile.genres?.length ?? 0) > 0 &&

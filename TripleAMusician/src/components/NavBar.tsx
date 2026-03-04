@@ -35,7 +35,7 @@ export function NavBar() {
           api.getMyMusicianProfile(),
         ]);
         if (cancelled) return;
-        const stripeReady = !!stripe.chargesEnabled && !!stripe.payoutsEnabled;
+        const stripeReady = !!stripe.detailsSubmitted;
         const profileReady =
           (profile.instruments?.length ?? 0) > 0 &&
           (profile.genres?.length ?? 0) > 0 &&

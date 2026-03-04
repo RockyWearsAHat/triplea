@@ -125,7 +125,7 @@ function StepProgress({
 }
 
 export function MusicianOnboardingPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const api = useMemo(() => createApiClient(), []);
 
@@ -149,6 +149,23 @@ export function MusicianOnboardingPage() {
   const handleStripeSubmitReady = useCallback((fn: () => Promise<void>) => {
     setStripeSubmitFn(() => fn);
   }, []);
+
+  const handleStripeSuccess = useCallback(() => {
+    void (async () => {
+      try {
+        const stripeAfter = await api.getMusicianStripeStatus();
+        setStripeStatus(stripeAfter);
+      } catch {
+        // ignore
+      }
+
+      try {
+        await refreshUser();
+      } catch {
+        // ignore
+      }
+    })();
+  }, [api, refreshUser]);
 
   // Form fields
   const [instruments, setInstruments] = useState("");
@@ -210,9 +227,10 @@ export function MusicianOnboardingPage() {
 
   const stripeReady =
     !!stripeStatus?.chargesEnabled && !!stripeStatus?.payoutsEnabled;
+  const stripeSubmitted = !!stripeStatus?.detailsSubmitted;
 
   // Determine current step based on what user has filled out
-  const hasStripeInfo = stripeReady;
+  const hasStripeInfo = stripeSubmitted;
   const stripeComplete = hasStripeInfo || stripeValid;
   const hasProfile = instruments.trim() && genres.trim() && bio.trim();
   const profileReady = hasProfile;
@@ -228,6 +246,16 @@ export function MusicianOnboardingPage() {
       // Step 1: Submit Stripe onboarding if needed
       if (!hasStripeInfo && stripeSubmitFn) {
         await stripeSubmitFn();
+
+        // Confirm server-side Stripe onboarding state before proceeding.
+        // This prevents a "looks complete" UI state from passing without persistence.
+        const stripeAfter = await api.getMusicianStripeStatus();
+        setStripeStatus(stripeAfter);
+        if (!stripeAfter.detailsSubmitted) {
+          throw new Error(
+            "Stripe onboarding isn't marked as submitted yet. Please finish the payouts step and try again.",
+          );
+        }
       }
 
       // Step 2: Save profile
@@ -303,12 +331,15 @@ export function MusicianOnboardingPage() {
               <StripeOnboardingForm
                 accountId={user.stripeAccountId}
                 apiClient={api}
-                onSuccess={() => window.location.reload()}
+                onSuccess={handleStripeSuccess}
                 onValidationChange={handleStripeValidationChange}
                 onSubmitReady={handleStripeSubmitReady}
               />
             ) : hasStripeInfo ? (
-              <p className={ui.help}>✓ Stripe account connected and ready</p>
+              <p className={ui.help}>
+                ✓ Stripe details submitted
+                {stripeReady ? "" : " (verification pending)"}
+              </p>
             ) : (
               <p className={ui.help}>Setting up your Stripe account...</p>
             )}

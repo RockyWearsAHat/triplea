@@ -69,6 +69,22 @@ export function requireRole(role: Role) {
   };
 }
 
+export function requireAnyRole(...roles: Role[]) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.authUser) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const userRoles = req.authUser.roles ?? [];
+    const allowed = roles.some((role) => userRoles.includes(role));
+    if (!allowed) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    return next();
+  };
+}
+
 export function requirePermission(permission: Permission) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.authUser) {
