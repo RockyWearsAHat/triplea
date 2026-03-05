@@ -1165,6 +1165,7 @@ router.post(
         "- rotationDeg = clockwise degrees the seating zone is rotated relative to the room. 0 = rows run left-right. Use e.g. 45 or -45 for diagonal wings. null for non-seating_zone types.",
         "- isAccessible = true if the zone is visibly labeled as wheelchair or mobility-accessible. false or null otherwise.",
         "- Only output types: stage, seating_zone, aisle, entrance. Skip railings, partitions, stairs, projection rooms.",
+        "- Each distinct seating block gets its own seating_zone entry — do NOT merge separate wings or sections. E.g. left wing, center block, and right wing = 3 separate zones with individual xPct/yPct/rotationDeg.",
         "- Include every visible element: stage, all seating zones, aisles, and entrances.",
         "- stagePosition = where stage is relative to audience (top/bottom/left/right).",
         "- If dimension labels show feet/metres, extract estimatedVenueWidthFeet and estimatedVenueHeightFeet.",
