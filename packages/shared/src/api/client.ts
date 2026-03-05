@@ -1708,6 +1708,8 @@ export class TripleAApiClient {
         widthPct?: number;
         heightPct?: number;
         estimatedSeats?: number;
+        rotationDeg?: number;
+        isAccessible?: boolean;
         notes?: string;
       }>;
     };

@@ -1158,11 +1158,14 @@ router.post(
       // Concise prompt — fewer output tokens = much faster generation
       const OLLAMA_PROMPT = [
         "Analyze this venue floor plan. Return ONLY valid JSON, no markdown or explanation.",
-        '{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":int|null,"estimatedVenueWidthFeet":num|null,"estimatedVenueHeightFeet":num|null,"referenceSeat":{"widthFeet":num,"depthFeet":num,"rowPitchFeet":num}|null,"suggestions":[{"type":"stage"|"aisle"|"table"|"railing"|"stairs"|"dance_floor"|"entrance"|"seating_zone","label":"short","xPct":INT,"yPct":INT,"widthPct":INT,"heightPct":INT,"estimatedSeats":int|null}]}',
+        '{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":int|null,"estimatedVenueWidthFeet":num|null,"estimatedVenueHeightFeet":num|null,"referenceSeat":{"widthFeet":num,"depthFeet":num,"rowPitchFeet":num}|null,"suggestions":[{"type":"stage"|"seating_zone"|"aisle"|"entrance","label":"short","xPct":INT,"yPct":INT,"widthPct":INT,"heightPct":INT,"estimatedSeats":int|null,"rotationDeg":int|null,"isAccessible":bool|null}]}',
         "RULES:",
         "- xPct/yPct = top-left corner as INTEGER percent 0-100. Example: center = xPct:50 yPct:50. Use integers NOT decimals like 0.5.",
         "- widthPct/heightPct = element size as INTEGER percent 0-100.",
-        "- Include every visible element: stage, all seating zones, aisles, railings, entrances.",
+        "- rotationDeg = clockwise degrees the seating zone is rotated relative to the room. 0 = rows run left-right. Use e.g. 45 or -45 for diagonal wings. null for non-seating_zone types.",
+        "- isAccessible = true if the zone is visibly labeled as wheelchair or mobility-accessible. false or null otherwise.",
+        "- Only output types: stage, seating_zone, aisle, entrance. Skip railings, partitions, stairs, projection rooms.",
+        "- Include every visible element: stage, all seating zones, aisles, and entrances.",
         "- stagePosition = where stage is relative to audience (top/bottom/left/right).",
         "- If dimension labels show feet/metres, extract estimatedVenueWidthFeet and estimatedVenueHeightFeet.",
         "- Extract referenceSeat widthFeet/depthFeet/rowPitchFeet from labeled seat or row spacing dimensions.",
@@ -1180,7 +1183,11 @@ router.post(
               images: [base64Image],
               stream: false,
               format: "json",
-              keep_alive: "30m",
+              keep_alive: "5m",
+              // Limit context + output tokens for faster inference.
+              // 8192 ctx is plenty for a floor plan image + short JSON response.
+              // 1500 predicted tokens covers even complex layouts.
+              options: { num_ctx: 8192, num_predict: 1500 },
             });
 
             const req = http.request(
@@ -1296,6 +1303,8 @@ router.post(
           widthPct?: number;
           heightPct?: number;
           estimatedSeats?: number;
+          rotationDeg?: number;
+          isAccessible?: boolean;
           notes?: string;
         }>;
       };
@@ -1381,6 +1390,9 @@ router.post(
             typeof s.estimatedSeats === "number" && s.estimatedSeats > 0
               ? s.estimatedSeats
               : undefined,
+          rotationDeg:
+            typeof s.rotationDeg === "number" ? Math.round(s.rotationDeg) : undefined,
+          isAccessible: s.isAccessible === true ? true : undefined,
           notes: s.notes ? String(s.notes) : undefined,
         }));
       // (mappedSuggestions is typed; used below in the aiSuggestions object)

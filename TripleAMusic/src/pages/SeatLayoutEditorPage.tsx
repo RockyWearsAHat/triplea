@@ -104,6 +104,10 @@ type AiSuggestion = {
   widthPct?: number;
   heightPct?: number;
   estimatedSeats?: number;
+  /** Rotation of this zone in degrees (clockwise). 0 = axis-aligned. */
+  rotationDeg?: number;
+  /** True if this zone should be designated as accessibility/mobility-accessible. */
+  isAccessible?: boolean;
   notes?: string;
 };
 
@@ -1425,26 +1429,35 @@ export function SeatLayoutEditorPage() {
         height: Math.max(gridSize * 3, height),
       }));
     } else if (s.type === "seating_zone") {
-      // Generate a block of seats
-      const cols = Math.max(1, Math.round(width / (gridSize * 1.2)));
-      const rows = Math.max(1, Math.round(height / (gridSize * 1.2)));
-      const generated: EditableSeat[] = [];
-      for (let r = 0; r < rows; r++) {
-        const rowLetter = toRowName(r);
-        for (let c = 0; c < cols; c++) {
-          const seatId = `ai-${floorId}-${s.label.replace(/\s+/g, "-")}-${r}-${c}-${Date.now()}`;
-          generated.push({
-            seatId,
-            section: s.label,
-            floorId,
-            row: rowLetter,
-            seatNumber: String(c + 1),
-            posX: x + c * gridSize * 1.2,
-            posY: y + r * gridSize * 1.2,
-            isAvailable: true,
-          });
-        }
-      }
+      // Use generateSectionSeats so rotation is applied correctly
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      const seatsPerRow = Math.max(1, Math.round(width / (seatSizeFeet * gridSize * 1.15)));
+      const rowCount = Math.max(
+        1,
+        s.estimatedSeats
+          ? Math.ceil(s.estimatedSeats / seatsPerRow)
+          : Math.round(height / (seatSizeFeet * gridSize * 1.25)),
+      );
+      const params: SectionWizardParams = {
+        shape: "straight",
+        sectionName: s.label,
+        rowCount,
+        seatsPerRow,
+        rowSpacingFt: seatSizeFeet * 1.25,
+        seatPitchFt: seatSizeFeet * 1.15,
+        rotationDeg: s.rotationDeg ?? 0,
+        startX: centerX,
+        startY: centerY,
+        floorId,
+      };
+      const blueprints = generateSectionSeats(params, gridSize);
+      const generated: EditableSeat[] = blueprints.map((bp) => ({
+        ...bp,
+        seatId: bp.seatId || `ai-${floorId}-${s.label.replace(/\s+/g, "-")}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        isAvailable: true,
+        ...(s.isAccessible ? { accessibilityNote: "Accessible" } : {}),
+      }));
       setSeats((prev) => [...prev, ...generated]);
     } else {
       // All other element types

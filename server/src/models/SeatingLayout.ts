@@ -142,6 +142,8 @@ export interface ISeatingLayout extends Document {
       widthPct?: number;
       heightPct?: number;
       estimatedSeats?: number;
+      rotationDeg?: number;
+      isAccessible?: boolean;
       notes?: string;
     }>;
   };
@@ -280,6 +282,8 @@ const SeatingLayoutSchema = new Schema<ISeatingLayout>(
           widthPct: { type: Number },
           heightPct: { type: Number },
           estimatedSeats: { type: Number },
+          rotationDeg: { type: Number },
+          isAccessible: { type: Boolean },
           notes: { type: String },
         },
       ],
