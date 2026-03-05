@@ -10,6 +10,7 @@
 ### Task 1 — Ollama "fetch failed" Root Cause
 
 The server uses Node.js 22 whose global `fetch()` is backed by undici. undici has two separate timeout values:
+
 - **`headersTimeout`** (default 30 s) — time to receive the first byte of the response headers
 - **`bodyTimeout`** (default **300 s = 5 min**) — time allowed for reading the full body after headers arrive
 
@@ -26,6 +27,7 @@ The existing `AbortController` timeout (600 s) never fires because undici's inte
 ### Task 2 — Photoshop-style Editor Layout
 
 Current structure (abbreviated):
+
 ```
 HostDashboardShell
   div.page (flex col, gap 16px)
@@ -40,6 +42,7 @@ HostDashboardShell
 ```
 
 Target (Photoshop-style):
+
 ```
 HostDashboardShell
   div.editorRoot (grid: 48px 1fr 28px)
@@ -83,11 +86,13 @@ cd server && pnpm add sharp && pnpm add -D @types/sharp
 Replace the entire analyze-image route handler opening (from the JSDoc comment through the end of the `} catch (fetchErr` catch block opener). The exact anchor and replacement are shown below.
 
 **What changes:**
+
 1. After loading `blob.data`, add a `sharp` resize step (wrapped in try/catch so it degrades gracefully if sharp unavailable)
 2. Replace the `fetch()` + `getReader()` streaming block with an undici `Agent`-based fetch using `stream: false`
 3. Parse the single JSON object response directly (no NDJSON accumulator)
 
 **Anchor — find this exact block starting at line ~1125:**
+
 ```typescript
       const base64Image = blob.data.toString("base64");
 
@@ -201,6 +206,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 **Operation:** `INSERT_AFTER`
 
 **Anchor:**
+
 ```scss
 /* ─── Page shell ──────────────────────────────────────────────────── */
 .page {
@@ -212,8 +218,8 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 ```
 
 **Code (insert immediately after the `.page {}` closing brace):**
-```scss
 
+```scss
 /* ═══════════════════════════════════════════════════════════════════
    Photoshop-style editor layout
    ═══════════════════════════════════════════════════════════════════ */
@@ -300,7 +306,9 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
   scrollbar-width: none;
 }
 
-.leftToolbar::-webkit-scrollbar { display: none; }
+.leftToolbar::-webkit-scrollbar {
+  display: none;
+}
 
 .leftToolSeparator {
   width: 28px;
@@ -388,7 +396,9 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
   transition: opacity 0.1s 0.45s;
 }
 
-.leftToolItem:hover::after { opacity: 1; }
+.leftToolItem:hover::after {
+  opacity: 1;
+}
 
 /* ─── Canvas wrap ─────────────────────────────────────────────────── */
 .canvasWrap {
@@ -436,6 +446,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 **Operation:** `REPLACE` — editorBody media query
 
 **Anchor:**
+
 ```scss
 @media (max-width: 960px) {
   .editorBody {
@@ -445,6 +456,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 ```
 
 **Code:**
+
 ```scss
 @media (max-width: 1100px) {
   .editorBody {
@@ -458,6 +470,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 **Operation:** `REPLACE` — sidePanel media query
 
 **Anchor:**
+
 ```scss
 @media (max-width: 960px) {
   .sidePanel {
@@ -471,6 +484,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 ```
 
 **Code:**
+
 ```scss
 @media (max-width: 1100px) {
   .sidePanel {
@@ -497,6 +511,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 **Operation:** `REPLACE` — panelToggle media query
 
 **Anchor:**
+
 ```scss
 /* Hide panel toggle on desktop (panel always visible) */
 @media (min-width: 961px) {
@@ -507,6 +522,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 ```
 
 **Code:**
+
 ```scss
 /* Hide panel toggle on desktop (panel always visible) */
 @media (min-width: 1101px) {
@@ -523,6 +539,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 **Operation:** `REPLACE` — replace the outer wrapper + headerCard + editorBody opening + viewportToolbar with the new editorRoot + editorTopBar + editorMain + leftToolbar + canvasWrap
 
 **Anchor (lines ~2349–2413, find this exact text):**
+
 ```tsx
   return (
     <HostDashboardShell
@@ -594,6 +611,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 ```
 
 **Code:**
+
 ```tsx
   return (
     <HostDashboardShell
@@ -644,6 +662,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
 After the `+ Floor` button and before the old `{/* ── Center: primary tools + advanced dropdown */}` section, close the new top bar.
 
 **Anchor (find lines ~2440–2580):**
+
 ```tsx
                 <Button
                   size="sm"
@@ -850,6 +869,7 @@ After the `+ Floor` button and before the old `{/* ── Center: primary tools 
 ```
 
 **Code (close the floor tabs → close editorTopBarCenter → add editorTopBarRight → close editorTopBar → open editorMain → left toolbar → canvasWrap):**
+
 ```tsx
                 <Button
                   size="sm"
@@ -1056,6 +1076,7 @@ After the `+ Floor` button and before the old `{/* ── Center: primary tools 
 **Operation:** `REPLACE` — close canvasWrap, end editorMain, add statusBar, close editorRoot
 
 **Anchor:**
+
 ```tsx
             {toolHintText[tool] ? (
                 <div className={styles.hintPill}>{toolHintText[tool]}</div>
@@ -1071,6 +1092,7 @@ After the `+ Floor` button and before the old `{/* ── Center: primary tools 
 ```
 
 **Code:**
+
 ```tsx
             {toolHintText[tool] ? (
                 <div className={styles.hintPill}>{toolHintText[tool]}</div>
@@ -1092,6 +1114,7 @@ After the `+ Floor` button and before the old `{/* ── Center: primary tools 
 **Operation:** `REPLACE`
 
 **Anchor (the closing divs just before the AI panel comment — lines ~4250):**
+
 ```tsx
             </div>
           </div>
@@ -1102,6 +1125,7 @@ After the `+ Floor` button and before the old `{/* ── Center: primary tools 
 ```
 
 **Code:**
+
 ```tsx
             </div>
           </div>

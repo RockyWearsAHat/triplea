@@ -1156,12 +1156,17 @@ router.post(
       const base64Image = blob.data.toString("base64");
 
       // Concise prompt — fewer output tokens = much faster generation
-      const OLLAMA_PROMPT = `Analyze this venue floor plan. Return ONLY valid JSON, no markdown or explanation.
-
-{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":integer|null,"suggestions":[{"type":"stage"|"aisle"|"table"|"railing"|"stairs"|"dance_floor"|"entrance"|"seating_zone","label":"short name","xPct":0-100,"yPct":0-100,"widthPct":0-100,"heightPct":0-100,"estimatedSeats":integer|null}]}
-
-Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, aisles, entrances. stagePosition = where stage is relative to audience.`;
-
+      const OLLAMA_PROMPT = [
+        "Analyze this venue floor plan. Return ONLY valid JSON, no markdown or explanation.",
+        '{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":int|null,"estimatedVenueWidthFeet":num|null,"estimatedVenueHeightFeet":num|null,"referenceSeat":{"widthFeet":num,"depthFeet":num,"rowPitchFeet":num}|null,"suggestions":[{"type":"stage"|"aisle"|"table"|"railing"|"stairs"|"dance_floor"|"entrance"|"seating_zone","label":"short","xPct":INT,"yPct":INT,"widthPct":INT,"heightPct":INT,"estimatedSeats":int|null}]}',
+        "RULES:",
+        "- xPct/yPct = top-left corner as INTEGER percent 0-100. Example: center = xPct:50 yPct:50. Use integers NOT decimals like 0.5.",
+        "- widthPct/heightPct = element size as INTEGER percent 0-100.",
+        "- Include every visible element: stage, all seating zones, aisles, railings, entrances.",
+        "- stagePosition = where stage is relative to audience (top/bottom/left/right).",
+        "- If dimension labels show feet/metres, extract estimatedVenueWidthFeet and estimatedVenueHeightFeet.",
+        "- Extract referenceSeat widthFeet/depthFeet/rowPitchFeet from labeled seat or row spacing dimensions.",
+      ].join("\n");
       let ollamaResponse: { response: string };
       try {
         // Use Node.js http.request (no default timeout) instead of global fetch()
@@ -1233,9 +1238,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
             );
 
             // 12-minute hard cap (generous for model load + generation)
-            req.setTimeout(720_000, () =>
-              req.destroy(new Error("timeout")),
-            );
+            req.setTimeout(720_000, () => req.destroy(new Error("timeout")));
             req.on("error", reject);
             req.write(reqBody);
             req.end();
@@ -1339,7 +1342,20 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
             VALID_TYPES.has(s.type) &&
             typeof s.xPct === "number" &&
             typeof s.yPct === "number",
-        )
+        );
+
+      // Auto-normalize: if the model returned 0-1 fractions instead of 0-100 integers,
+      // scale everything up. Heuristic: if the max xPct/yPct across all suggestions <= 1.0
+      // (and we have at least one suggestion), multiply all pct fields by 100.
+      const maxCoord = sanitizedSuggestions.reduce(
+        (m: number, s: (typeof sanitizedSuggestions)[0]) =>
+          Math.max(m, s.xPct, s.yPct, s.widthPct ?? 0, s.heightPct ?? 0),
+        0,
+      );
+      const pctScale =
+        maxCoord <= 1.0 && sanitizedSuggestions.length > 0 ? 100 : 1;
+
+      const mappedSuggestions = sanitizedSuggestions
         .map((s) => ({
           type: s.type as
             | "stage"
@@ -1351,15 +1367,15 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
             | "entrance"
             | "seating_zone",
           label: String(s.label || s.type),
-          xPct: Math.max(0, Math.min(100, s.xPct)),
-          yPct: Math.max(0, Math.min(100, s.yPct)),
+          xPct: Math.max(0, Math.min(100, s.xPct * pctScale)),
+          yPct: Math.max(0, Math.min(100, s.yPct * pctScale)),
           widthPct:
             typeof s.widthPct === "number"
-              ? Math.max(0, Math.min(100, s.widthPct))
+              ? Math.max(0, Math.min(100, s.widthPct * pctScale))
               : undefined,
           heightPct:
             typeof s.heightPct === "number"
-              ? Math.max(0, Math.min(100, s.heightPct))
+              ? Math.max(0, Math.min(100, s.heightPct * pctScale))
               : undefined,
           estimatedSeats:
             typeof s.estimatedSeats === "number" && s.estimatedSeats > 0
@@ -1367,6 +1383,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
               : undefined,
           notes: s.notes ? String(s.notes) : undefined,
         }));
+      // (mappedSuggestions is typed; used below in the aiSuggestions object)
 
       // Extract and validate real-world measurement fields
       const estimatedVenueWidthFeet =
@@ -1381,7 +1398,9 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
           : undefined;
       const refSeat = parsed.referenceSeat;
       const referenceSeat =
-        refSeat && typeof refSeat.widthFeet === "number" && refSeat.widthFeet > 0
+        refSeat &&
+        typeof refSeat.widthFeet === "number" &&
+        refSeat.widthFeet > 0
           ? {
               widthFeet: refSeat.widthFeet,
               depthFeet:
@@ -1399,6 +1418,7 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
       const aiSuggestions = {
         analyzedAt: new Date(),
         model: "qwen2.5vl:32b",
+        suggestions: mappedSuggestions,
         description: parsed.description
           ? String(parsed.description)
           : undefined,
@@ -1415,7 +1435,6 @@ Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, ais
         estimatedVenueWidthFeet,
         estimatedVenueHeightFeet,
         referenceSeat,
-        suggestions: sanitizedSuggestions,
       };
 
       // Persist to layout

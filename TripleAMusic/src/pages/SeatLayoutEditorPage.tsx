@@ -2621,7 +2621,6 @@ export function SeatLayoutEditorPage() {
             </button>
           </div>
           <div className={styles.canvasWrap}>
-
             <div
               ref={viewportRef}
               className={styles.viewport}
@@ -4265,9 +4264,7 @@ export function SeatLayoutEditorPage() {
             {selectedSeat ? "1 selected" : ""}
           </span>
           <div className={styles.statusBarDivider} />
-          <span className={styles.statusBarItem}>
-            {seats.length} seats
-          </span>
+          <span className={styles.statusBarItem}>{seats.length} seats</span>
           <div className={styles.statusBarDivider} />
           <span className={styles.statusBarItem}>
             {Math.round(view.scale * 100)}%
@@ -4314,14 +4311,13 @@ export function SeatLayoutEditorPage() {
             </div>
           ) : null}
 
-          {(aiResult.estimatedVenueWidthFeet ||
-            aiResult.referenceSeat) ? (
+          {aiResult.estimatedVenueWidthFeet || aiResult.referenceSeat ? (
             <div className={styles.aiScaleBanner}>
               <span className={styles.aiScaleIcon}>📐</span>
               <div className={styles.aiScaleDetails}>
                 <strong>Auto-scale detected</strong>
                 {aiResult.estimatedVenueWidthFeet &&
-                  aiResult.estimatedVenueHeightFeet ? (
+                aiResult.estimatedVenueHeightFeet ? (
                   <span>
                     Venue: {Math.round(aiResult.estimatedVenueWidthFeet)} ×{" "}
                     {Math.round(aiResult.estimatedVenueHeightFeet)} ft

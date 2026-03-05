@@ -103,7 +103,9 @@
   color: var(--text-muted);
   gap: 1px;
   padding: 0;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 
   &:hover {
     background: var(--surface-3);
@@ -111,7 +113,7 @@
   }
 
   &[data-active="true"] {
-    background: var(--accent, #1C276E);
+    background: var(--accent, #1c276e);
     color: #fff;
   }
 
@@ -328,7 +330,7 @@
 }
 
 .floorTab[data-active="true"] {
-  background: var(--accent, #1C276E);
+  background: var(--accent, #1c276e);
   color: #fff;
   border-color: transparent;
 }
@@ -1218,7 +1220,7 @@
   align-items: flex-start;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, #E59D0D 8%, var(--surface-2));
+  background: color-mix(in srgb, #e59d0d 8%, var(--surface-2));
   flex-shrink: 0;
 }
 
@@ -1239,7 +1241,7 @@
   strong {
     font-size: 11px;
     font-weight: 600;
-    color: #E59D0D;
+    color: #e59d0d;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
