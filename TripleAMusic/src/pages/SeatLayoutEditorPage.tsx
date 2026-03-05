@@ -113,6 +113,15 @@ type AiAnalysisResult = {
   description?: string;
   stagePosition?: "top" | "bottom" | "left" | "right";
   capacityEstimate?: number;
+  /** Real-world venue dimensions detected from the image (feet) */
+  estimatedVenueWidthFeet?: number;
+  estimatedVenueHeightFeet?: number;
+  /** Real-world size of a single seat detected from the image */
+  referenceSeat?: {
+    widthFeet: number;
+    depthFeet: number;
+    rowPitchFeet: number;
+  };
   suggestions: AiSuggestion[];
 };
 
@@ -1382,15 +1391,15 @@ export function SeatLayoutEditorPage() {
   /**
    * Convert an AI suggestion's percentage coordinates into world-space pixels.
    * Uses roomBoundary if set; falls back to a 40×30 ft default.
+   * Pass overrideW/H (in feet) to use freshly-computed dimensions before state settles.
    */
-  function suggestionToWorld(s: AiSuggestion): {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } {
-    const rW = (roomBoundary?.width ?? 40) * gridSize;
-    const rH = (roomBoundary?.height ?? 30) * gridSize;
+  function suggestionToWorld(
+    s: AiSuggestion,
+    overrideWFeet?: number,
+    overrideHFeet?: number,
+  ): { x: number; y: number; width: number; height: number } {
+    const rW = (overrideWFeet ?? roomBoundary?.width ?? 40) * gridSize;
+    const rH = (overrideHFeet ?? roomBoundary?.height ?? 30) * gridSize;
     return {
       x: (s.xPct / 100) * rW,
       y: (s.yPct / 100) * rH,
@@ -1399,8 +1408,12 @@ export function SeatLayoutEditorPage() {
     };
   }
 
-  function applySuggestion(s: AiSuggestion) {
-    const { x, y, width, height } = suggestionToWorld(s);
+  function applySuggestion(
+    s: AiSuggestion,
+    roomWFeet?: number,
+    roomHFeet?: number,
+  ) {
+    const { x, y, width, height } = suggestionToWorld(s, roomWFeet, roomHFeet);
     const floorId = activeFloorId ?? floors[0]?.floorId ?? "floor-1";
 
     if (s.type === "stage") {
@@ -1471,9 +1484,43 @@ export function SeatLayoutEditorPage() {
 
   function applyAllSuggestions() {
     if (!aiResult) return;
+
+    // ── Auto-scale: apply real-world measurements from AI analysis ────────────
+    // The AI returns estimated venue dimensions and a reference seat size.
+    // We use these to set the room boundary and seat size so the generated
+    // layout is 1:1 with real-world feet on the grid (1 grid cell = 1 ft).
+    const roomWFeet =
+      typeof aiResult.estimatedVenueWidthFeet === "number" &&
+      aiResult.estimatedVenueWidthFeet > 0
+        ? aiResult.estimatedVenueWidthFeet
+        : undefined;
+    const roomHFeet =
+      typeof aiResult.estimatedVenueHeightFeet === "number" &&
+      aiResult.estimatedVenueHeightFeet > 0
+        ? aiResult.estimatedVenueHeightFeet
+        : undefined;
+
+    if (roomWFeet && roomHFeet) {
+      // Update room boundary so canvas shows the correct area
+      setRoomBoundary({ width: roomWFeet, height: roomHFeet });
+      setPlannerRoomWidth(Math.round(roomWFeet));
+      setPlannerRoomHeight(Math.round(roomHFeet));
+    }
+
+    if (
+      aiResult.referenceSeat &&
+      typeof aiResult.referenceSeat.widthFeet === "number" &&
+      aiResult.referenceSeat.widthFeet > 0
+    ) {
+      // Scale seats to their detected real-world width
+      setSeatSizeFeet(aiResult.referenceSeat.widthFeet);
+    }
+
+    // Pass the freshly-computed room dims directly to each suggestion so they
+    // use the updated scale even before React re-renders with new state.
     aiResult.suggestions.forEach((s, idx) => {
       if (!rejectedSuggestionIds.has(idx)) {
-        applySuggestion(s);
+        applySuggestion(s, roomWFeet, roomHFeet);
       }
     });
     setShowAiPanel(false);
@@ -2354,53 +2401,8 @@ export function SeatLayoutEditorPage() {
       }
       hideTabs
     >
-      <div className={styles.page}>
+      <div className={styles.editorRoot}>
         {error ? <p className={ui.error}>{error}</p> : null}
-
-        <div className={[ui.card, ui.cardPad, styles.headerCard].join(" ")}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerRow}>
-              <input
-                className={ui.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Layout name"
-              />
-              <select
-                className={ui.input}
-                value={stagePosition}
-                onChange={(e) =>
-                  setStagePosition(e.target.value as StagePosition)
-                }
-              >
-                <option value="top">Stage: top</option>
-                <option value="bottom">Stage: bottom</option>
-                <option value="left">Stage: left</option>
-                <option value="right">Stage: right</option>
-              </select>
-            </div>
-            <input
-              className={ui.input}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description (optional)"
-            />
-            <div className={ui.help}>
-              Drag seats to place them. Trackpad scroll pans. Pinch zooms. Hold
-              Space to drag-pan.
-            </div>
-          </div>
-
-          <div className={styles.headerRight}>
-            <Button variant="secondary" onClick={handleDone}>
-              Done
-            </Button>
-            <Button onClick={handleSave} disabled={saving || !layoutId}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </div>
-        </div>
-
         {saveError ? <p className={ui.error}>{saveError}</p> : null}
         {saveOk ? (
           <p className={ui.help} style={{ color: "var(--success)" }}>
@@ -2408,224 +2410,217 @@ export function SeatLayoutEditorPage() {
           </p>
         ) : null}
 
-        <div className={styles.editorBody}>
-          <div className={[ui.card, styles.viewportCard].join(" ")}>
-            <div className={styles.viewportToolbar}>
-              {/* ── Left: floor tabs ─────────────────────────────── */}
-              <div className={styles.floors}>
-                {stableSortFloors(floors).map((f) => (
-                  <button
-                    key={f.floorId}
-                    type="button"
-                    className={styles.floorTab}
-                    data-active={f.floorId === activeFloorId}
-                    onClick={() => setActiveFloorId(f.floorId)}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    const id = `floor-${Date.now()}`;
-                    setFloors((prev) =>
-                      stableSortFloors([
-                        ...prev,
-                        { floorId: id, name: "New floor", order: prev.length },
-                      ]),
-                    );
-                    setActiveFloorId(id);
-                  }}
-                >
-                  + Floor
-                </Button>
-              </div>
-
-              {/* ── Center: primary tools + advanced dropdown ─────── */}
-              <div className={styles.toolsGroup}>
-                <div className={styles.primaryTools}>
-                  <button
-                    type="button"
-                    className={styles.toolBtn}
-                    data-active={tool === "select"}
-                    onClick={() => setTool("select")}
-                    title="Select & move seats (S)"
-                  >
-                    <span className={styles.toolIcon}>↖</span>
-                    <span className={styles.toolLabel}>Select</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.toolBtn}
-                    data-active={tool === "row"}
-                    onClick={() => setTool("row")}
-                    title="Draw a row of seats (R)"
-                  >
-                    <span className={styles.toolIcon}>⊟</span>
-                    <span className={styles.toolLabel}>Row</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.toolBtn}
-                    data-active={tool === "pan"}
-                    onClick={() => setTool("pan")}
-                    title="Pan the canvas (H)"
-                  >
-                    <span className={styles.toolIcon}>✥</span>
-                    <span className={styles.toolLabel}>Pan</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.toolBtn}
-                    data-active={tool === "table"}
-                    onClick={() => setTool("table")}
-                    title="Place table (T)"
-                  >
-                    <span className={styles.toolIcon}>⬛</span>
-                    <span className={styles.toolLabel}>Table</span>
-                  </button>
-                </div>
-
-                <div className={styles.advancedWrap}>
-                  <button
-                    type="button"
-                    className={styles.toolBtn}
-                    data-active={
-                      advancedOpen ||
-                      tool === "measure" ||
-                      tool === "path" ||
-                      tool === "aisle" ||
-                      tool === "stage"
-                    }
-                    onClick={() => setAdvancedOpen((v) => !v)}
-                    title="Advanced tools"
-                  >
-                    <span className={styles.toolIcon}>
-                      {tool === "measure"
-                        ? "↔"
-                        : tool === "path"
-                          ? "〜"
-                          : tool === "aisle"
-                            ? "⊩"
-                            : tool === "stage"
-                              ? "⬜"
-                              : "⋯"}
-                    </span>
-                    <span className={styles.toolLabel}>
-                      {tool === "measure"
-                        ? "Measure"
-                        : tool === "path"
-                          ? "Path"
-                          : tool === "aisle"
-                            ? "Aisle"
-                            : tool === "stage"
-                              ? "Stage"
-                              : "More"}
-                    </span>
-                    <span className={styles.chevron}>▾</span>
-                  </button>
-                  {advancedOpen && (
-                    <div className={styles.advancedDropdown}>
-                      {(
-                        [
-                          {
-                            id: "measure",
-                            icon: "↔",
-                            label: "Measure",
-                            title: "Measure distances",
-                          },
-                          {
-                            id: "path",
-                            icon: "〜",
-                            label: "Path",
-                            title: "Seats along a path",
-                          },
-                          {
-                            id: "aisle",
-                            icon: "⊩",
-                            label: "Aisle",
-                            title: "Add aisle guide",
-                          },
-                          {
-                            id: "stage",
-                            icon: "⬜",
-                            label: "Stage",
-                            title: "Reposition stage",
-                          },
-                        ] as const
-                      ).map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          className={styles.dropdownItem}
-                          data-active={tool === t.id}
-                          title={t.title}
-                          onClick={() => {
-                            setTool(t.id as BuilderTool);
-                            setAdvancedOpen(false);
-                          }}
-                        >
-                          <span className={styles.toolIcon}>{t.icon}</span>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Right: zoom display + clear + panel toggle ───── */}
-              <div className={styles.toolsRight}>
-                <span className={styles.zoomBadge}>
-                  {Math.round(view.scale * 100)}%
-                </span>
+        {/* ── Top bar ── */}
+        <div className={styles.editorTopBar}>
+          <div className={styles.editorTopBarLeft}>
+            {/* Floor tabs */}
+            <div className={styles.floors}>
+              {stableSortFloors(floors).map((f) => (
                 <button
+                  key={f.floorId}
                   type="button"
-                  className={styles.toolBtn}
-                  onClick={() =>
-                    setView((prev) => ({
+                  className={styles.floorTab}
+                  data-active={f.floorId === activeFloorId}
+                  onClick={() => setActiveFloorId(f.floorId)}
+                >
+                  {f.name}
+                </button>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const id = `floor-${Date.now()}`;
+                  setFloors((prev) =>
+                    stableSortFloors([
                       ...prev,
-                      scale: Math.max(0.1, prev.scale / 1.2),
-                    }))
-                  }
-                  title="Zoom out (-)"
-                >
-                  <span className={styles.toolIcon}>−</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.toolBtn}
-                  onClick={() =>
-                    setView((prev) => ({
-                      ...prev,
-                      scale: Math.min(10, prev.scale * 1.2),
-                    }))
-                  }
-                  title="Zoom in (+)"
-                >
-                  <span className={styles.toolIcon}>+</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.toolBtn}
-                  data-destructive
-                  onClick={clearArrangement}
-                  title="Clear all seats"
-                >
-                  <span className={styles.toolIcon}>🗑</span>
-                </button>
-                <button
-                  type="button"
-                  className={[styles.toolBtn, styles.panelToggle].join(" ")}
-                  data-active={toolsOpen}
-                  onClick={() => setToolsOpen((v) => !v)}
-                  title="Toggle settings panel"
-                >
-                  <span className={styles.toolIcon}>⚙</span>
-                </button>
-              </div>
+                      { floorId: id, name: "New floor", order: prev.length },
+                    ]),
+                  );
+                  setActiveFloorId(id);
+                }}
+              >
+                + Floor
+              </Button>
             </div>
+          </div>
+          <div className={styles.editorTopBarCenter}>
+            <input
+              className={ui.input}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Layout name"
+              style={{ minWidth: 0, flex: "1 1 140px", maxWidth: 220 }}
+            />
+            <select
+              className={ui.input}
+              value={stagePosition}
+              onChange={(e) =>
+                setStagePosition(e.target.value as StagePosition)
+              }
+              style={{ flex: "0 0 auto" }}
+            >
+              <option value="top">Stage: top</option>
+              <option value="bottom">Stage: bottom</option>
+              <option value="left">Stage: left</option>
+              <option value="right">Stage: right</option>
+            </select>
+          </div>
+          <div className={styles.editorTopBarRight}>
+            <span className={styles.zoomBadge}>
+              {Math.round(view.scale * 100)}%
+            </span>
+            <button
+              type="button"
+              className={styles.toolBtn}
+              onClick={() =>
+                setView((prev) => ({
+                  ...prev,
+                  scale: Math.max(0.1, prev.scale / 1.2),
+                }))
+              }
+              title="Zoom out (-)"
+            >
+              <span className={styles.toolIcon}>−</span>
+            </button>
+            <button
+              type="button"
+              className={styles.toolBtn}
+              onClick={() =>
+                setView((prev) => ({
+                  ...prev,
+                  scale: Math.min(10, prev.scale * 1.2),
+                }))
+              }
+              title="Zoom in (+)"
+            >
+              <span className={styles.toolIcon}>+</span>
+            </button>
+            <Button variant="secondary" onClick={handleDone}>
+              Done
+            </Button>
+            <Button onClick={handleSave} disabled={saving || !layoutId}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <button
+              type="button"
+              className={[styles.toolBtn, styles.panelToggle].join(" ")}
+              data-active={toolsOpen}
+              onClick={() => setToolsOpen((v) => !v)}
+              title="Toggle settings panel"
+            >
+              <span className={styles.toolIcon}>⚙</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Main area ── */}
+        <div className={styles.editorMain}>
+          {/* Left vertical toolbar */}
+          <div className={styles.leftToolbar}>
+            {/* Select */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "select"}
+              onClick={() => setTool("select")}
+              title="Select & move seats (S)"
+            >
+              <span className={styles.leftToolItemIcon}>↖</span>
+              <span className={styles.leftToolItemLabel}>Select</span>
+            </button>
+            {/* Row */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "row"}
+              onClick={() => setTool("row")}
+              title="Draw a row of seats (R)"
+            >
+              <span className={styles.leftToolItemIcon}>⊟</span>
+              <span className={styles.leftToolItemLabel}>Row</span>
+            </button>
+            {/* Pan */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "pan"}
+              onClick={() => setTool("pan")}
+              title="Pan the canvas (H)"
+            >
+              <span className={styles.leftToolItemIcon}>✥</span>
+              <span className={styles.leftToolItemLabel}>Pan</span>
+            </button>
+            {/* Table */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "table"}
+              onClick={() => setTool("table")}
+              title="Place table (T)"
+            >
+              <span className={styles.leftToolItemIcon}>⬛</span>
+              <span className={styles.leftToolItemLabel}>Table</span>
+            </button>
+            <div className={styles.leftToolSeparator} />
+            {/* Measure */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "measure"}
+              onClick={() => setTool("measure" as BuilderTool)}
+              title="Measure distances"
+            >
+              <span className={styles.leftToolItemIcon}>↔</span>
+              <span className={styles.leftToolItemLabel}>Measure</span>
+            </button>
+            {/* Path */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "path"}
+              onClick={() => setTool("path" as BuilderTool)}
+              title="Seats along a path"
+            >
+              <span className={styles.leftToolItemIcon}>〜</span>
+              <span className={styles.leftToolItemLabel}>Path</span>
+            </button>
+            {/* Aisle */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "aisle"}
+              onClick={() => setTool("aisle" as BuilderTool)}
+              title="Add aisle guide"
+            >
+              <span className={styles.leftToolItemIcon}>⊩</span>
+              <span className={styles.leftToolItemLabel}>Aisle</span>
+            </button>
+            {/* Stage */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-active={tool === "stage"}
+              onClick={() => setTool("stage" as BuilderTool)}
+              title="Reposition stage"
+            >
+              <span className={styles.leftToolItemIcon}>⬜</span>
+              <span className={styles.leftToolItemLabel}>Stage</span>
+            </button>
+            <div className={styles.leftToolSeparator} />
+            {/* Clear all */}
+            <button
+              type="button"
+              className={styles.leftToolItem}
+              data-destructive
+              onClick={clearArrangement}
+              title="Clear all seats"
+            >
+              <span className={styles.leftToolItemIcon}>🗑</span>
+              <span className={styles.leftToolItemLabel}>Clear</span>
+            </button>
+          </div>
+          <div className={styles.canvasWrap}>
 
             <div
               ref={viewportRef}
@@ -2707,12 +2702,12 @@ export function SeatLayoutEditorPage() {
                         transform: `translate(${el.x}px, ${el.y}px) translate(-50%, -50%)`,
                         width:
                           el.orientation === "vertical"
-                            ? el.thickness
-                            : el.length,
+                            ? (el.thickness ?? gridSize / 3)
+                            : (el.length ?? 8 * gridSize),
                         height:
                           el.orientation === "vertical"
-                            ? el.length
-                            : el.thickness,
+                            ? (el.length ?? 8 * gridSize)
+                            : (el.thickness ?? gridSize / 3),
                       }}
                       title={
                         tool === "aisle"
@@ -3051,8 +3046,6 @@ export function SeatLayoutEditorPage() {
                 <div className={styles.hintPill}>{toolHintText[tool]}</div>
               ) : null}
             </div>
-
-            {/* seatInspector moved to sidePanel */}
           </div>
 
           {/* ── Right panel: always-visible settings / inspector ── */}
@@ -3202,6 +3195,18 @@ export function SeatLayoutEditorPage() {
                     gap: spacing.md,
                   }}
                 >
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 4 }}>
+                      Description
+                    </div>
+                    <input
+                      className={ui.input}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Description (optional)"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
                   {/* Add Section -- primary entry point */}
                   <Button
                     variant="primary"
@@ -3659,7 +3664,11 @@ export function SeatLayoutEditorPage() {
                         type="number"
                         min={1}
                         step={1}
-                        value={Math.round(stage.width / gridSize)}
+                        value={
+                          gridSize > 0 && isFinite(stage.width / gridSize)
+                            ? Math.round(stage.width / gridSize)
+                            : ""
+                        }
                         onChange={(e) =>
                           setStage((prev) => ({
                             ...prev,
@@ -3673,7 +3682,11 @@ export function SeatLayoutEditorPage() {
                         type="number"
                         min={1}
                         step={1}
-                        value={Math.round(stage.height / gridSize)}
+                        value={
+                          gridSize > 0 && isFinite(stage.height / gridSize)
+                            ? Math.round(stage.height / gridSize)
+                            : ""
+                        }
                         onChange={(e) =>
                           setStage((prev) => ({
                             ...prev,
@@ -4246,6 +4259,20 @@ export function SeatLayoutEditorPage() {
             </div>
           </div>
         </div>
+        {/* ── Status bar ── */}
+        <div className={styles.statusBar}>
+          <span className={styles.statusBarItem}>
+            {selectedSeat ? "1 selected" : ""}
+          </span>
+          <div className={styles.statusBarDivider} />
+          <span className={styles.statusBarItem}>
+            {seats.length} seats
+          </span>
+          <div className={styles.statusBarDivider} />
+          <span className={styles.statusBarItem}>
+            {Math.round(view.scale * 100)}%
+          </span>
+        </div>
       </div>
 
       {/* ── AI Suggestions Overlay Panel ── */}
@@ -4284,6 +4311,33 @@ export function SeatLayoutEditorPage() {
               >
                 Apply
               </button>
+            </div>
+          ) : null}
+
+          {(aiResult.estimatedVenueWidthFeet ||
+            aiResult.referenceSeat) ? (
+            <div className={styles.aiScaleBanner}>
+              <span className={styles.aiScaleIcon}>📐</span>
+              <div className={styles.aiScaleDetails}>
+                <strong>Auto-scale detected</strong>
+                {aiResult.estimatedVenueWidthFeet &&
+                  aiResult.estimatedVenueHeightFeet ? (
+                  <span>
+                    Venue: {Math.round(aiResult.estimatedVenueWidthFeet)} ×{" "}
+                    {Math.round(aiResult.estimatedVenueHeightFeet)} ft
+                  </span>
+                ) : null}
+                {aiResult.referenceSeat ? (
+                  <span>
+                    Seat: {aiResult.referenceSeat.widthFeet.toFixed(1)} ft wide
+                    · {aiResult.referenceSeat.rowPitchFeet.toFixed(1)} ft row
+                    pitch
+                  </span>
+                ) : null}
+                <span className={styles.aiScaleNote}>
+                  Layout will be scaled to real-world measurements when applied.
+                </span>
+              </div>
             </div>
           ) : null}
 

@@ -1685,6 +1685,13 @@ export class TripleAApiClient {
       description?: string;
       stagePosition?: "top" | "bottom" | "left" | "right";
       capacityEstimate?: number;
+      estimatedVenueWidthFeet?: number;
+      estimatedVenueHeightFeet?: number;
+      referenceSeat?: {
+        widthFeet: number;
+        depthFeet: number;
+        rowPitchFeet: number;
+      };
       suggestions: Array<{
         type:
           | "stage"

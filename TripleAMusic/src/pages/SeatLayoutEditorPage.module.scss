@@ -6,6 +6,207 @@
   min-height: 100%;
 }
 
+/* ─── Photoshop-style editor root ─────────────────────────────────── */
+.editorRoot {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0;
+}
+
+/* ── Top bar ── */
+.editorTopBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  height: 48px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editorTopBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editorTopBarCenter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editorTopBarRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+
+  /* Compact all toolBtn instances in the top bar */
+  .toolBtn {
+    height: 32px;
+    min-height: 32px;
+    padding: 0 10px;
+  }
+}
+
+/* ── 3-column main area ── */
+.editorMain {
+  display: grid;
+  grid-template-columns: 52px 1fr 280px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .editorMain {
+    grid-template-columns: 52px 1fr;
+  }
+}
+
+/* ── Vertical left toolbar ── */
+.leftToolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.leftToolItem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 44px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  color: var(--text-muted);
+  gap: 1px;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  &[data-active="true"] {
+    background: var(--accent, #1C276E);
+    color: #fff;
+  }
+
+  &[data-destructive]:hover {
+    color: var(--danger, #dc2626);
+    background: color-mix(in srgb, var(--danger, #dc2626) 10%, transparent);
+  }
+
+  /* CSS tooltip */
+  &::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface-inverse, #111);
+    color: var(--text-inverse, #fff);
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 500;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+.leftToolItemIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.leftToolItemLabel {
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.leftToolSeparator {
+  width: 32px;
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+  flex-shrink: 0;
+}
+
+/* ── Canvas wrap (center panel) ── */
+.canvasWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: #111;
+}
+
+/* ── Status bar ── */
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 12px;
+  height: 28px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  color: var(--text-muted);
+}
+
+.statusBarItem {
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.statusBarDivider {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 /* ─── Header card ─────────────────────────────────────────────────── */
 .headerCard {
   display: flex;
@@ -50,7 +251,7 @@
   min-height: 0;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
   .editorBody {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -98,10 +299,12 @@
 .floorTab {
   display: inline-flex;
   align-items: center;
-  height: 26px;
+  justify-content: center;
+  height: 30px;
+  min-width: 64px;
   padding: 0 10px;
-  border: none;
-  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
   background: transparent;
   color: var(--text-muted);
   font-size: 12px;
@@ -109,12 +312,14 @@
   cursor: pointer;
   transition:
     background-color 0.15s,
-    color 0.15s;
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .floorTab:hover {
   color: var(--text);
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
 }
 
 .floorTab:focus-visible {
@@ -123,9 +328,9 @@
 }
 
 .floorTab[data-active="true"] {
-  color: var(--text);
-  background: var(--surface-3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--accent, #1C276E);
+  color: #fff;
+  border-color: transparent;
 }
 
 /* Center tool groups */
@@ -273,7 +478,7 @@
 }
 
 /* Hide panel toggle on desktop (panel always visible) */
-@media (min-width: 961px) {
+@media (min-width: 1101px) {
   .panelToggle {
     display: none;
   }
@@ -337,13 +542,20 @@
   overflow-y: auto;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
   .sidePanel {
     display: none;
   }
 
   .sidePanel[data-open="true"] {
     display: flex;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(300px, 90vw);
+    z-index: 400;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -998,6 +1210,49 @@
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
   flex-shrink: 0;
+}
+
+.aiScaleBanner {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, #E59D0D 8%, var(--surface-2));
+  flex-shrink: 0;
+}
+
+.aiScaleIcon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.aiScaleDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text, #fff);
+
+  strong {
+    font-size: 11px;
+    font-weight: 600;
+    color: #E59D0D;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  span {
+    color: var(--text-subtle, var(--text-muted));
+    line-height: 1.4;
+  }
+}
+
+.aiScaleNote {
+  font-style: italic;
+  margin-top: 2px;
 }
 
 .aiSuggestionList {

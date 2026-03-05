@@ -1,5 +1,6 @@
 import type { Response, Router } from "express";
 import express from "express";
+import * as http from "http";
 import multer from "multer";
 import mongoose from "mongoose";
 import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
@@ -1154,69 +1155,122 @@ router.post(
 
       const base64Image = blob.data.toString("base64");
 
-      const OLLAMA_PROMPT = `You are analyzing a venue floor plan image to help set up a seating layout. Identify all recognizable areas and return ONLY a valid JSON object — no markdown, no explanation, no code fences.
+      // Concise prompt — fewer output tokens = much faster generation
+      const OLLAMA_PROMPT = `Analyze this venue floor plan. Return ONLY valid JSON, no markdown or explanation.
 
-Return exactly this structure:
-{
-  "description": "one sentence describing the venue",
-  "stagePosition": "top" | "bottom" | "left" | "right" | null,
-  "capacityEstimate": <integer or null>,
-  "suggestions": [
-    {
-      "type": "stage" | "aisle" | "table" | "railing" | "stairs" | "dance_floor" | "entrance" | "seating_zone",
-      "label": "human readable label e.g. Main Stage, Center Aisle, Table 1, Exit",
-      "xPct": <0-100, top-left X as % of image width>,
-      "yPct": <0-100, top-left Y as % of image height>,
-      "widthPct": <0-100, element width as % of image width>,
-      "heightPct": <0-100, element height as % of image height>,
-      "estimatedSeats": <integer or null>,
-      "notes": "optional accessibility or context note"
-    }
-  ]
-}
+{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":integer|null,"suggestions":[{"type":"stage"|"aisle"|"table"|"railing"|"stairs"|"dance_floor"|"entrance"|"seating_zone","label":"short name","xPct":0-100,"yPct":0-100,"widthPct":0-100,"heightPct":0-100,"estimatedSeats":integer|null}]}
 
-Rules:
-- xPct/yPct are top-left corner percentages (0=left/top, 100=right/bottom)
-- widthPct/heightPct are the element size as percentage of image dimensions
-- Include stage, main seating areas, aisles, entrances/exits, and any special areas (dance floor, bar area, standing room)
-- For seating_zone, set estimatedSeats to the approximate number of chairs/seats you can see or infer
-- stagePosition should reflect where the stage is relative to the audience (top=stage at top of image)
-- If unclear, make a best guess based on typical venue layouts`;
+Rules: xPct/yPct = top-left corner % of image. Include stage, seating areas, aisles, entrances. stagePosition = where stage is relative to audience.`;
 
       let ollamaResponse: { response: string };
       try {
-        const ollamaFetchRes = await (async () => {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 180_000);
-          try {
-            return await fetch("http://localhost:11434/api/generate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                model: "qwen2.5vl:32b",
-                prompt: OLLAMA_PROMPT,
-                images: [base64Image],
-                stream: false,
-                format: "json",
-              }),
-              signal: controller.signal,
+        // Use Node.js http.request (no default timeout) instead of global fetch()
+        // which uses undici with a 300-s bodyTimeout that kills long VLM calls.
+        // Our only timeout is the explicit req.setTimeout(720_000) below.
+        ollamaResponse = await new Promise<{ response: string }>(
+          (resolve, reject) => {
+            const reqBody = JSON.stringify({
+              model: "qwen2.5vl:32b",
+              prompt: OLLAMA_PROMPT,
+              images: [base64Image],
+              stream: false,
+              format: "json",
+              keep_alive: "30m",
             });
-          } finally {
-            clearTimeout(timeoutId);
-          }
-        })();
 
-        if (!ollamaFetchRes.ok) {
-          const errText = await ollamaFetchRes.text();
-          throw new Error(`Ollama error ${ollamaFetchRes.status}: ${errText}`);
+            const req = http.request(
+              {
+                hostname: "127.0.0.1",
+                port: 11434,
+                path: "/api/generate",
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Content-Length": Buffer.byteLength(reqBody),
+                },
+              },
+              (ollamaRes) => {
+                const chunks: Buffer[] = [];
+                ollamaRes.on("data", (chunk: Buffer) => chunks.push(chunk));
+                ollamaRes.on("end", () => {
+                  const body = Buffer.concat(chunks).toString("utf-8");
+                  if (ollamaRes.statusCode && ollamaRes.statusCode >= 400) {
+                    reject(
+                      new Error(
+                        `Ollama error ${ollamaRes.statusCode}: ${body.slice(0, 500)}`,
+                      ),
+                    );
+                    return;
+                  }
+                  try {
+                    const parsed = JSON.parse(body) as {
+                      response?: string;
+                      message?: { content?: string };
+                    };
+                    const text =
+                      typeof parsed.response === "string"
+                        ? parsed.response
+                        : (parsed.message?.content ?? "");
+                    if (!text) {
+                      reject(
+                        new Error(
+                          `Ollama: empty response. Body: ${body.slice(0, 300)}`,
+                        ),
+                      );
+                      return;
+                    }
+                    resolve({ response: text });
+                  } catch {
+                    reject(
+                      new Error(
+                        `Ollama: JSON parse failed. Body: ${body.slice(0, 300)}`,
+                      ),
+                    );
+                  }
+                });
+                ollamaRes.on("error", reject);
+              },
+            );
+
+            // 12-minute hard cap (generous for model load + generation)
+            req.setTimeout(720_000, () =>
+              req.destroy(new Error("timeout")),
+            );
+            req.on("error", reject);
+            req.write(reqBody);
+            req.end();
+          },
+        );
+      } catch (fetchErr: unknown) {
+        console.error("Ollama request error:", fetchErr);
+
+        // Produce a helpful message depending on failure mode
+        let userMsg = "Could not reach Ollama.";
+        if (fetchErr instanceof Error) {
+          const msg = fetchErr.message.toLowerCase();
+          const cause = String(
+            (fetchErr as Error & { cause?: unknown }).cause ?? "",
+          );
+          if (
+            msg.includes("econnrefused") ||
+            cause.includes("econnrefused") ||
+            msg.includes("socket hang up")
+          ) {
+            userMsg =
+              "Ollama is not running. Start it with `ollama serve` and make sure the qwen2.5vl:32b model is available.";
+          } else if (
+            fetchErr.name === "AbortError" ||
+            msg.includes("aborted") ||
+            msg.includes("abort")
+          ) {
+            userMsg =
+              "Ollama took too long to respond (>12 min). The model may still be loading — try again in a moment.";
+          } else {
+            userMsg = `Could not reach Ollama: ${fetchErr.message}`;
+          }
         }
 
-        ollamaResponse = (await ollamaFetchRes.json()) as { response: string };
-      } catch (fetchErr) {
-        console.error("Ollama fetch error:", fetchErr);
-        return res.status(502).json({
-          message: `Could not reach Ollama: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`,
-        });
+        return res.status(502).json({ message: userMsg });
       }
 
       // Parse the model's JSON response
@@ -1224,6 +1278,13 @@ Rules:
         description?: string;
         stagePosition?: "top" | "bottom" | "left" | "right";
         capacityEstimate?: number;
+        estimatedVenueWidthFeet?: number;
+        estimatedVenueHeightFeet?: number;
+        referenceSeat?: {
+          widthFeet?: number;
+          depthFeet?: number;
+          rowPitchFeet?: number;
+        };
         suggestions?: Array<{
           type: string;
           label: string;
@@ -1307,6 +1368,34 @@ Rules:
           notes: s.notes ? String(s.notes) : undefined,
         }));
 
+      // Extract and validate real-world measurement fields
+      const estimatedVenueWidthFeet =
+        typeof parsed.estimatedVenueWidthFeet === "number" &&
+        parsed.estimatedVenueWidthFeet > 0
+          ? parsed.estimatedVenueWidthFeet
+          : undefined;
+      const estimatedVenueHeightFeet =
+        typeof parsed.estimatedVenueHeightFeet === "number" &&
+        parsed.estimatedVenueHeightFeet > 0
+          ? parsed.estimatedVenueHeightFeet
+          : undefined;
+      const refSeat = parsed.referenceSeat;
+      const referenceSeat =
+        refSeat && typeof refSeat.widthFeet === "number" && refSeat.widthFeet > 0
+          ? {
+              widthFeet: refSeat.widthFeet,
+              depthFeet:
+                typeof refSeat.depthFeet === "number" && refSeat.depthFeet > 0
+                  ? refSeat.depthFeet
+                  : refSeat.widthFeet,
+              rowPitchFeet:
+                typeof refSeat.rowPitchFeet === "number" &&
+                refSeat.rowPitchFeet > 0
+                  ? refSeat.rowPitchFeet
+                  : refSeat.widthFeet * 1.65,
+            }
+          : undefined;
+
       const aiSuggestions = {
         analyzedAt: new Date(),
         model: "qwen2.5vl:32b",
@@ -1323,6 +1412,9 @@ Rules:
           parsed.capacityEstimate > 0
             ? parsed.capacityEstimate
             : undefined,
+        estimatedVenueWidthFeet,
+        estimatedVenueHeightFeet,
+        referenceSeat,
         suggestions: sanitizedSuggestions,
       };
 
