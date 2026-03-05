@@ -58,6 +58,19 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.legendAvailable {
+  background: var(--success);
+}
+.legendSelected {
+  background: var(--primary);
+}
+.legendInCart {
+  background: var(--taa-gold-500);
+}
+.legendSold {
+  background: var(--text-subtle);
+}
+
 .chart {
   display: flex;
   flex-direction: column;
@@ -132,27 +145,41 @@
     opacity: 0.5;
   }
 
-  &[data-status="sold"] {
-    background: var(--surface-3) !important;
-    color: var(--text-muted);
-    cursor: not-allowed;
+  /* Available — green */
+  &[data-status="available"] {
+    background: var(--success) !important;
+    color: #fff;
   }
 
-  &[data-status="unavailable"] {
-    background: var(--surface-3) !important;
-    cursor: not-allowed;
+  /* In-cart (other users viewing) — amber/gold warning */
+  &[data-status="in-cart"] {
+    background: var(--taa-gold-500) !important;
+    color: var(--primary-contrast);
   }
 
+  /* Selected by current user — gold with ring */
   &[data-status="selected"] {
     background: var(--primary) !important;
     color: var(--primary-contrast);
     box-shadow:
       0 0 0 2px var(--primary),
-      0 0 8px var(--primary);
+      0 0 8px rgba(229, 157, 13, 0.45);
+  }
+
+  /* Sold / unavailable — muted gray, not interactive */
+  &[data-status="sold"],
+  &[data-status="unavailable"] {
+    background: var(--text-subtle) !important;
+    color: var(--bg);
+    cursor: not-allowed;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .seat {
+    transition: none;
+  }
+
   .seat:hover:not(:disabled) {
     transform: none;
   }

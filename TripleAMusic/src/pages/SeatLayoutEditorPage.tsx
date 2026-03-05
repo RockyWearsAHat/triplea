@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Location } from "@shared";
 import { Button, spacing } from "@shared";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { SectionWizard } from "../components/SectionWizard";
+import type {
+  EditableSeatBlueprint,
+  SectionWizardParams,
+} from "../components/SectionWizard";
+import { generateSectionSeats } from "../components/SectionWizard";
+import { LayoutPreviewModal } from "../components/LayoutPreviewModal";
 import ui from "@shared/styles/primitives.module.scss";
 import { useNavigate, useParams } from "react-router-dom";
-import { useBeforeUnload, useBlocker } from "react-router";
+import { useBeforeUnload } from "react-router";
 import { HostDashboardShell } from "../components/HostDashboardShell";
 import { createApiClient, getAssetUrl } from "../lib/urls";
 import styles from "./SeatLayoutEditorPage.module.scss";
 
 type StagePosition = "top" | "bottom" | "left" | "right";
 
-type EditableFloor = {
-  floorId: string;
-  name: string;
-  order: number;
-};
+// Domain types used across this file
+type EditableFloor = { floorId: string; name: string; order: number };
 
 type EditableSeat = {
   seatId: string;
@@ -26,21 +31,32 @@ type EditableSeat = {
   posX?: number;
   posY?: number;
   isAvailable: boolean;
-  accessibility?: string[];
+  isSold?: boolean;
   rowGroupId?: string;
   detachedFromRow?: boolean;
+  rotationDeg?: number;
 };
 
 type LayoutElement = {
   elementId: string;
-  type: "aisle";
+  type: "aisle" | "table" | "railing" | "stairs" | "dance_floor" | "entrance";
   floorId?: string;
-  orientation: "vertical" | "horizontal";
+  /** Used by aisle/railing/stairs */
+  orientation?: "vertical" | "horizontal";
   x: number;
   y: number;
-  length: number;
-  thickness: number;
+  /** Used by aisle/railing lines */
+  length?: number;
+  thickness?: number;
   label?: string;
+  /** Table-specific */
+  tableShape?: "round" | "rect";
+  width?: number;
+  height?: number;
+  seatCount?: number;
+  /** Stairs/entrance direction */
+  arrowDir?: "up" | "down" | "left" | "right";
+  accessibilityNote?: string;
 };
 
 type StageConfig = {
@@ -69,75 +85,72 @@ type BuilderTool =
   | "measure"
   | "stage"
   | "aisle"
-  | "path";
+  | "path"
+  | "table";
 
-type ViewState = {
-  scale: number;
-  offsetX: number; // px
-  offsetY: number; // px
+type AiSuggestion = {
+  type:
+    | "stage"
+    | "aisle"
+    | "table"
+    | "railing"
+    | "stairs"
+    | "dance_floor"
+    | "entrance"
+    | "seating_zone";
+  label: string;
+  xPct: number;
+  yPct: number;
+  widthPct?: number;
+  heightPct?: number;
+  estimatedSeats?: number;
+  notes?: string;
 };
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+type AiAnalysisResult = {
+  analyzedAt: string;
+  model: string;
+  description?: string;
+  stagePosition?: "top" | "bottom" | "left" | "right";
+  capacityEstimate?: number;
+  suggestions: AiSuggestion[];
+};
+
+type ViewState = { scale: number; offsetX: number; offsetY: number };
+
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
 }
 
-function stableSortFloors(floors: EditableFloor[]): EditableFloor[] {
-  return [...floors].sort(
-    (a, b) => a.order - b.order || a.name.localeCompare(b.name),
-  );
+function stableSortFloors(floors: EditableFloor[]) {
+  return [...floors].sort((a, b) => {
+    const oa = typeof a.order === "number" ? a.order : 0;
+    const ob = typeof b.order === "number" ? b.order : 0;
+    if (oa !== ob) return oa - ob;
+    return (a.name || "").localeCompare(b.name || "");
+  });
 }
 
-function ensureDefaultFloor(floors?: EditableFloor[]): EditableFloor[] {
-  const list =
-    floors && floors.length > 0
-      ? floors
-      : [{ floorId: "floor-1", name: "Main Floor", order: 0 }];
-  const seen = new Set<string>();
-  const deduped: EditableFloor[] = [];
-  for (const f of list) {
-    if (!f.floorId || seen.has(f.floorId)) continue;
-    seen.add(f.floorId);
-    deduped.push({ ...f, order: typeof f.order === "number" ? f.order : 0 });
-  }
-  return stableSortFloors(
-    deduped.length
-      ? deduped
-      : [{ floorId: "floor-1", name: "Main Floor", order: 0 }],
-  );
-}
-
-function isLegacyPercentPosition(posX?: number, posY?: number): boolean {
-  if (typeof posX !== "number" || typeof posY !== "number") return false;
-  return posX >= 0 && posX <= 100 && posY >= 0 && posY <= 100;
+function ensureDefaultFloor(
+  floors: EditableFloor[] | undefined,
+): EditableFloor[] {
+  if (floors && floors.length > 0) return floors;
+  return [{ floorId: "floor-1", name: "Main floor", order: 0 }];
 }
 
 function normalizeSeatPositions(
-  seats: EditableSeat[],
+  seats: EditableSeat[] | undefined,
   defaultFloorId: string,
   gridSize: number,
-): EditableSeat[] {
-  const hasAnyPosition = seats.some(
+) {
+  const normalized: EditableSeat[] = (seats ?? []).map((s) => ({
+    ...s,
+    floorId: s.floorId ?? defaultFloorId,
+  }));
+
+  const hasAnyPosition = normalized.some(
     (s) => typeof s.posX === "number" && typeof s.posY === "number",
   );
-  const needsAnyPosition = seats.some(
-    (s) => typeof s.posX !== "number" || typeof s.posY !== "number",
-  );
-
-  const normalized = seats.map((s) => {
-    const floorId = s.floorId || defaultFloorId;
-    if (isLegacyPercentPosition(s.posX, s.posY)) {
-      // Convert 0..100 "percent" into world coords around origin.
-      const x = ((s.posX ?? 50) - 50) * 10;
-      const y = ((s.posY ?? 50) - 50) * 10;
-      return { ...s, floorId, posX: x, posY: y };
-    }
-    return {
-      ...s,
-      floorId,
-    };
-  });
-
-  if (!needsAnyPosition) return normalized;
 
   // If most seats were missing coordinates, place them in a simple grid near origin.
   const coordsSeats = normalized.filter(
@@ -252,6 +265,275 @@ function toRowName(idx: number): string {
   return s;
 }
 
+type SectionBlockSpec = {
+  shape: "straight" | "arc" | "wing";
+  sectionName: string;
+  rowCount: number;
+  seatsPerRow: number;
+  maxSeatsPerRow?: number;
+  rowSpacingFt: number;
+  seatPitchFt: number;
+  innerRadiusFt?: number;
+  arcSpanDeg?: number;
+  centerAngleDeg?: number;
+  offsetXFt?: number;
+  offsetYFt?: number;
+  rotationDeg?: number;
+};
+
+type RoomTemplate = {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+  roomWidth: number; // feet
+  roomHeight: number; // feet
+  stagePosition: "top" | "bottom" | "left" | "right";
+  /** null means no auto-generated tables, just the room boundary */
+  defaultPlan: {
+    tableShape: "round" | "rect";
+    tableDiameterFeet: number; // or width for rect
+    tableHeightFeet: number; // rect only
+    seatsPerTable: number;
+    cols: number;
+    rows: number;
+    aisleWidthFeet: number;
+    sectionName: string;
+  } | null;
+  rowPlan?: SectionBlockSpec[] | null;
+};
+
+const ROOM_TEMPLATES: RoomTemplate[] = [
+  {
+    id: "banquet",
+    label: "Banquet / Wedding",
+    icon: "🍽️",
+    description: "Round tables for a wedding or banquet hall",
+    roomWidth: 60,
+    roomHeight: 40,
+    stagePosition: "top",
+    defaultPlan: {
+      tableShape: "round",
+      tableDiameterFeet: 5,
+      tableHeightFeet: 5,
+      seatsPerTable: 8,
+      cols: 4,
+      rows: 3,
+      aisleWidthFeet: 5,
+      sectionName: "Main",
+    },
+  },
+  {
+    id: "dinner_show",
+    label: "Dinner Show",
+    icon: "🎭",
+    description: "Rectangular tables facing a stage, cabaret style",
+    roomWidth: 50,
+    roomHeight: 35,
+    stagePosition: "top",
+    defaultPlan: {
+      tableShape: "rect",
+      tableDiameterFeet: 6,
+      tableHeightFeet: 3,
+      seatsPerTable: 6,
+      cols: 3,
+      rows: 4,
+      aisleWidthFeet: 4,
+      sectionName: "Main",
+    },
+  },
+  {
+    id: "club",
+    label: "Nightclub / Lounge",
+    icon: "🎶",
+    description: "Intimate table layout around a dance floor",
+    roomWidth: 40,
+    roomHeight: 30,
+    stagePosition: "bottom",
+    defaultPlan: {
+      tableShape: "round",
+      tableDiameterFeet: 3,
+      tableHeightFeet: 3,
+      seatsPerTable: 4,
+      cols: 4,
+      rows: 3,
+      aisleWidthFeet: 3,
+      sectionName: "Lounge",
+    },
+  },
+  {
+    id: "theater",
+    label: "Theater",
+    icon: "🎭",
+    description: "Traditional theater with main section and angled side wings",
+    roomWidth: 70,
+    roomHeight: 50,
+    stagePosition: "top",
+    defaultPlan: null,
+    rowPlan: [
+      {
+        shape: "straight",
+        sectionName: "Center",
+        rowCount: 10,
+        seatsPerRow: 14,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        offsetXFt: 0,
+        offsetYFt: 12,
+      },
+      {
+        shape: "wing",
+        sectionName: "Left",
+        rowCount: 7,
+        seatsPerRow: 7,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        rotationDeg: -25,
+        offsetXFt: -28,
+        offsetYFt: 20,
+      },
+      {
+        shape: "wing",
+        sectionName: "Right",
+        rowCount: 7,
+        seatsPerRow: 7,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        rotationDeg: 25,
+        offsetXFt: 28,
+        offsetYFt: 20,
+      },
+    ],
+  },
+  {
+    id: "arena",
+    label: "Arena (¾)",
+    icon: "🏟️",
+    description: "Three-sided arena seating around a center stage",
+    roomWidth: 80,
+    roomHeight: 80,
+    stagePosition: "bottom",
+    defaultPlan: null,
+    rowPlan: [
+      {
+        shape: "straight",
+        sectionName: "Front",
+        rowCount: 4,
+        seatsPerRow: 14,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        offsetXFt: 0,
+        offsetYFt: -18,
+      },
+      {
+        shape: "wing",
+        sectionName: "Left Bank",
+        rowCount: 8,
+        seatsPerRow: 8,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        rotationDeg: -45,
+        offsetXFt: -28,
+        offsetYFt: 0,
+      },
+      {
+        shape: "wing",
+        sectionName: "Right Bank",
+        rowCount: 8,
+        seatsPerRow: 8,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        rotationDeg: 45,
+        offsetXFt: 28,
+        offsetYFt: 0,
+      },
+      {
+        shape: "straight",
+        sectionName: "Rear",
+        rowCount: 8,
+        seatsPerRow: 12,
+        rowSpacingFt: 3,
+        seatPitchFt: 2.5,
+        offsetXFt: 0,
+        offsetYFt: 25,
+      },
+    ],
+  },
+  {
+    id: "amphitheater",
+    label: "Amphitheater",
+    icon: "🎪",
+    description: "Fan-curved rows for outdoor or semicircular venues",
+    roomWidth: 100,
+    roomHeight: 60,
+    stagePosition: "bottom",
+    defaultPlan: null,
+    rowPlan: [
+      {
+        shape: "arc",
+        sectionName: "Main",
+        rowCount: 12,
+        seatsPerRow: 10,
+        maxSeatsPerRow: 22,
+        rowSpacingFt: 3.5,
+        seatPitchFt: 2.5,
+        innerRadiusFt: 20,
+        arcSpanDeg: 160,
+        centerAngleDeg: 270,
+        offsetXFt: 0,
+        offsetYFt: 0,
+      },
+    ],
+  },
+  {
+    id: "small_club",
+    label: "Small Club",
+    icon: "🎺",
+    description: "Intimate venue, 5 short rows facing stage",
+    roomWidth: 25,
+    roomHeight: 20,
+    stagePosition: "top",
+    defaultPlan: null,
+    rowPlan: [
+      {
+        shape: "straight",
+        sectionName: "Main",
+        rowCount: 5,
+        seatsPerRow: 8,
+        rowSpacingFt: 2.5,
+        seatPitchFt: 2.2,
+        offsetXFt: 0,
+        offsetYFt: 8,
+      },
+    ],
+  },
+  {
+    id: "concert",
+    label: "Concert / Standing",
+    icon: "🎵",
+    description: "General admission open floor facing stage",
+    roomWidth: 80,
+    roomHeight: 50,
+    stagePosition: "top",
+    defaultPlan: null,
+    rowPlan: null,
+  },
+];
+
+// Palette for auto-assigning section colors
+const SECTION_COLORS = [
+  "#3b82f6", // blue
+  "#a855f7", // purple
+  "#22c55e", // green
+  "#f97316", // orange
+  "#ec4899", // pink
+  "#14b8a6", // teal
+  "#eab308", // yellow
+  "#ef4444", // red
+  "#6366f1", // indigo
+  "#06b6d4", // cyan
+];
+
 export function SeatLayoutEditorPage() {
   const { locationId, layoutId } = useParams();
   const navigate = useNavigate();
@@ -282,6 +564,17 @@ export function SeatLayoutEditorPage() {
   const [showSeatText, setShowSeatText] = useState<boolean>(true);
   const [showAllFloors, setShowAllFloors] = useState<boolean>(false);
   const [toolsOpen, setToolsOpen] = useState<boolean>(false);
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false);
+
+  // In-page confirm dialog — replaces all window.confirm() calls.
+  const [confirmState, setConfirmState] = useState<{
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  function confirmThen(message: string, onConfirm: () => void) {
+    setConfirmState({ message, onConfirm });
+  }
 
   const [seatSizeFeet, setSeatSizeFeet] = useState<number>(2.5);
   const [seatPitchFeet, setSeatPitchFeet] = useState<number>(3);
@@ -290,6 +583,9 @@ export function SeatLayoutEditorPage() {
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>("");
   const [showBackgroundImage, setShowBackgroundImage] =
     useState<boolean>(false);
+  // Local file for background image (before upload)
+  const [localBgFile, setLocalBgFile] = useState<File | null>(null);
+  const [localBgBlob, setLocalBgBlob] = useState<string | null>(null);
 
   const [stage, setStage] = useState<StageConfig>({
     x: 0,
@@ -305,6 +601,12 @@ export function SeatLayoutEditorPage() {
     offsetX: 0,
     offsetY: 0,
   });
+
+  // Ref to the latest view state — native DOM wheel handler reads this to avoid stale closures.
+  const viewStateRef = useRef<ViewState>({ scale: 1, offsetX: 0, offsetY: 0 });
+  useEffect(() => {
+    viewStateRef.current = view;
+  }, [view]);
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [selectedRowGroupId, setSelectedRowGroupId] = useState<string | null>(
@@ -340,6 +642,37 @@ export function SeatLayoutEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
+
+  // AI analysis state
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AiAnalysisResult | null>(null);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<
+    Set<number>
+  >(new Set());
+  const [uploadingBgNow, setUploadingBgNow] = useState(false);
+
+  // Room boundary + planner state
+  const [roomBoundary, setRoomBoundary] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [showRoomBoundary, setShowRoomBoundary] = useState(true);
+  const [plannerTableShape, setPlannerTableShape] = useState<"round" | "rect">(
+    "round",
+  );
+  const [plannerTableDiameter, setPlannerTableDiameter] = useState(4);
+  const [plannerSeatsPerTable, setPlannerSeatsPerTable] = useState(4);
+  const [plannerRows, setPlannerRows] = useState(2);
+  const [plannerCols, setPlannerCols] = useState(3);
+  const [plannerAisleWidth, setPlannerAisleWidth] = useState(3);
+  const [plannerSectionName, setPlannerSectionName] = useState("Main");
+  const [plannerRoomWidth, setPlannerRoomWidth] = useState(40);
+  const [plannerRoomHeight, setPlannerRoomHeight] = useState(30);
 
   function getLayoutSnapshotString(args?: {
     name?: string;
@@ -350,6 +683,7 @@ export function SeatLayoutEditorPage() {
     backgroundImageUrl?: string;
     stage?: StageConfig;
     seats?: EditableSeat[];
+    roomBoundary?: { width: number; height: number } | null;
   }): string {
     const snapshot = {
       name: (args?.name ?? name).trim() || "Seating",
@@ -362,6 +696,10 @@ export function SeatLayoutEditorPage() {
         .toString(),
       stage: args?.stage ?? stage,
       seats: args?.seats ?? seats,
+      roomBoundary:
+        args !== undefined && "roomBoundary" in args
+          ? args.roomBoundary
+          : roomBoundary,
     };
 
     return JSON.stringify(snapshot);
@@ -369,6 +707,7 @@ export function SeatLayoutEditorPage() {
 
   function hasUnsavedChanges(): boolean {
     if (!savedSnapshotRef.current) return false;
+    if (localBgFile) return true; // pending local image upload
     return getLayoutSnapshotString() !== savedSnapshotRef.current;
   }
 
@@ -379,10 +718,11 @@ export function SeatLayoutEditorPage() {
 
   function handleDone() {
     if (hasUnsavedChanges()) {
-      const ok = window.confirm(
+      confirmThen(
         "You have unsaved changes. Exit the seat editor without saving?",
+        navigateToVenueLayouts,
       );
-      if (!ok) return;
+      return;
     }
     navigateToVenueLayouts();
   }
@@ -393,24 +733,31 @@ export function SeatLayoutEditorPage() {
     event.returnValue = "";
   });
 
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    if (allowNavigationRef.current) return false;
-    if (currentLocation.pathname === nextLocation.pathname) return false;
-    return hasUnsavedChanges();
-  });
-
+  // Block browser back/forward when there are unsaved changes.
+  // useBlocker requires a data router; we're using BrowserRouter so we use
+  // the popstate approach instead.
   useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    const ok = window.confirm(
-      "You have unsaved changes. Leave this page without saving?",
-    );
-    if (ok) {
-      allowNavigationRef.current = true;
-      blocker.proceed();
-    } else {
-      blocker.reset();
+    // Push an extra history entry so we can catch the first back-press.
+    window.history.pushState(null, "", window.location.href);
+
+    function handlePopState() {
+      if (allowNavigationRef.current) return;
+      if (!hasUnsavedChanges()) return;
+      // Re-push so the URL doesn't change while the dialog renders.
+      window.history.pushState(null, "", window.location.href);
+      confirmThen(
+        "You have unsaved changes. Leave this page without saving?",
+        () => {
+          allowNavigationRef.current = true;
+          window.history.back();
+        },
+      );
     }
-  }, [blocker]);
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragSeatIdRef = useRef<string | null>(null);
@@ -445,6 +792,8 @@ export function SeatLayoutEditorPage() {
     startEl: LayoutElement;
   } | null>(null);
   const spaceDownRef = useRef(false);
+  // Tracks screen-space pointerdown position for tap vs drag detection in row tool
+  const rowDownScreenRef = useRef<{ x: number; y: number } | null>(null);
 
   const [newSectionName, setNewSectionName] = useState("Main");
   const [newSectionRows, setNewSectionRows] = useState(10);
@@ -471,6 +820,10 @@ export function SeatLayoutEditorPage() {
         const loadedBackgroundImageUrl = ((layout as any).backgroundImageUrl ??
           "") as string;
         const loadedStage = ((layout as any).stage ?? stage) as StageConfig;
+        const loadedRoomBoundary = ((layout as any).roomBoundary ?? null) as {
+          width: number;
+          height: number;
+        } | null;
 
         const loadedFloors = ensureDefaultFloor(
           (layout.floors as EditableFloor[] | undefined) ?? undefined,
@@ -488,6 +841,11 @@ export function SeatLayoutEditorPage() {
         setElements(loadedElements);
         setBackgroundImageUrl(loadedBackgroundImageUrl);
         setStage(loadedStage);
+        setRoomBoundary(loadedRoomBoundary);
+        if (loadedRoomBoundary) {
+          setPlannerRoomWidth(loadedRoomBoundary.width);
+          setPlannerRoomHeight(loadedRoomBoundary.height);
+        }
         setFloors(loadedFloors);
         setActiveFloorId(defaultFloorId);
         setSeats(normalizedSeats);
@@ -501,6 +859,7 @@ export function SeatLayoutEditorPage() {
           backgroundImageUrl: loadedBackgroundImageUrl,
           stage: loadedStage,
           seats: normalizedSeats,
+          roomBoundary: loadedRoomBoundary,
         });
 
         if (locationId) {
@@ -526,6 +885,37 @@ export function SeatLayoutEditorPage() {
       if (e.code === "Space") {
         spaceDownRef.current = true;
       }
+      // Skip shortcuts when typing in an input/textarea/select
+      const tag = (e.target as HTMLElement)?.tagName ?? "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      switch (e.key.toUpperCase()) {
+        case "V":
+          setTool("select");
+          break;
+        case "H":
+          setTool("pan");
+          break;
+        case "R":
+          setTool("row");
+          break;
+        case "T":
+          setTool("table");
+          break;
+        case "M":
+          setTool("measure");
+          break;
+        case "S":
+          setTool("stage");
+          break;
+        case "A":
+          setTool("aisle");
+          break;
+        case "DELETE":
+        case "BACKSPACE":
+          if (selectedSeatId) deleteSeat(selectedSeatId);
+          break;
+      }
     }
     function onKeyUp(e: KeyboardEvent) {
       if (e.code === "Space") {
@@ -541,15 +931,20 @@ export function SeatLayoutEditorPage() {
   }, []);
 
   useEffect(() => {
-    // On first paint after loading, center origin in the viewport.
-    if (!viewportRef.current) return;
+    // Wait for layout paint before reading dimensions — rAF ensures getBoundingClientRect
+    // returns real values instead of zero during the loading→loaded transition.
+    if (loading) return;
     const el = viewportRef.current;
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    setView((prev) => {
-      if (prev.offsetX !== 0 || prev.offsetY !== 0) return prev;
-      return { ...prev, offsetX: rect.width / 2, offsetY: rect.height / 2 };
+    if (!el) return;
+    const raf = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      setView((prev) => {
+        if (prev.offsetX !== 0 || prev.offsetY !== 0) return prev;
+        return { ...prev, offsetX: rect.width / 2, offsetY: rect.height / 2 };
+      });
     });
+    return () => cancelAnimationFrame(raf);
   }, [loading]);
 
   const selectedSeat = selectedSeatId
@@ -561,17 +956,24 @@ export function SeatLayoutEditorPage() {
     return seats.filter((s) => (s.floorId || activeFloorId) === activeFloorId);
   }, [seats, activeFloorId, showAllFloors]);
 
+  // Map section name → color for the current canvas view
+  const sectionColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const uniqueNames = Array.from(
+      new Set(seats.map((s) => s.section || "Main")),
+    );
+    uniqueNames.forEach((name, i) => {
+      map.set(name, SECTION_COLORS[i % SECTION_COLORS.length]!);
+    });
+    return map;
+  }, [seats]);
+
   const visibleElements = useMemo(() => {
     if (showAllFloors) return elements;
     return elements.filter(
       (e) => (e.floorId || activeFloorId) === activeFloorId,
     );
   }, [elements, activeFloorId, showAllFloors]);
-
-  const selectedRowSeats = useMemo(() => {
-    if (!selectedRowGroupId) return [];
-    return seats.filter((s) => s.rowGroupId === selectedRowGroupId);
-  }, [seats, selectedRowGroupId]);
 
   function updateSeat(seatId: string, patch: Partial<EditableSeat>) {
     setSeats((prev) =>
@@ -634,20 +1036,18 @@ export function SeatLayoutEditorPage() {
   }
 
   function clearArrangement() {
-    if (
-      !window.confirm(
-        "Clear all seats and aisle guides? This cannot be undone.",
-      )
-    ) {
-      return;
-    }
-    setSeats([]);
-    setElements([]);
-    setSelectedSeatId(null);
-    setSelectedRowGroupId(null);
-    setSelectedElementId(null);
-    setMeasure(null);
-    setRowDraft(null);
+    confirmThen(
+      "Clear all seats and aisle guides? This cannot be undone.",
+      () => {
+        setSeats([]);
+        setElements([]);
+        setSelectedSeatId(null);
+        setSelectedRowGroupId(null);
+        setSelectedElementId(null);
+        setMeasure(null);
+        setRowDraft(null);
+      },
+    );
   }
 
   function deleteSeat(seatId: string) {
@@ -725,6 +1125,403 @@ export function SeatLayoutEditorPage() {
     });
   }
 
+  // ─── Room Planner helpers ────────────────────────────────────────────────
+
+  function generateTableSeats(
+    tableEl: LayoutElement,
+    floorId: string,
+  ): EditableSeat[] {
+    const seatCount = tableEl.seatCount ?? 4;
+    const cx = tableEl.x + (tableEl.width ?? 0) / 2;
+    const cy = tableEl.y + (tableEl.height ?? 0) / 2;
+    const radius =
+      (tableEl.width ?? tableEl.height ?? gridSize * 4) / 2 +
+      seatSizeFeet * gridSize * 0.6 +
+      4;
+    const tableSeatArr: EditableSeat[] = [];
+    const tableLabel = tableEl.label ?? "T";
+    for (let i = 0; i < seatCount; i++) {
+      const angle = (2 * Math.PI * i) / seatCount - Math.PI / 2;
+      tableSeatArr.push({
+        seatId: `seat-${tableEl.elementId}-${i}-${Date.now() + i}`,
+        rowGroupId: `table-${tableEl.elementId}`,
+        row: tableLabel,
+        seatNumber: `${i + 1}`,
+        section: "",
+        posX: cx + Math.cos(angle) * radius - (seatSizeFeet * gridSize) / 2,
+        posY: cy + Math.sin(angle) * radius - (seatSizeFeet * gridSize) / 2,
+        floorId,
+        isAvailable: true,
+        detachedFromRow: true,
+      });
+    }
+    return tableSeatArr;
+  }
+
+  function generateSmartPlan(opts?: {
+    tableShape?: "round" | "rect";
+    tableDiameterFeet?: number;
+    tableHeightFeet?: number;
+    seatsPerTable?: number;
+    cols?: number;
+    rows?: number;
+    aisleWidthFeet?: number;
+    roomWidthFeet?: number;
+    roomHeightFeet?: number;
+    sectionName?: string;
+    floorId?: string;
+  }) {
+    const shape = opts?.tableShape ?? plannerTableShape;
+    const diam = opts?.tableDiameterFeet ?? plannerTableDiameter;
+    const tableH = opts?.tableHeightFeet ?? (shape === "rect" ? 3 : diam);
+    const perTable = opts?.seatsPerTable ?? plannerSeatsPerTable;
+    const cols = opts?.cols ?? plannerCols;
+    const rows = opts?.rows ?? plannerRows;
+    const aisleW = opts?.aisleWidthFeet ?? plannerAisleWidth;
+    const rW = opts?.roomWidthFeet ?? plannerRoomWidth;
+    const rH = opts?.roomHeightFeet ?? plannerRoomHeight;
+    const secName = opts?.sectionName ?? plannerSectionName;
+    const floorId =
+      opts?.floorId ?? activeFloorId ?? floors[0]?.floorId ?? "floor-1";
+
+    const doGenerate = () => {
+      // Room boundary (in pixels)
+      const rbPx = { width: rW * gridSize, height: rH * gridSize };
+      setRoomBoundary({ width: rW, height: rH });
+      setPlannerRoomWidth(rW);
+      setPlannerRoomHeight(rH);
+
+      const tableWPx = diam * gridSize;
+      const tableHPx = tableH * gridSize;
+      const cellW = tableWPx + aisleW * gridSize;
+      const cellH = tableHPx + aisleW * gridSize;
+      const gridW = cols * cellW;
+      const gridH = rows * cellH;
+      const startX = (rbPx.width - gridW) / 2;
+      const startY = (rbPx.height - gridH) / 2 + 4 * gridSize; // offset from stage
+
+      const newElements: LayoutElement[] = [];
+      const newSeats: EditableSeat[] = [];
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const elemId = `table-${Date.now()}-${r}-${c}`;
+          const ex = startX + c * cellW;
+          const ey = startY + r * cellH;
+          const tableEl: LayoutElement = {
+            elementId: elemId,
+            type: "table",
+            floorId,
+            tableShape: shape,
+            x: ex,
+            y: ey,
+            width: tableWPx,
+            height: tableHPx,
+            seatCount: perTable,
+            label: `T${r * cols + c + 1}`,
+          };
+          newElements.push(tableEl);
+          const tableSeats = generateTableSeats(tableEl, floorId);
+          tableSeats.forEach((s) => {
+            s.section = secName;
+          });
+          newSeats.push(...tableSeats);
+        }
+      }
+
+      setElements((prev) => [
+        ...prev.filter((e) => e.type !== "table"),
+        ...newElements,
+      ]);
+      setSeats((prev) => {
+        const withoutTableSeats = prev.filter(
+          (s) => !s.rowGroupId?.startsWith("table-"),
+        );
+        return [...withoutTableSeats, ...newSeats];
+      });
+    };
+
+    const floorElements = elements.filter((e) => e.floorId === floorId);
+    if (floorElements.some((e) => e.type === "table")) {
+      confirmThen(
+        `Replace the ${floorElements.filter((e) => e.type === "table").length} existing table(s) and their seats on this floor?`,
+        doGenerate,
+      );
+    } else {
+      doGenerate();
+    }
+  }
+
+  function applyRoomTemplate(templateId: string) {
+    const tpl = ROOM_TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setRoomBoundary({ width: tpl.roomWidth, height: tpl.roomHeight });
+    setPlannerRoomWidth(tpl.roomWidth);
+    setPlannerRoomHeight(tpl.roomHeight);
+    // Move stage to match template preference
+    const stageW = Math.round(tpl.roomWidth * 0.4) * gridSize;
+    const centerX = (tpl.roomWidth * gridSize) / 2;
+    const stageX = centerX - stageW / 2;
+    const stageY =
+      tpl.stagePosition === "bottom"
+        ? (tpl.roomHeight - 6) * gridSize
+        : gridSize;
+    const stageH = 6 * gridSize;
+    setStage((prev) => ({
+      ...prev,
+      x: stageX,
+      y: stageY,
+      width: stageW,
+      height: stageH,
+    }));
+    if (tpl.defaultPlan) {
+      generateSmartPlan({
+        tableShape: tpl.defaultPlan.tableShape,
+        tableDiameterFeet: tpl.defaultPlan.tableDiameterFeet,
+        tableHeightFeet: tpl.defaultPlan.tableHeightFeet,
+        seatsPerTable: tpl.defaultPlan.seatsPerTable,
+        cols: tpl.defaultPlan.cols,
+        rows: tpl.defaultPlan.rows,
+        aisleWidthFeet: tpl.defaultPlan.aisleWidthFeet,
+        roomWidthFeet: tpl.roomWidth,
+        roomHeightFeet: tpl.roomHeight,
+        sectionName: tpl.defaultPlan.sectionName,
+      });
+    }
+    if (tpl.rowPlan && tpl.rowPlan.length > 0) {
+      const stageCx = stageX + stageW / 2;
+      const stageCy = stageY + stageH / 2;
+      const allSeats: EditableSeat[] = [];
+      for (const spec of tpl.rowPlan) {
+        const sectionCx = stageCx + (spec.offsetXFt ?? 0) * gridSize;
+        const sectionCy = stageCy + (spec.offsetYFt ?? 0) * gridSize;
+        const params: SectionWizardParams = {
+          shape: spec.shape,
+          sectionName: spec.sectionName,
+          rowCount: spec.rowCount,
+          seatsPerRow: spec.seatsPerRow,
+          maxSeatsPerRow: spec.maxSeatsPerRow,
+          rowSpacingFt: spec.rowSpacingFt,
+          seatPitchFt: spec.seatPitchFt,
+          innerRadiusFt: spec.innerRadiusFt,
+          arcSpanDeg: spec.arcSpanDeg,
+          centerAngleDeg: spec.centerAngleDeg,
+          centerX: sectionCx,
+          centerY: sectionCy,
+          startX: sectionCx,
+          startY: sectionCy,
+          rotationDeg: spec.rotationDeg,
+          floorId: activeFloorId ?? floors[0]?.floorId ?? "floor-1",
+        };
+        const blueprints = generateSectionSeats(params, gridSize);
+        allSeats.push(...(blueprints as EditableSeat[]));
+      }
+      setSeats((prev) => [...prev, ...allSeats]);
+    }
+  }
+
+  function handleWizardGenerate(blueprints: EditableSeatBlueprint[]) {
+    setSeats((prev) => {
+      const ids = new Set(prev.map((s) => s.seatId));
+      return [
+        ...prev,
+        ...(blueprints.filter((b) => !ids.has(b.seatId)) as EditableSeat[]),
+      ];
+    });
+    setWizardOpen(false);
+  }
+
+  function addPresetElement(
+    type: LayoutElement["type"],
+    opts?: Partial<LayoutElement>,
+  ) {
+    const floorId = activeFloorId ?? floors[0]?.floorId ?? "floor-1";
+    const elemId = `${type}-${Date.now()}`;
+    const defaults: Record<string, Partial<LayoutElement>> = {
+      table: {
+        tableShape: "round",
+        width: 4 * gridSize,
+        height: 4 * gridSize,
+        seatCount: 4,
+      },
+      railing: {
+        orientation: "horizontal",
+        length: 8 * gridSize,
+        thickness: gridSize / 3,
+      },
+      stairs: {
+        orientation: "horizontal",
+        width: 4 * gridSize,
+        height: 3 * gridSize,
+        arrowDir: "up",
+      },
+      dance_floor: { width: 10 * gridSize, height: 10 * gridSize },
+      entrance: {
+        width: 3 * gridSize,
+        height: 2 * gridSize,
+        arrowDir: "up",
+        label: "Entrance",
+      },
+    };
+    const el: LayoutElement = {
+      elementId: elemId,
+      type,
+      floorId,
+      x: 100,
+      y: 100,
+      ...defaults[type],
+      ...opts,
+    };
+    setElements((prev) => [...prev, el]);
+    if (type === "table") {
+      const tSeats = generateTableSeats(el, floorId);
+      setSeats((prev) => [...prev, ...tSeats]);
+    }
+  }
+
+  /**
+   * Convert an AI suggestion's percentage coordinates into world-space pixels.
+   * Uses roomBoundary if set; falls back to a 40×30 ft default.
+   */
+  function suggestionToWorld(s: AiSuggestion): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } {
+    const rW = (roomBoundary?.width ?? 40) * gridSize;
+    const rH = (roomBoundary?.height ?? 30) * gridSize;
+    return {
+      x: (s.xPct / 100) * rW,
+      y: (s.yPct / 100) * rH,
+      width: ((s.widthPct ?? 10) / 100) * rW,
+      height: ((s.heightPct ?? 10) / 100) * rH,
+    };
+  }
+
+  function applySuggestion(s: AiSuggestion) {
+    const { x, y, width, height } = suggestionToWorld(s);
+    const floorId = activeFloorId ?? floors[0]?.floorId ?? "floor-1";
+
+    if (s.type === "stage") {
+      setStage((prev) => ({
+        ...prev,
+        x: x + width / 2,
+        y: y + height / 2,
+        width: Math.max(gridSize * 4, width),
+        height: Math.max(gridSize * 3, height),
+      }));
+    } else if (s.type === "seating_zone") {
+      // Generate a block of seats
+      const cols = Math.max(1, Math.round(width / (gridSize * 1.2)));
+      const rows = Math.max(1, Math.round(height / (gridSize * 1.2)));
+      const generated: EditableSeat[] = [];
+      for (let r = 0; r < rows; r++) {
+        const rowLetter = toRowName(r);
+        for (let c = 0; c < cols; c++) {
+          const seatId = `ai-${floorId}-${s.label.replace(/\s+/g, "-")}-${r}-${c}-${Date.now()}`;
+          generated.push({
+            seatId,
+            section: s.label,
+            floorId,
+            row: rowLetter,
+            seatNumber: String(c + 1),
+            posX: x + c * gridSize * 1.2,
+            posY: y + r * gridSize * 1.2,
+            isAvailable: true,
+          });
+        }
+      }
+      setSeats((prev) => [...prev, ...generated]);
+    } else {
+      // All other element types
+      const elemType = s.type as LayoutElement["type"];
+      const elemId = `${elemType}-ai-${Date.now()}`;
+      const el: LayoutElement = {
+        elementId: elemId,
+        type: elemType,
+        floorId,
+        x,
+        y,
+        width,
+        height,
+        label: s.label,
+        ...(elemType === "aisle"
+          ? {
+              orientation:
+                width >= height
+                  ? ("horizontal" as const)
+                  : ("vertical" as const),
+              length: Math.max(width, height),
+              thickness: Math.min(width, height),
+            }
+          : {}),
+        ...(elemType === "table"
+          ? { tableShape: "round" as const, seatCount: s.estimatedSeats ?? 4 }
+          : {}),
+        ...(elemType === "entrance" ? { arrowDir: "up" as const } : {}),
+      };
+      setElements((prev) => [...prev, el]);
+      if (elemType === "table") {
+        const tSeats = generateTableSeats(el, floorId);
+        setSeats((prev) => [...prev, ...tSeats]);
+      }
+    }
+  }
+
+  function applyAllSuggestions() {
+    if (!aiResult) return;
+    aiResult.suggestions.forEach((s, idx) => {
+      if (!rejectedSuggestionIds.has(idx)) {
+        applySuggestion(s);
+      }
+    });
+    setShowAiPanel(false);
+    setAiResult(null);
+  }
+
+  /** Upload background image immediately (before Save) + trigger analysis */
+  async function handleUploadAndAnalyze() {
+    if (!layoutId || !localBgFile) return;
+    setUploadingBgNow(true);
+    setAiError(null);
+    try {
+      const result = await api.uploadSeatingLayoutBackgroundImage(
+        layoutId,
+        localBgFile,
+      );
+      setBackgroundImageUrl(result.imageUrl);
+      if (localBgBlob) {
+        URL.revokeObjectURL(localBgBlob);
+        setLocalBgBlob(null);
+      }
+      setLocalBgFile(null);
+      setShowBackgroundImage(true);
+      // Now analyze
+      await triggerAnalysis();
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setUploadingBgNow(false);
+    }
+  }
+
+  async function triggerAnalysis() {
+    if (!layoutId) return;
+    setAiAnalyzing(true);
+    setAiError(null);
+    try {
+      const resp = await api.analyzeSeatingLayoutImage(layoutId);
+      setAiResult(resp.aiSuggestions);
+      setRejectedSuggestionIds(new Set());
+      setShowAiPanel(true);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAiAnalyzing(false);
+    }
+  }
+
   async function handleSave() {
     if (!layoutId) return;
     setSaving(true);
@@ -732,6 +1529,24 @@ export function SeatLayoutEditorPage() {
     setSaveOk(false);
 
     try {
+      let resolvedBgUrl = backgroundImageUrl.trim() || undefined;
+
+      // If the user picked a local file, upload it first to get a persisted URL
+      if (localBgFile) {
+        const result = await api.uploadSeatingLayoutBackgroundImage(
+          layoutId,
+          localBgFile,
+        );
+        resolvedBgUrl = result.imageUrl;
+        setBackgroundImageUrl(result.imageUrl);
+        // Release the blob URL since we now have a server URL
+        if (localBgBlob) {
+          URL.revokeObjectURL(localBgBlob);
+          setLocalBgBlob(null);
+        }
+        setLocalBgFile(null);
+      }
+
       const sections = computeSectionsFromSeats(seats);
       await api.updateSeatingLayout(layoutId, {
         name: name.trim() || "Seating",
@@ -739,10 +1554,11 @@ export function SeatLayoutEditorPage() {
         stagePosition,
         floors,
         elements,
-        backgroundImageUrl: backgroundImageUrl.trim() || undefined,
+        backgroundImageUrl: resolvedBgUrl,
         stage,
         sections,
         seats,
+        roomBoundary: roomBoundary ?? undefined,
       });
       savedSnapshotRef.current = getLayoutSnapshotString();
       setSaveOk(true);
@@ -800,8 +1616,8 @@ export function SeatLayoutEditorPage() {
     for (const el of elements) {
       if (el.type !== "aisle") continue;
       if ((el.floorId || activeFloorId) !== floorId) continue;
-      const w = el.orientation === "vertical" ? el.thickness : el.length;
-      const h = el.orientation === "vertical" ? el.length : el.thickness;
+      const w = (el.orientation === "vertical" ? el.thickness : el.length) ?? 0;
+      const h = (el.orientation === "vertical" ? el.length : el.thickness) ?? 0;
       const rect = {
         left: el.x - w / 2,
         right: el.x + w / 2,
@@ -951,12 +1767,41 @@ export function SeatLayoutEditorPage() {
           );
         }
         const maxSeatSize = spacingFeet * maxComp;
-        const ok = window.confirm(
+        const newSeatSizeFt = Math.max(1, Math.floor(maxSeatSize * 4) / 4);
+        const deferredSpacingFeet = spacingFeet;
+        const deferredOpts = opts;
+        confirmThen(
           `These ${count} seats would overlap at the current seat size (${seatSizeFeet.toFixed(2)} ft).\n\nResize seats automatically to ~${maxSeatSize.toFixed(2)} ft to fit?`,
+          () => {
+            setSeatSizeFeet(newSeatSizeFt);
+            const sPx = deferredSpacingFeet * gridSize;
+            const ctr = samplePolyline(deferredOpts.points, sPx);
+            if (ctr.length < 2) return;
+            const sec = newSectionName.trim() || "Main";
+            const ts = Date.now();
+            const gen: EditableSeat[] = ctr.map((c, idx) => {
+              let x = c.x,
+                y = c.y;
+              if (snapToGrid) {
+                x = snap(x, gridSize);
+                y = snap(y, gridSize);
+              }
+              return {
+                seatId: `path-${deferredOpts.floorId}-${ts}-${idx + 1}`,
+                section: sec,
+                floorId: deferredOpts.floorId,
+                row: "P",
+                seatNumber: String(idx + 1),
+                posX: x,
+                posY: y,
+                isAvailable: true,
+              };
+            });
+            setSeats((prev) => [...prev, ...gen]);
+            setSelectedSeatId(gen[0]?.seatId ?? null);
+          },
         );
-        if (!ok) return;
-        // Snap to quarter-foot increments.
-        setSeatSizeFeet(Math.max(1, Math.floor(maxSeatSize * 4) / 4));
+        return;
       }
     }
 
@@ -1127,8 +1972,44 @@ export function SeatLayoutEditorPage() {
         snapToGrid && !e.altKey
           ? { x: snap(world.x, gridSize), y: snap(world.y, gridSize) }
           : world;
+
+      // Tap-tap mode: if rowDraft already exists, this is the second tap →
+      // finalize immediately with the new end point.
+      if (rowDraft) {
+        const finalDraft = { ...rowDraft, end: snapped };
+        generateRowFromDraft(finalDraft);
+        setRowDraft(null);
+        rowDownScreenRef.current = null;
+        return;
+      }
+
+      // First tap / start of drag: set the draft start point.
+      rowDownScreenRef.current = { x: e.clientX, y: e.clientY };
       setRowDraft({ start: snapped, end: snapped, floorId: activeFloorId });
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (tool === "table") {
+      const world = screenToWorld(e);
+      if (!world) return;
+      const id = `table-${Date.now()}`;
+      const tableEl: LayoutElement = {
+        elementId: id,
+        type: "table",
+        floorId: activeFloorId,
+        tableShape: "round",
+        x: snapToGrid ? snap(world.x, gridSize) : world.x,
+        y: snapToGrid ? snap(world.y, gridSize) : world.y,
+        width: 4 * gridSize,
+        height: 4 * gridSize,
+        seatCount: 4,
+        label: `T${elements.filter((el) => el.type === "table").length + 1}`,
+      };
+      setElements((prev) => [...prev, tableEl]);
+      const tSeats = generateTableSeats(tableEl, activeFloorId);
+      setSeats((prev) => [...prev, ...tSeats]);
+      setSelectedElementId(id);
       return;
     }
 
@@ -1276,13 +2157,25 @@ export function SeatLayoutEditorPage() {
     });
   }
 
-  function handleViewportPointerUp() {
+  function handleViewportPointerUp(e: React.PointerEvent) {
     dragSeatIdRef.current = null;
     dragStartRef.current = null;
     panStartRef.current = null;
     dragRowRef.current = null;
     dragStageRef.current = null;
     dragElementRef.current = null;
+
+    // Row tool: if the pointer moved >= 8px it was a drag → finalize now.
+    // If it moved < 8px (a tap), keep rowDraft for the second tap.
+    if (tool === "row" && rowDraft && rowDownScreenRef.current) {
+      const dx = e.clientX - rowDownScreenRef.current.x;
+      const dy = e.clientY - rowDownScreenRef.current.y;
+      if (dx * dx + dy * dy >= 64) {
+        generateRowFromDraft(rowDraft);
+        setRowDraft(null);
+      }
+      rowDownScreenRef.current = null;
+    }
   }
 
   // Measure now finalizes on second click; no implicit finalize on leave.
@@ -1335,39 +2228,40 @@ export function SeatLayoutEditorPage() {
     setSelectedSeatId(generated[0]?.seatId ?? null);
   }
 
-  function handleWheel(e: React.WheelEvent) {
-    // Trackpad:
-    // - two-finger scroll = pan
-    // - pinch zoom = WheelEvent with ctrlKey=true (macOS)
-    e.preventDefault();
-
+  // Native wheel handler attached with { passive: false } so e.preventDefault() is honoured.
+  // Reads latest pan/zoom from viewStateRef to avoid stale closures.
+  useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-
-    if (!e.ctrlKey) {
-      setView((prev) => ({
-        ...prev,
-        offsetX: prev.offsetX - e.deltaX,
-        offsetY: prev.offsetY - e.deltaY,
-      }));
-      return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      if (!e.ctrlKey) {
+        // Two-finger trackpad scroll → pan
+        setView((prev) => ({
+          ...prev,
+          offsetX: prev.offsetX - e.deltaX,
+          offsetY: prev.offsetY - e.deltaY,
+        }));
+        return;
+      }
+      // Pinch zoom (ctrlKey=true on macOS trackpad / Ctrl+scroll on mouse)
+      const rect = el!.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const { offsetX, offsetY, scale } = viewStateRef.current;
+      const worldX = (screenX - offsetX) / scale;
+      const worldY = (screenY - offsetY) / scale;
+      const delta = -e.deltaY;
+      const zoomFactor = Math.exp(delta / 500);
+      const nextScale = clamp(scale * zoomFactor, 0.25, 3);
+      const nextOffsetX = screenX - worldX * nextScale;
+      const nextOffsetY = screenY - worldY * nextScale;
+      setView({ scale: nextScale, offsetX: nextOffsetX, offsetY: nextOffsetY });
     }
-
-    const rect = el.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-
-    const worldX = (screenX - view.offsetX) / view.scale;
-    const worldY = (screenY - view.offsetY) / view.scale;
-
-    const delta = -e.deltaY;
-    const zoomFactor = Math.exp(delta / 500);
-    const nextScale = clamp(view.scale * zoomFactor, 0.25, 3);
-
-    const nextOffsetX = screenX - worldX * nextScale;
-    const nextOffsetY = screenY - worldY * nextScale;
-    setView({ scale: nextScale, offsetX: nextOffsetX, offsetY: nextOffsetY });
-  }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function autoLabelActiveFloor() {
     setSeats((prev) => {
@@ -1440,6 +2334,18 @@ export function SeatLayoutEditorPage() {
   const gridOffsetX = ((view.offsetX % scaledGrid) + scaledGrid) % scaledGrid;
   const gridOffsetY = ((view.offsetY % scaledGrid) + scaledGrid) % scaledGrid;
 
+  const toolHintText: Record<string, string> = {
+    select:
+      "V — Click seat to select. Drag to move. Delete/Backspace to remove.",
+    row: "R — Click and drag to draw a row of seats.",
+    pan: "H — Click and drag to pan. Space+drag also pans.",
+    table: "T — Click anywhere to place a table.",
+    measure: "M — Click and drag to measure distance.",
+    path: "P — Click to lay path points, double-click to finalize.",
+    aisle: "A — Click to place an aisle guide.",
+    stage: "S — Click to reposition the stage.",
+  };
+
   return (
     <HostDashboardShell
       title="Seat map editor"
@@ -1502,9 +2408,10 @@ export function SeatLayoutEditorPage() {
           </p>
         ) : null}
 
-        <div className={styles.grid}>
+        <div className={styles.editorBody}>
           <div className={[ui.card, styles.viewportCard].join(" ")}>
             <div className={styles.viewportToolbar}>
+              {/* ── Left: floor tabs ─────────────────────────────── */}
               <div className={styles.floors}>
                 {stableSortFloors(floors).map((f) => (
                   <button
@@ -1535,66 +2442,188 @@ export function SeatLayoutEditorPage() {
                 </Button>
               </div>
 
-              <div className={styles.tools}>
-                <Button
-                  size="sm"
-                  variant={tool === "select" ? "secondary" : "ghost"}
-                  onClick={() => setTool("select")}
+              {/* ── Center: primary tools + advanced dropdown ─────── */}
+              <div className={styles.toolsGroup}>
+                <div className={styles.primaryTools}>
+                  <button
+                    type="button"
+                    className={styles.toolBtn}
+                    data-active={tool === "select"}
+                    onClick={() => setTool("select")}
+                    title="Select & move seats (S)"
+                  >
+                    <span className={styles.toolIcon}>↖</span>
+                    <span className={styles.toolLabel}>Select</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.toolBtn}
+                    data-active={tool === "row"}
+                    onClick={() => setTool("row")}
+                    title="Draw a row of seats (R)"
+                  >
+                    <span className={styles.toolIcon}>⊟</span>
+                    <span className={styles.toolLabel}>Row</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.toolBtn}
+                    data-active={tool === "pan"}
+                    onClick={() => setTool("pan")}
+                    title="Pan the canvas (H)"
+                  >
+                    <span className={styles.toolIcon}>✥</span>
+                    <span className={styles.toolLabel}>Pan</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.toolBtn}
+                    data-active={tool === "table"}
+                    onClick={() => setTool("table")}
+                    title="Place table (T)"
+                  >
+                    <span className={styles.toolIcon}>⬛</span>
+                    <span className={styles.toolLabel}>Table</span>
+                  </button>
+                </div>
+
+                <div className={styles.advancedWrap}>
+                  <button
+                    type="button"
+                    className={styles.toolBtn}
+                    data-active={
+                      advancedOpen ||
+                      tool === "measure" ||
+                      tool === "path" ||
+                      tool === "aisle" ||
+                      tool === "stage"
+                    }
+                    onClick={() => setAdvancedOpen((v) => !v)}
+                    title="Advanced tools"
+                  >
+                    <span className={styles.toolIcon}>
+                      {tool === "measure"
+                        ? "↔"
+                        : tool === "path"
+                          ? "〜"
+                          : tool === "aisle"
+                            ? "⊩"
+                            : tool === "stage"
+                              ? "⬜"
+                              : "⋯"}
+                    </span>
+                    <span className={styles.toolLabel}>
+                      {tool === "measure"
+                        ? "Measure"
+                        : tool === "path"
+                          ? "Path"
+                          : tool === "aisle"
+                            ? "Aisle"
+                            : tool === "stage"
+                              ? "Stage"
+                              : "More"}
+                    </span>
+                    <span className={styles.chevron}>▾</span>
+                  </button>
+                  {advancedOpen && (
+                    <div className={styles.advancedDropdown}>
+                      {(
+                        [
+                          {
+                            id: "measure",
+                            icon: "↔",
+                            label: "Measure",
+                            title: "Measure distances",
+                          },
+                          {
+                            id: "path",
+                            icon: "〜",
+                            label: "Path",
+                            title: "Seats along a path",
+                          },
+                          {
+                            id: "aisle",
+                            icon: "⊩",
+                            label: "Aisle",
+                            title: "Add aisle guide",
+                          },
+                          {
+                            id: "stage",
+                            icon: "⬜",
+                            label: "Stage",
+                            title: "Reposition stage",
+                          },
+                        ] as const
+                      ).map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={styles.dropdownItem}
+                          data-active={tool === t.id}
+                          title={t.title}
+                          onClick={() => {
+                            setTool(t.id as BuilderTool);
+                            setAdvancedOpen(false);
+                          }}
+                        >
+                          <span className={styles.toolIcon}>{t.icon}</span>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Right: zoom display + clear + panel toggle ───── */}
+              <div className={styles.toolsRight}>
+                <span className={styles.zoomBadge}>
+                  {Math.round(view.scale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className={styles.toolBtn}
+                  onClick={() =>
+                    setView((prev) => ({
+                      ...prev,
+                      scale: Math.max(0.1, prev.scale / 1.2),
+                    }))
+                  }
+                  title="Zoom out (-)"
                 >
-                  Select
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "row" ? "secondary" : "ghost"}
-                  onClick={() => setTool("row")}
+                  <span className={styles.toolIcon}>−</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.toolBtn}
+                  onClick={() =>
+                    setView((prev) => ({
+                      ...prev,
+                      scale: Math.min(10, prev.scale * 1.2),
+                    }))
+                  }
+                  title="Zoom in (+)"
                 >
-                  Row
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "pan" ? "secondary" : "ghost"}
-                  onClick={() => setTool("pan")}
+                  <span className={styles.toolIcon}>+</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.toolBtn}
+                  data-destructive
+                  onClick={clearArrangement}
+                  title="Clear all seats"
                 >
-                  Pan
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "measure" ? "secondary" : "ghost"}
-                  onClick={() => setTool("measure")}
-                >
-                  Measure
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "path" ? "secondary" : "ghost"}
-                  onClick={() => setTool("path")}
-                >
-                  Path
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "aisle" ? "secondary" : "ghost"}
-                  onClick={() => setTool("aisle")}
-                >
-                  Aisle
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "stage" ? "secondary" : "ghost"}
-                  onClick={() => setTool("stage")}
-                >
-                  Stage
-                </Button>
-                <Button size="sm" variant="ghost" onClick={clearArrangement}>
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  variant={toolsOpen ? "secondary" : "ghost"}
+                  <span className={styles.toolIcon}>🗑</span>
+                </button>
+                <button
+                  type="button"
+                  className={[styles.toolBtn, styles.panelToggle].join(" ")}
+                  data-active={toolsOpen}
                   onClick={() => setToolsOpen((v) => !v)}
+                  title="Toggle settings panel"
                 >
-                  Tools
-                </Button>
+                  <span className={styles.toolIcon}>⚙</span>
+                </button>
               </div>
             </div>
 
@@ -1616,7 +2645,6 @@ export function SeatLayoutEditorPage() {
                 }
                 if (tool === "path") setPathHover(null);
               }}
-              onWheel={handleWheel}
               style={{
                 backgroundImage: showGrid
                   ? `linear-gradient(to right, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),\n                     linear-gradient(to bottom, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px)`
@@ -1625,9 +2653,9 @@ export function SeatLayoutEditorPage() {
                 backgroundPosition: `${gridOffsetX}px ${gridOffsetY}px`,
               }}
             >
-              {showBackgroundImage && backgroundImageUrl ? (
+              {showBackgroundImage && (localBgBlob || backgroundImageUrl) ? (
                 <img
-                  src={getAssetUrl(backgroundImageUrl)}
+                  src={localBgBlob ?? getAssetUrl(backgroundImageUrl)}
                   alt=""
                   className={styles.layoutImage}
                 />
@@ -1695,6 +2723,143 @@ export function SeatLayoutEditorPage() {
                       {el.label ? (
                         <div className={styles.aisleLabel}>{el.label}</div>
                       ) : null}
+                    </div>
+                  ))}
+
+                {/* Room boundary */}
+                {showRoomBoundary && roomBoundary && (
+                  <div
+                    className={styles.roomBoundary}
+                    style={{
+                      width: roomBoundary.width * gridSize,
+                      height: roomBoundary.height * gridSize,
+                    }}
+                  />
+                )}
+
+                {/* Tables */}
+                {visibleElements
+                  .filter((el) => el.type === "table")
+                  .map((el) => (
+                    <div
+                      key={el.elementId}
+                      className={styles.elementTable}
+                      data-selected={el.elementId === selectedElementId}
+                      data-shape={el.tableShape ?? "round"}
+                      onPointerDown={(e) =>
+                        handleElementPointerDown(e, el.elementId)
+                      }
+                      style={{
+                        transform: `translate(${el.x}px, ${el.y}px)`,
+                        width: el.width ?? 4 * gridSize,
+                        height: el.height ?? 4 * gridSize,
+                      }}
+                      title={el.label || "Table"}
+                    >
+                      {el.label ? (
+                        <span className={styles.elementLabel}>{el.label}</span>
+                      ) : null}
+                    </div>
+                  ))}
+
+                {/* Railings */}
+                {visibleElements
+                  .filter((el) => el.type === "railing")
+                  .map((el) => (
+                    <div
+                      key={el.elementId}
+                      className={styles.elementRailing}
+                      data-selected={el.elementId === selectedElementId}
+                      data-orientation={el.orientation ?? "horizontal"}
+                      onPointerDown={(e) =>
+                        handleElementPointerDown(e, el.elementId)
+                      }
+                      style={{
+                        transform: `translate(${el.x}px, ${el.y}px) translate(-50%, -50%)`,
+                        width:
+                          (el.orientation ?? "horizontal") === "vertical"
+                            ? (el.thickness ?? gridSize / 3)
+                            : (el.length ?? 8 * gridSize),
+                        height:
+                          (el.orientation ?? "horizontal") === "vertical"
+                            ? (el.length ?? 8 * gridSize)
+                            : (el.thickness ?? gridSize / 3),
+                      }}
+                      title={el.label || "Railing"}
+                    />
+                  ))}
+
+                {/* Stairs */}
+                {visibleElements
+                  .filter((el) => el.type === "stairs")
+                  .map((el) => (
+                    <div
+                      key={el.elementId}
+                      className={styles.elementStairs}
+                      data-selected={el.elementId === selectedElementId}
+                      onPointerDown={(e) =>
+                        handleElementPointerDown(e, el.elementId)
+                      }
+                      style={{
+                        transform: `translate(${el.x}px, ${el.y}px)`,
+                        width: el.width ?? 4 * gridSize,
+                        height: el.height ?? 3 * gridSize,
+                      }}
+                      title={el.label || "Stairs"}
+                    >
+                      <div className={styles.stairsStripes} />
+                      {el.label ? (
+                        <span className={styles.elementLabel}>{el.label}</span>
+                      ) : null}
+                    </div>
+                  ))}
+
+                {/* Dance floors */}
+                {visibleElements
+                  .filter((el) => el.type === "dance_floor")
+                  .map((el) => (
+                    <div
+                      key={el.elementId}
+                      className={styles.elementDanceFloor}
+                      data-selected={el.elementId === selectedElementId}
+                      onPointerDown={(e) =>
+                        handleElementPointerDown(e, el.elementId)
+                      }
+                      style={{
+                        transform: `translate(${el.x}px, ${el.y}px)`,
+                        width: el.width ?? 10 * gridSize,
+                        height: el.height ?? 10 * gridSize,
+                      }}
+                      title={el.label || "Dance Floor"}
+                    >
+                      <span className={styles.elementLabel}>
+                        {el.label ?? "Dance Floor"}
+                      </span>
+                    </div>
+                  ))}
+
+                {/* Entrances / Exits */}
+                {visibleElements
+                  .filter((el) => el.type === "entrance")
+                  .map((el) => (
+                    <div
+                      key={el.elementId}
+                      className={styles.elementEntrance}
+                      data-selected={el.elementId === selectedElementId}
+                      data-dir={el.arrowDir ?? "up"}
+                      onPointerDown={(e) =>
+                        handleElementPointerDown(e, el.elementId)
+                      }
+                      style={{
+                        transform: `translate(${el.x}px, ${el.y}px)`,
+                        width: el.width ?? 3 * gridSize,
+                        height: el.height ?? 2 * gridSize,
+                      }}
+                      title={el.label || "Entrance"}
+                    >
+                      <span className={styles.elementLabel}>
+                        {el.label ?? "↑"}
+                      </span>
                     </div>
                   ))}
 
@@ -1844,6 +3009,10 @@ export function SeatLayoutEditorPage() {
                   const rowSelected =
                     !!selectedRowGroupId && s.rowGroupId === selectedRowGroupId;
 
+                  const seatColor =
+                    sectionColorMap.get(s.section || "Main") ??
+                    SECTION_COLORS[0]!;
+
                   return (
                     <button
                       key={s.seatId}
@@ -1855,37 +3024,177 @@ export function SeatLayoutEditorPage() {
                       data-available={s.isAvailable}
                       data-row-selected={rowSelected}
                       data-detached={!!s.detachedFromRow}
-                      style={{
-                        transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
-                        width: seatSizeFeet * gridSize,
-                        height: seatSizeFeet * gridSize,
-                      }}
+                      style={
+                        {
+                          transform: `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${s.rotationDeg ?? 0}deg)`,
+                          width: seatSizeFeet * gridSize,
+                          height: seatSizeFeet * gridSize,
+                          "--seat-color": seatColor,
+                        } as React.CSSProperties
+                      }
                       title={`${s.section} ${s.row}${s.seatNumber}`}
                     >
-                      {showSeatText ? (
-                        <span className={styles.seatText}>
-                          {s.row}
-                          {s.seatNumber}
-                        </span>
-                      ) : null}
+                      <span className={styles.seatBack} aria-hidden="true" />
+                      <span className={styles.seatCushion}>
+                        {showSeatText ? (
+                          <span className={styles.seatText}>
+                            {s.row}
+                            {s.seatNumber}
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
                   );
                 })}
               </div>
+              {toolHintText[tool] ? (
+                <div className={styles.hintPill}>{toolHintText[tool]}</div>
+              ) : null}
             </div>
 
-            {toolsOpen ? (
-              <div
-                className={[ui.card, ui.cardPad, styles.toolsOverlay].join(" ")}
-                onWheel={(e) => e.stopPropagation()}
-              >
-                <h3
-                  className={ui.sectionTitle}
-                  style={{ marginBottom: spacing.sm }}
-                >
-                  Tools
-                </h3>
+            {/* seatInspector moved to sidePanel */}
+          </div>
 
+          {/* ── Right panel: always-visible settings / inspector ── */}
+          <div
+            className={styles.sidePanel}
+            data-open={toolsOpen}
+            onWheel={(e) => e.stopPropagation()}
+          >
+            <div className={styles.panelHeader}>
+              <span className={styles.panelTitle}>
+                {selectedSeat ? "Edit Seat" : "Settings"}
+              </span>
+              {selectedSeat ? (
+                <button
+                  type="button"
+                  className={styles.panelClose}
+                  onClick={() => {
+                    setSelectedSeatId(null);
+                    setSelectedRowGroupId(null);
+                  }}
+                  aria-label="Close inspector"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+
+            <div className={styles.panelBody}>
+              {selectedSeat ? (
+                /* ── Seat inspector ──────────────────────────────── */
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  <div className={styles.seatInspectorGrid}>
+                    <input
+                      className={ui.input}
+                      value={selectedSeat.section}
+                      onChange={(e) =>
+                        updateSeat(selectedSeat.seatId, {
+                          section: e.target.value,
+                        })
+                      }
+                      placeholder="Section"
+                      aria-label="Section"
+                    />
+                    <input
+                      className={ui.input}
+                      value={selectedSeat.row}
+                      onChange={(e) =>
+                        updateSeat(selectedSeat.seatId, { row: e.target.value })
+                      }
+                      placeholder="Row"
+                      aria-label="Row"
+                    />
+                    <input
+                      className={ui.input}
+                      value={selectedSeat.seatNumber}
+                      onChange={(e) =>
+                        updateSeat(selectedSeat.seatId, {
+                          seatNumber: e.target.value,
+                        })
+                      }
+                      placeholder="Seat #"
+                      aria-label="Seat number"
+                    />
+                    <select
+                      className={ui.input}
+                      value={selectedSeat.floorId || activeFloorId}
+                      onChange={(e) =>
+                        updateSeat(selectedSeat.seatId, {
+                          floorId: e.target.value,
+                        })
+                      }
+                      aria-label="Floor"
+                    >
+                      {stableSortFloors(floors).map((f) => (
+                        <option key={f.floorId} value={f.floorId}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                    <label className={styles.toggle}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSeat.isAvailable}
+                        onChange={(e) =>
+                          updateSeat(selectedSeat.seatId, {
+                            isAvailable: e.target.checked,
+                          })
+                        }
+                      />
+                      Available
+                    </label>
+                    {selectedSeat.rowGroupId ? (
+                      <label className={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={!!selectedSeat.detachedFromRow}
+                          onChange={(e) =>
+                            updateSeat(selectedSeat.seatId, {
+                              detachedFromRow: e.target.checked,
+                            })
+                          }
+                        />
+                        Detached
+                      </label>
+                    ) : null}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        updateSeat(selectedSeat.seatId, { posX: 0, posY: 0 })
+                      }
+                    >
+                      Center
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteSeat(selectedSeat.seatId)}
+                    >
+                      Delete seat
+                    </Button>
+                  </div>
+                  <div className={ui.help}>
+                    ID:{" "}
+                    <code style={{ fontSize: "11px" }}>
+                      {selectedSeat.seatId}
+                    </code>
+                  </div>
+                  <div className={ui.divider} />
+                  <div className={ui.help}>
+                    Total seats:{" "}
+                    <strong style={{ color: "var(--text)" }}>
+                      {seats.length}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
+                /* ── Canvas settings ─────────────────────────────── */
                 <div
                   style={{
                     display: "flex",
@@ -1893,6 +3202,24 @@ export function SeatLayoutEditorPage() {
                     gap: spacing.md,
                   }}
                 >
+                  {/* Add Section -- primary entry point */}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setWizardOpen(true)}
+                    style={{ width: "100%" }}
+                  >
+                    + Add Section
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPreviewOpen(true)}
+                    style={{ width: "100%" }}
+                  >
+                    Preview / Export
+                  </Button>
+                  <div className={ui.divider} />
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Canvas
@@ -1924,9 +3251,7 @@ export function SeatLayoutEditorPage() {
                       </label>
                     </div>
                   </div>
-
                   <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       View
@@ -1937,12 +3262,11 @@ export function SeatLayoutEditorPage() {
                         variant="secondary"
                         onClick={() => {
                           if (!viewportRef.current) return;
-                          const rect =
-                            viewportRef.current.getBoundingClientRect();
+                          const r = viewportRef.current.getBoundingClientRect();
                           setView({
                             scale: 1,
-                            offsetX: rect.width / 2,
-                            offsetY: rect.height / 2,
+                            offsetX: r.width / 2,
+                            offsetY: r.height / 2,
                           });
                         }}
                       >
@@ -1951,40 +3275,15 @@ export function SeatLayoutEditorPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          setView((prev) => ({ ...prev, scale: 1 }));
-                        }}
+                        onClick={() =>
+                          setView((prev) => ({ ...prev, scale: 1 }))
+                        }
                       >
                         100%
                       </Button>
                     </div>
                   </div>
-
                   <div className={ui.divider} />
-
-                  <div>
-                    <div className={ui.help} style={{ marginBottom: 6 }}>
-                      Navigation
-                    </div>
-                    <div className={ui.help}>
-                      Trackpad scroll pans. Pinch zooms. Hold Space to drag-pan.
-                    </div>
-                  </div>
-
-                  <div className={ui.divider} />
-
-                  <div>
-                    <div className={ui.help} style={{ marginBottom: 6 }}>
-                      Measure tool
-                    </div>
-                    <div className={ui.help}>
-                      Click A, move, click B. Shift locks to 0/45/90°. Alt snaps
-                      to grid. ⌘ disables snapping.
-                    </div>
-                  </div>
-
-                  <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Seat size
@@ -2005,19 +3304,58 @@ export function SeatLayoutEditorPage() {
                         ft
                       </div>
                     </div>
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      Default is ~2.5 ft per seat.
-                    </div>
                   </div>
-
                   <div className={ui.divider} />
-
+                  <div>
+                    <div className={ui.help} style={{ marginBottom: 6 }}>
+                      Row spacing
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        className={ui.input}
+                        type="number"
+                        min={2}
+                        step={0.5}
+                        value={seatPitchFeet}
+                        onChange={(e) =>
+                          setSeatPitchFeet(Number(e.target.value) || 3)
+                        }
+                        aria-label="Seat pitch (ft)"
+                      />
+                      <div className={ui.help} style={{ alignSelf: "center" }}>
+                        ft
+                      </div>
+                    </div>
+                    {selectedRowGroupId ? (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={reflowSelectedRow}
+                        >
+                          Reflow row
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedRowGroupId(null)}
+                        >
+                          Clear row select
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className={ui.divider} />
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Path tool
-                    </div>
-                    <div className={ui.help} style={{ marginBottom: 8 }}>
-                      Click to add points, then double-click to place seats.
                     </div>
                     <div
                       style={{
@@ -2049,116 +3387,10 @@ export function SeatLayoutEditorPage() {
                         }
                         placeholder="# Seats"
                         aria-label="Path seat count"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && tool === "path")
-                            finalizePathDraft();
-                        }}
                       />
                     </div>
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      Leave spacing at 0 for auto-min spacing.
-                    </div>
                   </div>
-
                   <div className={ui.divider} />
-
-                  <div>
-                    <div className={ui.help} style={{ marginBottom: 6 }}>
-                      Row spacing
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input
-                        className={ui.input}
-                        type="number"
-                        min={2}
-                        step={0.5}
-                        value={seatPitchFeet}
-                        onChange={(e) =>
-                          setSeatPitchFeet(Number(e.target.value) || 3)
-                        }
-                        aria-label="Seat pitch (ft)"
-                      />
-                      <div className={ui.help} style={{ alignSelf: "center" }}>
-                        ft
-                      </div>
-                    </div>
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      Used when drawing/reflowing rows.
-                    </div>
-
-                    {selectedRowGroupId ? (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          display: "flex",
-                          gap: 8,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={reflowSelectedRow}
-                        >
-                          Reflow row
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedRowGroupId(null)}
-                        >
-                          Clear row select
-                        </Button>
-                        <div
-                          className={ui.help}
-                          style={{ alignSelf: "center" }}
-                        >
-                          Seats:{" "}
-                          <strong style={{ color: "var(--text)" }}>
-                            {selectedRowSeats.length}
-                          </strong>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={ui.help} style={{ marginTop: 10 }}>
-                        Use the Row tool to select/drag a row.
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={ui.divider} />
-
-                  <div>
-                    <div className={ui.help} style={{ marginBottom: 6 }}>
-                      Background image
-                    </div>
-                    <label
-                      className={ui.help}
-                      style={{ display: "flex", gap: 8, alignItems: "center" }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={showBackgroundImage}
-                        onChange={(e) =>
-                          setShowBackgroundImage(e.target.checked)
-                        }
-                      />
-                      Show layout image
-                    </label>
-                    <input
-                      className={ui.input}
-                      value={backgroundImageUrl}
-                      onChange={(e) => setBackgroundImageUrl(e.target.value)}
-                      placeholder="/api/... or https://..."
-                      style={{ marginTop: 8 }}
-                    />
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      This is NOT the venue cover photo.
-                    </div>
-                  </div>
-
-                  <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Floor
@@ -2199,9 +3431,7 @@ export function SeatLayoutEditorPage() {
                       </label>
                     </div>
                   </div>
-
                   <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Aisles
@@ -2232,30 +3462,187 @@ export function SeatLayoutEditorPage() {
                       >
                         Add aisle
                       </Button>
-                      {selectedElementId ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setElements((prev) =>
-                              prev.filter(
-                                (e) => e.elementId !== selectedElementId,
-                              ),
+                      {selectedElementId
+                        ? (() => {
+                            const selEl = elements.find(
+                              (e) => e.elementId === selectedElementId,
                             );
-                            setSelectedElementId(null);
-                          }}
-                        >
-                          Delete aisle
-                        </Button>
-                      ) : null}
-                    </div>
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      Use the Aisle tool to drag guides.
+                            const elTypeLabel: Record<string, string> = {
+                              aisle: "Aisle",
+                              table: "Table",
+                              railing: "Railing",
+                              stairs: "Stairs",
+                              dance_floor: "Dance Floor",
+                              entrance: "Entrance / Exit",
+                            };
+                            const label = selEl
+                              ? (elTypeLabel[selEl.type] ?? "Element")
+                              : "Element";
+                            return (
+                              <>
+                                {selEl?.type === "table" && (
+                                  <div
+                                    style={{
+                                      marginBottom: 8,
+                                      padding: "8px",
+                                      background: "var(--surface-2)",
+                                      borderRadius: "var(--radius-sm)",
+                                      border: "1px solid var(--border)",
+                                    }}
+                                  >
+                                    <div
+                                      className={ui.help}
+                                      style={{
+                                        marginBottom: 6,
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      {selEl.label ?? "Table"} — edit
+                                    </div>
+                                    <label className={ui.help}>Shape</label>
+                                    <select
+                                      className={ui.input}
+                                      value={selEl.tableShape ?? "round"}
+                                      onChange={(e) =>
+                                        setElements((prev) =>
+                                          prev.map((el) =>
+                                            el.elementId === selectedElementId
+                                              ? {
+                                                  ...el,
+                                                  tableShape: e.target.value as
+                                                    | "round"
+                                                    | "rect",
+                                                }
+                                              : el,
+                                          ),
+                                        )
+                                      }
+                                      style={{ marginBottom: 4 }}
+                                    >
+                                      <option value="round">Round</option>
+                                      <option value="rect">Rectangular</option>
+                                    </select>
+                                    <label className={ui.help}>Seats</label>
+                                    <input
+                                      className={ui.input}
+                                      type="number"
+                                      min={1}
+                                      max={30}
+                                      value={selEl.seatCount ?? 4}
+                                      onChange={(e) => {
+                                        const n = Number(e.target.value) || 4;
+                                        setElements((prev) =>
+                                          prev.map((el) =>
+                                            el.elementId === selectedElementId
+                                              ? { ...el, seatCount: n }
+                                              : el,
+                                          ),
+                                        );
+                                        // Regenerate seats for this table
+                                        setSeats((prev) => {
+                                          const updated = {
+                                            ...selEl,
+                                            seatCount: n,
+                                          };
+                                          const newSeats = generateTableSeats(
+                                            updated,
+                                            selEl.floorId ??
+                                              activeFloorId ??
+                                              "floor-1",
+                                          );
+                                          newSeats.forEach((s) => {
+                                            const existingFloorSeats =
+                                              prev.filter(
+                                                (ps) =>
+                                                  ps.rowGroupId ===
+                                                  `table-${selectedElementId}`,
+                                              );
+                                            if (existingFloorSeats[0]) {
+                                              s.section =
+                                                existingFloorSeats[0].section;
+                                            }
+                                          });
+                                          return [
+                                            ...prev.filter(
+                                              (s) =>
+                                                s.rowGroupId !==
+                                                `table-${selectedElementId}`,
+                                            ),
+                                            ...newSeats,
+                                          ];
+                                        });
+                                      }}
+                                      style={{ marginBottom: 4 }}
+                                      aria-label="Seat count"
+                                    />
+                                    <label className={ui.help}>Label</label>
+                                    <input
+                                      className={ui.input}
+                                      type="text"
+                                      value={selEl.label ?? ""}
+                                      onChange={(e) =>
+                                        setElements((prev) =>
+                                          prev.map((el) =>
+                                            el.elementId === selectedElementId
+                                              ? { ...el, label: e.target.value }
+                                              : el,
+                                          ),
+                                        )
+                                      }
+                                      placeholder="T1"
+                                      aria-label="Table label"
+                                    />
+                                  </div>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const el = elements.find(
+                                      (e) => e.elementId === selectedElementId,
+                                    );
+                                    const doDelete = () => {
+                                      setElements((prev) =>
+                                        prev.filter(
+                                          (e) =>
+                                            e.elementId !== selectedElementId,
+                                        ),
+                                      );
+                                      if (el?.type === "table") {
+                                        setSeats((prev) =>
+                                          prev.filter(
+                                            (s) =>
+                                              s.rowGroupId !==
+                                              `table-${selectedElementId}`,
+                                          ),
+                                        );
+                                      }
+                                      setSelectedElementId(null);
+                                    };
+                                    if (el?.type === "table") {
+                                      const seatCount = seats.filter(
+                                        (s) =>
+                                          s.rowGroupId ===
+                                          `table-${selectedElementId}`,
+                                      ).length;
+                                      confirmThen(
+                                        `Delete table "${el.label ?? el.elementId}" and its ${seatCount} seat(s)?`,
+                                        doDelete,
+                                      );
+                                    } else {
+                                      doDelete();
+                                    }
+                                  }}
+                                >
+                                  Delete {label}
+                                </Button>
+                              </>
+                            );
+                          })()
+                        : null}
                     </div>
                   </div>
-
                   <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Stage
@@ -2273,13 +3660,12 @@ export function SeatLayoutEditorPage() {
                         min={1}
                         step={1}
                         value={Math.round(stage.width / gridSize)}
-                        onChange={(e) => {
-                          const ft = Number(e.target.value) || 20;
+                        onChange={(e) =>
                           setStage((prev) => ({
                             ...prev,
-                            width: ft * gridSize,
-                          }));
-                        }}
+                            width: (Number(e.target.value) || 20) * gridSize,
+                          }))
+                        }
                         aria-label="Stage width (ft)"
                       />
                       <input
@@ -2288,13 +3674,12 @@ export function SeatLayoutEditorPage() {
                         min={1}
                         step={1}
                         value={Math.round(stage.height / gridSize)}
-                        onChange={(e) => {
-                          const ft = Number(e.target.value) || 6;
+                        onChange={(e) =>
                           setStage((prev) => ({
                             ...prev,
-                            height: ft * gridSize,
-                          }));
-                        }}
+                            height: (Number(e.target.value) || 6) * gridSize,
+                          }))
+                        }
                         aria-label="Stage depth (ft)"
                       />
                     </div>
@@ -2322,13 +3707,8 @@ export function SeatLayoutEditorPage() {
                         <option value="rounded">Rounded</option>
                       </select>
                     </div>
-                    <div className={ui.help} style={{ marginTop: 6 }}>
-                      Stage is fixed in the layout; drag it only in Stage tool.
-                    </div>
                   </div>
-
                   <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Quick generator
@@ -2388,191 +3768,678 @@ export function SeatLayoutEditorPage() {
                       </div>
                     </div>
                   </div>
-
                   <div className={ui.divider} />
-
                   <div>
                     <div className={ui.help} style={{ marginBottom: 6 }}>
                       Labeling
                     </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={autoLabelActiveFloor}
+                    >
+                      Auto-label active floor
+                    </Button>
+                    <div className={ui.help} style={{ marginTop: 6 }}>
+                      Row A/B/C by Y position; seat numbers left→right by X.
+                    </div>
+                  </div>
+                  <div className={ui.divider} />
+                  <div>
+                    <div
+                      className={ui.sectionTitle}
+                      style={{ marginBottom: 8 }}
+                    >
+                      Floor Plan Image
+                    </div>
+                    <label
+                      className={ui.help}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showBackgroundImage}
+                        onChange={(e) =>
+                          setShowBackgroundImage(e.target.checked)
+                        }
+                      />
+                      Show overlay
+                    </label>
                     <div
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: 8,
+                        gap: 6,
                       }}
                     >
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={autoLabelActiveFloor}
-                      >
-                        Auto-label active floor
-                      </Button>
-                      <div className={ui.help}>
-                        Uses seat Y to form rows (A, B, C…) and seat X to number
-                        left→right.
-                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ fontSize: 12 }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          if (localBgBlob) URL.revokeObjectURL(localBgBlob);
+                          if (file) {
+                            const blob = URL.createObjectURL(file);
+                            setLocalBgFile(file);
+                            setLocalBgBlob(blob);
+                            setShowBackgroundImage(true);
+                            setAiError(null);
+                          } else {
+                            setLocalBgFile(null);
+                            setLocalBgBlob(null);
+                          }
+                        }}
+                      />
+                      {localBgBlob || backgroundImageUrl ? (
+                        <img
+                          src={localBgBlob ?? getAssetUrl(backgroundImageUrl)}
+                          alt="Preview"
+                          style={{
+                            width: "100%",
+                            maxHeight: 90,
+                            objectFit: "contain",
+                            borderRadius: 4,
+                            border: "1px solid var(--border)",
+                            marginTop: 4,
+                          }}
+                        />
+                      ) : null}
+
+                      {/* Primary action: Upload + Analyze (if local file selected) */}
+                      {localBgFile ? (
+                        <button
+                          type="button"
+                          className={styles.aiAnalyzeBtn}
+                          disabled={uploadingBgNow || aiAnalyzing || !layoutId}
+                          onClick={handleUploadAndAnalyze}
+                        >
+                          {uploadingBgNow
+                            ? "Uploading…"
+                            : aiAnalyzing
+                              ? "Analyzing…"
+                              : "✨ Upload & Analyze with AI"}
+                        </button>
+                      ) : null}
+
+                      {/* Analyze again if already uploaded */}
+                      {!localBgFile && backgroundImageUrl && (
+                        <button
+                          type="button"
+                          className={styles.aiAnalyzeBtn}
+                          style={{
+                            background: "var(--surface-3)",
+                            color: "var(--text)",
+                          }}
+                          disabled={aiAnalyzing || !layoutId}
+                          onClick={triggerAnalysis}
+                        >
+                          {aiAnalyzing ? "Analyzing…" : "✨ Analyze with AI"}
+                        </button>
+                      )}
+
+                      {aiAnalyzing && (
+                        <span
+                          className={ui.help}
+                          style={{ fontSize: 11, color: "var(--text-muted)" }}
+                        >
+                          Qwen2.5-VL is analyzing your floor plan… this may take
+                          30–90 seconds.
+                        </span>
+                      )}
+                      {aiError && (
+                        <span className={ui.error} style={{ fontSize: 11 }}>
+                          {aiError}
+                        </span>
+                      )}
+                      {aiResult && !showAiPanel && (
+                        <button
+                          type="button"
+                          className={styles.aiAnalyzeBtn}
+                          style={{
+                            background: "var(--surface-3)",
+                            color: "var(--text)",
+                          }}
+                          onClick={() => setShowAiPanel(true)}
+                        >
+                          📋 View {aiResult.suggestions.length} AI Suggestions
+                        </button>
+                      )}
+
+                      {localBgFile && !uploadingBgNow && (
+                        <span
+                          className={ui.help}
+                          style={{ color: "var(--warning)", fontSize: 11 }}
+                        >
+                          Or use "Save" to upload without analyzing.
+                        </span>
+                      )}
                     </div>
-                  </div>
-
-                  <div className={ui.divider} />
-
-                  <div>
-                    <div className={ui.help} style={{ marginBottom: 6 }}>
-                      Selected seat
+                    {/* URL fallback */}
+                    <div style={{ marginTop: 10 }}>
+                      <label className={ui.help}>Or paste a URL</label>
+                      <input
+                        className={ui.input}
+                        value={backgroundImageUrl}
+                        onChange={(e) => {
+                          setBackgroundImageUrl(e.target.value);
+                          // Clear local file if user switches to URL
+                          if (e.target.value && localBgBlob) {
+                            URL.revokeObjectURL(localBgBlob);
+                            setLocalBgFile(null);
+                            setLocalBgBlob(null);
+                          }
+                        }}
+                        placeholder="/api/... or https://..."
+                        style={{ marginTop: 4 }}
+                      />
                     </div>
-
-                    {!selectedSeat ? (
-                      <p className={ui.help}>Click a seat to edit.</p>
-                    ) : (
-                      <div
+                    {localBgBlob || backgroundImageUrl ? (
+                      <button
+                        type="button"
+                        className={ui.help}
                         style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 8,
+                          marginTop: 6,
+                          cursor: "pointer",
+                          color: "var(--error)",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          fontSize: 11,
+                        }}
+                        onClick={() => {
+                          if (localBgBlob) URL.revokeObjectURL(localBgBlob);
+                          setLocalBgFile(null);
+                          setLocalBgBlob(null);
+                          setBackgroundImageUrl("");
+                          setShowBackgroundImage(false);
                         }}
                       >
-                        <div className={ui.cardText}>
-                          <strong>{selectedSeat.seatId}</strong>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: 8,
-                          }}
-                        >
-                          <input
-                            className={ui.input}
-                            value={selectedSeat.section}
-                            onChange={(e) =>
-                              updateSeat(selectedSeat.seatId, {
-                                section: e.target.value,
-                              })
-                            }
-                            placeholder="Section"
-                          />
-                          <input
-                            className={ui.input}
-                            value={selectedSeat.row}
-                            onChange={(e) =>
-                              updateSeat(selectedSeat.seatId, {
-                                row: e.target.value,
-                              })
-                            }
-                            placeholder="Row"
-                          />
-                          <input
-                            className={ui.input}
-                            value={selectedSeat.seatNumber}
-                            onChange={(e) =>
-                              updateSeat(selectedSeat.seatId, {
-                                seatNumber: e.target.value,
-                              })
-                            }
-                            placeholder="Seat #"
-                          />
-                          <select
-                            className={ui.input}
-                            value={selectedSeat.floorId || activeFloorId}
-                            onChange={(e) =>
-                              updateSeat(selectedSeat.seatId, {
-                                floorId: e.target.value,
-                              })
-                            }
-                          >
-                            {stableSortFloors(floors).map((f) => (
-                              <option key={f.floorId} value={f.floorId}>
-                                {f.name}
-                              </option>
-                            ))}
-                          </select>
-                          <label
-                            className={ui.help}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              paddingLeft: 4,
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedSeat.isAvailable}
-                              onChange={(e) =>
-                                updateSeat(selectedSeat.seatId, {
-                                  isAvailable: e.target.checked,
-                                })
-                              }
-                            />
-                            Available
-                          </label>
-
-                          {selectedSeat.rowGroupId ? (
-                            <label
-                              className={ui.help}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                paddingLeft: 4,
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={!!selectedSeat.detachedFromRow}
-                                onChange={(e) =>
-                                  updateSeat(selectedSeat.seatId, {
-                                    detachedFromRow: e.target.checked,
-                                  })
-                                }
-                              />
-                              Detached
-                            </label>
-                          ) : null}
-                        </div>
-
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              updateSeat(selectedSeat.seatId, {
-                                posX: 0,
-                                posY: 0,
-                              });
-                            }}
-                          >
-                            Center
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteSeat(selectedSeat.seatId)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                        ✕ Remove image
+                      </button>
+                    ) : null}
                   </div>
-
                   <div className={ui.divider} />
-
                   <div className={ui.help}>
                     Total seats:{" "}
                     <strong style={{ color: "var(--text)" }}>
                       {seats.length}
                     </strong>
                   </div>
+
+                  {/* ── Room Templates ── */}
+                  <div className={ui.divider} />
+                  <div className={ui.sectionTitle} style={{ marginBottom: 8 }}>
+                    Room Templates
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {ROOM_TEMPLATES.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        className={ui.chip}
+                        title={tpl.description}
+                        onClick={() => applyRoomTemplate(tpl.id)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        {tpl.icon} {tpl.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── Room Planner ── */}
+                  <div className={ui.divider} />
+                  <div className={ui.sectionTitle} style={{ marginBottom: 8 }}>
+                    Room Planner
+                  </div>
+                  <label className={ui.help}>Room size (ft) — W × H</label>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    <input
+                      className={ui.input}
+                      type="number"
+                      min={10}
+                      step={1}
+                      value={plannerRoomWidth}
+                      onChange={(e) =>
+                        setPlannerRoomWidth(Number(e.target.value) || 40)
+                      }
+                      aria-label="Room width (ft)"
+                      style={{ width: "50%" }}
+                      placeholder="W"
+                    />
+                    <input
+                      className={ui.input}
+                      type="number"
+                      min={10}
+                      step={1}
+                      value={plannerRoomHeight}
+                      onChange={(e) =>
+                        setPlannerRoomHeight(Number(e.target.value) || 30)
+                      }
+                      aria-label="Room height (ft)"
+                      style={{ width: "50%" }}
+                      placeholder="H"
+                    />
+                  </div>
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id="showRoomBoundary"
+                      checked={showRoomBoundary}
+                      onChange={(e) => {
+                        setShowRoomBoundary(e.target.checked);
+                        if (e.target.checked) {
+                          setRoomBoundary({
+                            width: plannerRoomWidth,
+                            height: plannerRoomHeight,
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor="showRoomBoundary" style={{ fontSize: 12 }}>
+                      Show room boundary
+                    </label>
+                  </div>
+                  <label className={ui.help}>Table shape</label>
+                  <select
+                    className={ui.input}
+                    value={plannerTableShape}
+                    onChange={(e) =>
+                      setPlannerTableShape(e.target.value as "round" | "rect")
+                    }
+                    style={{ marginBottom: 6 }}
+                  >
+                    <option value="round">Round</option>
+                    <option value="rect">Rectangular</option>
+                  </select>
+                  <label className={ui.help}>Table size (ft)</label>
+                  <input
+                    className={ui.input}
+                    type="number"
+                    min={2}
+                    max={12}
+                    step={0.5}
+                    value={plannerTableDiameter}
+                    onChange={(e) =>
+                      setPlannerTableDiameter(Number(e.target.value) || 4)
+                    }
+                    style={{ marginBottom: 6 }}
+                    aria-label="Table size (ft)"
+                  />
+                  <label className={ui.help}>Seats per table</label>
+                  <input
+                    className={ui.input}
+                    type="number"
+                    min={2}
+                    max={20}
+                    step={1}
+                    value={plannerSeatsPerTable}
+                    onChange={(e) =>
+                      setPlannerSeatsPerTable(Number(e.target.value) || 4)
+                    }
+                    style={{ marginBottom: 6 }}
+                    aria-label="Seats per table"
+                  />
+                  <label className={ui.help}>Grid (cols × rows)</label>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    <input
+                      className={ui.input}
+                      type="number"
+                      min={1}
+                      max={20}
+                      step={1}
+                      value={plannerCols}
+                      onChange={(e) =>
+                        setPlannerCols(Number(e.target.value) || 3)
+                      }
+                      aria-label="Columns"
+                      style={{ width: "50%" }}
+                      placeholder="Cols"
+                    />
+                    <input
+                      className={ui.input}
+                      type="number"
+                      min={1}
+                      max={20}
+                      step={1}
+                      value={plannerRows}
+                      onChange={(e) =>
+                        setPlannerRows(Number(e.target.value) || 2)
+                      }
+                      aria-label="Rows"
+                      style={{ width: "50%" }}
+                      placeholder="Rows"
+                    />
+                  </div>
+                  <label className={ui.help}>Aisle width (ft)</label>
+                  <input
+                    className={ui.input}
+                    type="number"
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    value={plannerAisleWidth}
+                    onChange={(e) =>
+                      setPlannerAisleWidth(Number(e.target.value) || 3)
+                    }
+                    style={{ marginBottom: 6 }}
+                    aria-label="Aisle width (ft)"
+                  />
+                  <label className={ui.help}>Section name</label>
+                  <input
+                    className={ui.input}
+                    type="text"
+                    value={plannerSectionName}
+                    onChange={(e) => setPlannerSectionName(e.target.value)}
+                    style={{ marginBottom: 10 }}
+                    placeholder="Main"
+                    aria-label="Section name"
+                  />
+                  <button
+                    className={ui.chip}
+                    onClick={() => generateSmartPlan()}
+                    style={{
+                      background: "var(--primary)",
+                      color: "#fff",
+                      border: "none",
+                      cursor: "pointer",
+                      width: "100%",
+                      padding: "8px 0",
+                      fontWeight: 600,
+                      borderRadius: 6,
+                    }}
+                  >
+                    ⚡ Generate Table Layout
+                  </button>
+
+                  {/* ── Add Preset Object ── */}
+                  <div className={ui.divider} />
+                  <div className={ui.sectionTitle} style={{ marginBottom: 8 }}>
+                    Add Object
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {[
+                      {
+                        label: "🪑 Round 4",
+                        type: "table" as const,
+                        opts: {
+                          tableShape: "round" as const,
+                          width: 4 * gridSize,
+                          height: 4 * gridSize,
+                          seatCount: 4,
+                        },
+                      },
+                      {
+                        label: "🪑 Round 6",
+                        type: "table" as const,
+                        opts: {
+                          tableShape: "round" as const,
+                          width: 5 * gridSize,
+                          height: 5 * gridSize,
+                          seatCount: 6,
+                        },
+                      },
+                      {
+                        label: "📋 Rect 8",
+                        type: "table" as const,
+                        opts: {
+                          tableShape: "rect" as const,
+                          width: 8 * gridSize,
+                          height: 3 * gridSize,
+                          seatCount: 8,
+                        },
+                      },
+                      {
+                        label: "⛓️ Railing",
+                        type: "railing" as const,
+                        opts: {},
+                      },
+                      { label: "🪜 Stairs", type: "stairs" as const, opts: {} },
+                      {
+                        label: "💃 Dance Floor",
+                        type: "dance_floor" as const,
+                        opts: {},
+                      },
+                      {
+                        label: "🚪 Entrance",
+                        type: "entrance" as const,
+                        opts: {},
+                      },
+                      {
+                        label: "🚪 Exit",
+                        type: "entrance" as const,
+                        opts: { label: "Exit", arrowDir: "down" as const },
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        className={ui.chip}
+                        onClick={() =>
+                          addPresetElement(preset.type, preset.opts)
+                        }
+                        style={{ cursor: "pointer" }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── AI Suggestions Overlay Panel ── */}
+      {showAiPanel && aiResult && (
+        <div className={styles.aiPanel}>
+          <div className={styles.aiPanelHeader}>
+            <div>
+              <span className={styles.aiPanelTitle}>✨ AI Analysis</span>
+              {aiResult.capacityEstimate ? (
+                <span className={styles.aiPanelBadge}>
+                  ~{aiResult.capacityEstimate} seats estimated
+                </span>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className={styles.panelClose}
+              onClick={() => setShowAiPanel(false)}
+              aria-label="Close AI panel"
+            >
+              ✕
+            </button>
+          </div>
+
+          {aiResult.description ? (
+            <p className={styles.aiDescription}>{aiResult.description}</p>
+          ) : null}
+
+          {aiResult.stagePosition ? (
+            <div className={styles.aiMeta}>
+              Stage detected: <strong>{aiResult.stagePosition}</strong>
+              <button
+                type="button"
+                className={styles.aiApplySmall}
+                onClick={() => setStagePosition(aiResult.stagePosition!)}
+              >
+                Apply
+              </button>
+            </div>
+          ) : null}
+
+          <div className={styles.aiSuggestionList}>
+            {aiResult.suggestions.map((s, idx) => {
+              const rejected = rejectedSuggestionIds.has(idx);
+              return (
+                <div
+                  key={idx}
+                  className={styles.aiSuggestionCard}
+                  data-rejected={rejected}
+                >
+                  <div className={styles.aiSuggestionTop}>
+                    <span className={styles.aiSuggestionType}>
+                      {s.type.replace(/_/g, " ")}
+                    </span>
+                    <span className={styles.aiSuggestionLabel}>{s.label}</span>
+                    {s.estimatedSeats ? (
+                      <span className={styles.aiSuggestionSeats}>
+                        {s.estimatedSeats} seats
+                      </span>
+                    ) : null}
+                  </div>
+                  {s.notes ? (
+                    <p className={styles.aiSuggestionNotes}>{s.notes}</p>
+                  ) : null}
+                  <div className={styles.aiSuggestionActions}>
+                    {!rejected ? (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.aiApplySmall}
+                          onClick={() => {
+                            applySuggestion(s);
+                            setRejectedSuggestionIds(
+                              (prev) => new Set([...prev, idx]),
+                            );
+                          }}
+                        >
+                          ✓ Apply
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.aiRejectSmall}
+                          onClick={() =>
+                            setRejectedSuggestionIds(
+                              (prev) => new Set([...prev, idx]),
+                            )
+                          }
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : (
+                      <span className={ui.help} style={{ fontSize: 11 }}>
+                        Skipped
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className={styles.aiPanelFooter}>
+            <button
+              type="button"
+              className={styles.aiAnalyzeBtn}
+              onClick={applyAllSuggestions}
+            >
+              ⚡ Apply All Remaining
+            </button>
+            <button
+              type="button"
+              className={styles.panelClose}
+              style={{ fontSize: 12, padding: "4px 10px" }}
+              onClick={() => setShowAiPanel(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmState ? (
+        <ConfirmDialog
+          message={confirmState.message}
+          onConfirm={() => {
+            const fn = confirmState.onConfirm;
+            setConfirmState(null);
+            fn();
+          }}
+          onCancel={() => setConfirmState(null)}
+        />
+      ) : null}
+
+      {wizardOpen && (
+        <SectionWizard
+          onGenerate={handleWizardGenerate}
+          onClose={() => setWizardOpen(false)}
+          floorId={activeFloorId ?? floors[0]?.floorId ?? "floor-1"}
+          gridSize={gridSize}
+          stageX={stage.x}
+          stageY={stage.y}
+          stageWidth={stage.width}
+          stageHeight={stage.height}
+        />
+      )}
+
+      {previewOpen && (
+        <LayoutPreviewModal
+          seats={seats}
+          sections={computeSectionsFromSeats(seats)}
+          stagePosition={stagePosition}
+          layoutName={name || "Layout"}
+          onClose={() => setPreviewOpen(false)}
+          onSave={handleSave}
+        />
+      )}
+
+      {/* Mobile FAB */}
+      <button
+        className={styles.fab}
+        onClick={() => setFabOpen((v) => !v)}
+        aria-label="Actions"
+      >
+        ＋
+      </button>
+      {fabOpen && (
+        <div className={styles.fabSheet}>
+          <button
+            className={styles.fabSheetAction}
+            onClick={() => {
+              setWizardOpen(true);
+              setFabOpen(false);
+            }}
+          >
+            ＋ Add Section
+          </button>
+          <button
+            className={styles.fabSheetAction}
+            onClick={() => {
+              setTool("row");
+              setFabOpen(false);
+            }}
+          >
+            ＋ Add Row
+          </button>
+          <button
+            className={styles.fabSheetAction}
+            onClick={() => setPreviewOpen(true)}
+          >
+            Preview / Export
+          </button>
+        </div>
+      )}
     </HostDashboardShell>
   );
 }

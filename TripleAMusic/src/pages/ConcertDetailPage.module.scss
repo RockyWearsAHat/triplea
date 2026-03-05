@@ -228,7 +228,7 @@
 .freeLabel {
   font-size: 20px;
   font-weight: 600;
-  color: var(--success, #16a34a);
+  color: var(--success);
 }
 
 .quantitySelector {
@@ -308,9 +308,9 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(22, 163, 74, 0.1);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
   border-radius: var(--radius-sm);
-  color: var(--success, #16a34a);
+  color: var(--success);
   font-size: 14px;
   font-weight: 500;
 }
@@ -380,7 +380,7 @@
   width: 64px;
   height: 64px;
   border-radius: 999px;
-  background: var(--success, #16a34a);
+  background: var(--success);
   color: #fff;
   font-size: 32px;
   font-weight: 700;

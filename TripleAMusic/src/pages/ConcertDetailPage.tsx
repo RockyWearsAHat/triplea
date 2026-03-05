@@ -48,6 +48,12 @@ export default function ConcertDetailPage() {
   } | null>(null);
   const [showSeatPicker, setShowSeatPicker] = useState(false);
 
+  // Cart activity — GA viewer count and per-seat activity map
+  const [cartViewers, setCartViewers] = useState(0);
+  const [cartSeatActivity, setCartSeatActivity] = useState<
+    Record<string, number>
+  >({});
+
   // Check if this concert is already in cart
   const inCart = items.find((item) => item.gigId === id);
 
@@ -121,6 +127,38 @@ export default function ConcertDetailPage() {
     };
   }, [api, id]);
 
+  // Fetch GA cart-activity count once on mount (informational only)
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    api
+      .getCartActivity(id)
+      .then((data) => {
+        if (!cancelled) {
+          setCartViewers(data.activity["GA"] ?? 0);
+          setCartSeatActivity(data.activity);
+        }
+      })
+      .catch(() => {
+        /* non-critical */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, id]);
+
+  // Decrement cart-activity when leaving the page if item was added
+  useEffect(() => {
+    return () => {
+      if (id && inCart) {
+        api.removeCartActivity(id, { quantity: inCart.quantity }).catch(() => {
+          /* best-effort */
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Get the effective ticket price
   const getEffectivePrice = () => {
     if (selectedTier && hasTiers) {
@@ -137,6 +175,12 @@ export default function ConcertDetailPage() {
     const qty = isReservedSeating ? selectedSeats.length : quantity;
 
     if (qty <= 0) return;
+
+    // Signal cart-activity (fire-and-forget; non-blocking)
+    api.addCartActivity(concert.id, { quantity: qty }).catch(() => {
+      /* non-critical */
+    });
+    setCartViewers((v) => Math.max(0, v - qty));
 
     // If already in cart, update quantity; otherwise add new item
     if (inCart) {
@@ -367,6 +411,9 @@ export default function ConcertDetailPage() {
                     sections={seatingData.layout.sections}
                     tiers={seatingData.tiers}
                     selectedSeats={selectedSeats}
+                    inCartSeats={Object.entries(cartSeatActivity)
+                      .filter(([k, v]) => k !== "GA" && v > 0)
+                      .map(([k]) => k)}
                     onSelectionChange={(seatIds: string[]) => {
                       setSelectedSeats(seatIds.slice(0, 10));
                     }}
@@ -413,30 +460,41 @@ export default function ConcertDetailPage() {
               </div>
             ) : (
               /* Standard Quantity Selector for General Admission */
-              <div className={styles.quantitySelector}>
-                <span className={styles.quantityLabel}>Tickets</span>
-                <div className={styles.quantityControls}>
-                  <button
-                    type="button"
-                    className={styles.quantityButton}
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
+              <>
+                {cartViewers > 0 && (
+                  <p
+                    className={styles.feeNote}
+                    style={{ color: "var(--taa-gold-500)", marginBottom: 4 }}
                   >
-                    <Minus size={16} />
-                  </button>
-                  <span className={styles.quantityValue}>{quantity}</span>
-                  <button
-                    type="button"
-                    className={styles.quantityButton}
-                    onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                    disabled={quantity >= 10}
-                    aria-label="Increase quantity"
-                  >
-                    <Plus size={16} />
-                  </button>
+                    🔥 {cartViewers} other
+                    {cartViewers === 1 ? " person" : " people"} viewing tickets
+                  </p>
+                )}
+                <div className={styles.quantitySelector}>
+                  <span className={styles.quantityLabel}>Tickets</span>
+                  <div className={styles.quantityControls}>
+                    <button
+                      type="button"
+                      className={styles.quantityButton}
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className={styles.quantityValue}>{quantity}</span>
+                    <button
+                      type="button"
+                      className={styles.quantityButton}
+                      onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                      disabled={quantity >= 10}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {!isFree && effectiveQuantity > 0 && (

@@ -1,4 +1,10 @@
-Plan TODOs derived from .github/plan.md
+# Plan TODOs
+
+> ⚠️ AGENTS: "Remaining / next steps" listed below are **NOT assigned work**.
+> They require explicit user confirmation before any agent implements them.
+> Do NOT pick these up as a task list. Surface them to the user as 📋 items.
+
+Derived from .github/plan.md
 
 1. Server model additions:
    - Add TicketSeat model with unique index (gigId + seatId)

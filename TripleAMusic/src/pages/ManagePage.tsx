@@ -260,34 +260,38 @@ export default function ManagePage() {
               variant="primary"
               size="sm"
               onClick={() => navigate("/my-gigs")}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
+              className={`${styles.actionTile} ${styles.actionTilePrimary}`}
             >
-              <Plus size={14} /> Post Event
+              <Plus size={18} />
+              Post Event
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
+
+            <button
+              type="button"
+              className={styles.actionTile}
               onClick={() => navigate("/venues")}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <MapPin size={14} /> Add Venue
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
+              <MapPin size={18} />
+              Add Venue
+            </button>
+
+            <button
+              type="button"
+              className={styles.actionTile}
               onClick={() => navigate("/staff")}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <Users size={14} /> Manage Staff
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
+              <Users size={18} />
+              Manage Staff
+            </button>
+
+            <button
+              type="button"
+              className={styles.actionTile}
               onClick={() => navigate("/scan-tickets")}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <ScanLine size={14} /> Scan Tickets
-            </Button>
+              <ScanLine size={18} />
+              Scan Tickets
+            </button>
           </div>
         </Section>
 
@@ -384,7 +388,8 @@ export default function ManagePage() {
                 {pendingGigs.slice(0, 4).map((g) => (
                   <div
                     key={g.id}
-                    className={styles.eventCard}
+                    className={`${styles.eventCard} ${g.status === "open" ? styles.eventCardOpen : ""} ${g.status === "filled" ? styles.eventCardFilled : ""}`}
+                    data-status={g.status}
                     onClick={() =>
                       navigate(`/my-gigs?gig=${encodeURIComponent(g.id)}`)
                     }
@@ -452,7 +457,8 @@ export default function ManagePage() {
                 {scheduledGigs.slice(0, 4).map((g) => (
                   <div
                     key={g.id}
-                    className={styles.eventCard}
+                    className={`${styles.eventCard} ${g.status === "open" ? styles.eventCardOpen : ""} ${g.status === "filled" ? styles.eventCardFilled : ""}`}
+                    data-status={g.status}
                     onClick={() =>
                       navigate(`/my-gigs?gig=${encodeURIComponent(g.id)}`)
                     }

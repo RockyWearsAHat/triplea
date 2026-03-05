@@ -1,7 +1,23 @@
 ---
 name: Style
 description: Kevin Powell-style modern CSS. Uses project tokens, intrinsic sizing, minimal media queries.
-model: GPT-5 mini (copilot)
+model: Claude Sonnet 4.6 (copilot)
+tools:
+  - edit/editFiles
+  - search/codebase
+  - read/problems
+  - execute/runInTerminal
+  - execute/getTerminalOutput
+  - read/terminalLastCommand
+  - search/usages
+---
+
+# STARTUP SEQUENCE (MANDATORY)
+
+1. Read `.github/bugs.md`. If non-empty, surface ALL entries to the user immediately before making any style changes.
+2. Note any `plan_todos.md` "Remaining / next steps" — do NOT pick them up as implicit styling tasks. Surface as 📋 items if they involve UI work.
+3. Proceed with styling only after surfacing the above.
+
 ---
 
 # APPLY TO
@@ -216,3 +232,27 @@ When cleaning a module:
 6. **Verify focus-visible** on interactive elements
 7. **Add reduced-motion** for animations
 8. **Keep diff small** — don't reformat unchanged code
+
+---
+
+# Completion
+
+When styling work is done:
+
+1. Run build and check for CSS/TS errors.
+2. **MANDATORY: End your turn with this exact structure sent as a chat message to the user:**
+
+```
+## Style Review Complete
+
+✅ What was changed:
+- [File — what was fixed/improved]
+
+⚠️ DECISIONS REQUIRED (user must respond before anything else proceeds):
+- [E.g. "Two valid approaches for X — option A uses Y, option B uses Z. Which do you prefer?"]
+
+📋 Not restyled this pass (needs your go-ahead):
+- [Component or file — one line reason]
+```
+
+**NEVER** silently leave style notes like "this could also be updated" — put them in the 📋 block so the user controls what gets picked up next.

@@ -4,6 +4,7 @@ import { MusicianProfile } from "../models/MusicianProfile";
 import { Instrument } from "../models/Instrument";
 import { Location } from "../models/Location";
 import { Gig } from "../models/Gig";
+import { SeatingLayout } from "../models/SeatingLayout";
 
 const router: Router = express.Router();
 
@@ -541,5 +542,117 @@ router.get("/gigs/:id", async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+// -------------------------------------------------------------------
+// In-memory cart-activity store (no DB persistence; TTL-based cleanup)
+// Map<gigId, Map<seatId | "GA", CartEntry>>
+// -------------------------------------------------------------------
+const CART_ACTIVITY_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+interface CartEntry {
+  count: number;
+  expiresAt: number;
+}
+
+const cartStore = new Map<string, Map<string, CartEntry>>();
+
+function pruneGig(gigId: string): void {
+  const m = cartStore.get(gigId);
+  if (!m) return;
+  const now = Date.now();
+  for (const [k, v] of m) {
+    if (v.expiresAt <= now) m.delete(k);
+  }
+  if (m.size === 0) cartStore.delete(gigId);
+}
+
+// POST /api/public/gigs/:gigId/cart-activity
+// Fire-and-forget: called when a ticket/seat is added to a browser cart
+router.post("/gigs/:gigId/cart-activity", (req: Request, res: Response) => {
+  const { gigId } = req.params as { gigId: string };
+  const { seatId, quantity } = req.body as {
+    seatId?: string;
+    quantity?: number;
+  };
+  const key = seatId || "GA";
+  const qty = Math.max(1, Number(quantity) || 1);
+  pruneGig(gigId);
+  const m = cartStore.get(gigId) ?? new Map<string, CartEntry>();
+  const prev = m.get(key);
+  m.set(key, {
+    count: (prev?.count ?? 0) + qty,
+    expiresAt: Date.now() + CART_ACTIVITY_TTL_MS,
+  });
+  cartStore.set(gigId, m);
+  return res.status(204).end();
+});
+
+// GET /api/public/gigs/:gigId/cart-activity
+// Returns current in-cart counts — informational only, NOT a reservation
+router.get("/gigs/:gigId/cart-activity", (req: Request, res: Response) => {
+  const { gigId } = req.params as { gigId: string };
+  pruneGig(gigId);
+  const m = cartStore.get(gigId);
+  const activity: Record<string, number> = {};
+  if (m) {
+    for (const [k, v] of m) {
+      if (v.count > 0) activity[k] = v.count;
+    }
+  }
+  return res.json({ activity });
+});
+
+// DELETE /api/public/gigs/:gigId/cart-activity
+// Best-effort decrement when cart is cleared or component unmounts
+router.delete("/gigs/:gigId/cart-activity", (req: Request, res: Response) => {
+  const { gigId } = req.params as { gigId: string };
+  const { seatId, quantity } = req.body as {
+    seatId?: string;
+    quantity?: number;
+  };
+  const key = seatId || "GA";
+  const qty = Math.max(1, Number(quantity) || 1);
+  pruneGig(gigId);
+  const m = cartStore.get(gigId);
+  if (m) {
+    const prev = m.get(key);
+    if (prev) {
+      const next = prev.count - qty;
+      if (next <= 0) m.delete(key);
+      else m.set(key, { ...prev, count: next });
+    }
+    if (m.size === 0) cartStore.delete(gigId);
+  }
+  return res.status(204).end();
+});
+
+/**
+ * Serve the stored background image for a seating layout
+ * GET /api/public/seating/layouts/:layoutId/background-image
+ */
+router.get(
+  "/seating/layouts/:layoutId/background-image",
+  async (req: Request, res: Response) => {
+    try {
+      const { layoutId } = req.params as { layoutId: string };
+      const layout = await SeatingLayout.findById(layoutId)
+        .select("backgroundImageBlob")
+        .exec();
+      if (!layout || !layout.backgroundImageBlob?.data) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      const blob = layout.backgroundImageBlob;
+      res.setHeader("Content-Type", blob.mimeType || "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.status(200).send(blob.data);
+    } catch (err) {
+      console.error(
+        "/public/seating/layouts/:layoutId/background-image error",
+        err,
+      );
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
 export default router;

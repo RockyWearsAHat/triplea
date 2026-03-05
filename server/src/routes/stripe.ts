@@ -3,6 +3,7 @@ import express from "express";
 import Stripe from "stripe";
 import { Types } from "mongoose";
 import { Ticket } from "../models/Ticket";
+import { TicketSeat } from "../models/TicketSeat";
 import { Gig } from "../models/Gig";
 import { Location } from "../models/Location";
 import { TicketTier } from "../models/TicketTier";
@@ -942,6 +943,29 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
       }
     }
 
+    // GA capacity enforcement — atomic increment with guard
+    const isGA = !gig?.seatingType || gig.seatingType === "general_admission";
+    if (isGA && gig?.seatCapacity && gig.seatCapacity > 0) {
+      const reserved = await Gig.findOneAndUpdate(
+        {
+          _id: gig._id,
+          $expr: {
+            $lte: [
+              { $add: [{ $ifNull: ["$ticketsSold", 0] }, qty] },
+              "$seatCapacity",
+            ],
+          },
+        },
+        { $inc: { ticketsSold: qty } },
+        { new: false },
+      ).exec();
+      if (!reserved) {
+        return res
+          .status(409)
+          .json({ message: "Not enough tickets remaining for this event" });
+      }
+    }
+
     // Create the ticket with Stripe payment info
     const ticket = await (Ticket as any).createTicketWithPayment({
       gigId: new Types.ObjectId(gigId),
@@ -971,6 +995,37 @@ router.post("/confirm-payment", async (req: Request, res: Response) => {
       ticket.seatAssignments = seatAssignments;
     }
     await ticket.save();
+
+    // Reserved seating: create TicketSeat records (unique index prevents race)
+    if (seatAssignments.length > 0) {
+      try {
+        await TicketSeat.insertMany(
+          seatAssignments.map((sa) => ({
+            gigId: new Types.ObjectId(gigId),
+            ticketId: ticket._id,
+            seatId: sa.seatId,
+            section: sa.section,
+            row: sa.row,
+            seatNumber: sa.seatNumber,
+            status: "valid",
+          })),
+          { ordered: false },
+        );
+      } catch (insertErr: any) {
+        const isDuplicate =
+          insertErr.code === 11000 ||
+          (insertErr.result &&
+            insertErr.result.nInserted < seatAssignments.length);
+        if (isDuplicate) {
+          await (ticket as any).deleteOne();
+          return res.status(409).json({
+            message:
+              "One or more seats were just taken. Please re-select seats.",
+          });
+        }
+        throw insertErr;
+      }
+    }
 
     // Get location for email
     const location = gig?.locationId

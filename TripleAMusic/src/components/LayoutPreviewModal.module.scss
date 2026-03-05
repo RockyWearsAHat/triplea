@@ -1,0 +1,258 @@
+/* ─── LayoutPreviewModal ─────────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overscroll-behavior: contain;
+}
+
+.dialog {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: calc(100% - 32px);
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dialogTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  min-width: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  height: 44px;
+  padding: 0 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &[data-active="true"] {
+    color: var(--primary, #e59d0d);
+    border-bottom-color: var(--primary, #e59d0d);
+  }
+
+  &:hover:not([data-active="true"]) {
+    color: var(--text);
+    background: var(--surface-3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+}
+
+/* ─── Body ────────────────────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.previewWrap {
+  height: 100%;
+  min-height: 300px;
+  overflow: auto;
+}
+
+.jsonWrap {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+  flex: 1;
+}
+
+.jsonPre {
+  font-size: 12px;
+  font-family: monospace;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+  margin: 0;
+}
+
+.jsonSummary {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.copyBtn {
+  align-self: flex-start;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 36px;
+
+  &:hover {
+    background: var(--surface-3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────── */
+
+.footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.cancelBtn {
+  padding: 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 44px;
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+.saveBtn {
+  padding: 0 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary, #e59d0d);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary, #e59d0d);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .dialog {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    border-bottom: none;
+  }
+
+  .previewWrap {
+    min-height: 250px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    transition: none;
+  }
+}

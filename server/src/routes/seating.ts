@@ -1,5 +1,6 @@
 import type { Response, Router } from "express";
 import express from "express";
+import multer from "multer";
 import mongoose from "mongoose";
 import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
 import { Gig } from "../models/Gig";
@@ -9,6 +10,11 @@ import { Ticket } from "../models/Ticket";
 import { Location } from "../models/Location";
 
 const router: Router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for floor plan images
+});
 
 // ==================== TICKET TIERS ====================
 
@@ -286,6 +292,10 @@ router.get(
           sections: layout.sections,
           seats: layout.seats,
           floors: (layout as any).floors,
+          elements: (layout as any).elements,
+          backgroundImageUrl: (layout as any).backgroundImageUrl,
+          roomBoundary: (layout as any).roomBoundary,
+          stage: (layout as any).stage,
           isTemplate: layout.isTemplate,
           stagePosition: layout.stagePosition,
           createdAt: layout.createdAt,
@@ -424,15 +434,22 @@ router.patch(
         floors?: Array<{ floorId: string; name: string; order: number }>;
         elements?: Array<{
           elementId: string;
-          type: "aisle";
+          type: string;
           floorId?: string;
-          orientation: "vertical" | "horizontal";
+          orientation?: "vertical" | "horizontal";
           x: number;
           y: number;
-          length: number;
-          thickness: number;
+          length?: number;
+          thickness?: number;
           label?: string;
+          tableShape?: "round" | "rect";
+          width?: number;
+          height?: number;
+          seatCount?: number;
+          arrowDir?: "up" | "down" | "left" | "right";
+          accessibilityNote?: string;
         }>;
+        roomBoundary?: { width: number; height: number } | null;
         seats?: Array<{
           seatId: string;
           row: string;
@@ -517,6 +534,11 @@ router.patch(
         (layout as any).elements = updates.elements;
       }
 
+      if (updates.roomBoundary !== undefined) {
+        (layout as any).roomBoundary =
+          updates.roomBoundary === null ? undefined : updates.roomBoundary;
+      }
+
       if (updates.seats) {
         const floors = (updates.floors ??
           (layout as any).floors ??
@@ -583,6 +605,7 @@ router.patch(
           floors: (layout as any).floors,
           elements: (layout as any).elements,
           backgroundImageUrl: (layout as any).backgroundImageUrl,
+          roomBoundary: (layout as any).roomBoundary,
           stage: (layout as any).stage,
           isTemplate: layout.isTemplate,
           stagePosition: layout.stagePosition,
@@ -1048,5 +1071,271 @@ router.get("/locations/:locationId/layouts", async (req, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+/**
+ * Upload a background image for a layout (local file from user's machine)
+ * POST /api/seating/layouts/:layoutId/background-image
+ */
+router.post(
+  "/layouts/:layoutId/background-image",
+  requireRole("customer"),
+  upload.single("image"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { layoutId } = req.params as { layoutId: string };
+      const file = req.file as Express.Multer.File | undefined;
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const layout = await SeatingLayout.findById(layoutId).exec();
+      if (!layout) return res.status(404).json({ message: "Layout not found" });
+
+      // Only owner or admin may update
+      const userId = req.authUser!.id;
+      if (
+        String(layout.createdByUserId) !== String(userId) &&
+        !(req.authUser!.roles ?? []).includes("admin")
+      ) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      layout.backgroundImageBlob = {
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        data: file.buffer,
+      };
+      const imageUrl = `/api/public/seating/layouts/${layoutId}/background-image`;
+      layout.backgroundImageUrl = imageUrl;
+      await layout.save();
+
+      return res.status(200).json({ imageUrl });
+    } catch (err) {
+      console.error(
+        "POST /seating/layouts/:layoutId/background-image error",
+        err,
+      );
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+
+/**
+ * Analyze background image with Qwen VL via Ollama (server-side only)
+ * POST /api/seating/layouts/:layoutId/analyze-image
+ */
+router.post(
+  "/layouts/:layoutId/analyze-image",
+  requireRole("customer"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { layoutId } = req.params as { layoutId: string };
+
+      const layout = await SeatingLayout.findById(layoutId).exec();
+      if (!layout) return res.status(404).json({ message: "Layout not found" });
+
+      // Auth check
+      const userId = req.authUser!.id;
+      const isAdmin = (req.authUser!.roles ?? []).includes("admin");
+      if (String(layout.createdByUserId) !== String(userId) && !isAdmin) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const blob = (layout as any).backgroundImageBlob as
+        | { filename: string; mimeType: string; data: Buffer }
+        | undefined;
+
+      if (!blob?.data) {
+        return res.status(400).json({
+          message:
+            "No background image stored on this layout. Upload an image first.",
+        });
+      }
+
+      const base64Image = blob.data.toString("base64");
+
+      const OLLAMA_PROMPT = `You are analyzing a venue floor plan image to help set up a seating layout. Identify all recognizable areas and return ONLY a valid JSON object — no markdown, no explanation, no code fences.
+
+Return exactly this structure:
+{
+  "description": "one sentence describing the venue",
+  "stagePosition": "top" | "bottom" | "left" | "right" | null,
+  "capacityEstimate": <integer or null>,
+  "suggestions": [
+    {
+      "type": "stage" | "aisle" | "table" | "railing" | "stairs" | "dance_floor" | "entrance" | "seating_zone",
+      "label": "human readable label e.g. Main Stage, Center Aisle, Table 1, Exit",
+      "xPct": <0-100, top-left X as % of image width>,
+      "yPct": <0-100, top-left Y as % of image height>,
+      "widthPct": <0-100, element width as % of image width>,
+      "heightPct": <0-100, element height as % of image height>,
+      "estimatedSeats": <integer or null>,
+      "notes": "optional accessibility or context note"
+    }
+  ]
+}
+
+Rules:
+- xPct/yPct are top-left corner percentages (0=left/top, 100=right/bottom)
+- widthPct/heightPct are the element size as percentage of image dimensions
+- Include stage, main seating areas, aisles, entrances/exits, and any special areas (dance floor, bar area, standing room)
+- For seating_zone, set estimatedSeats to the approximate number of chairs/seats you can see or infer
+- stagePosition should reflect where the stage is relative to the audience (top=stage at top of image)
+- If unclear, make a best guess based on typical venue layouts`;
+
+      let ollamaResponse: { response: string };
+      try {
+        const ollamaFetchRes = await (async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 180_000);
+          try {
+            return await fetch("http://localhost:11434/api/generate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "qwen2.5vl:32b",
+                prompt: OLLAMA_PROMPT,
+                images: [base64Image],
+                stream: false,
+                format: "json",
+              }),
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        })();
+
+        if (!ollamaFetchRes.ok) {
+          const errText = await ollamaFetchRes.text();
+          throw new Error(`Ollama error ${ollamaFetchRes.status}: ${errText}`);
+        }
+
+        ollamaResponse = (await ollamaFetchRes.json()) as { response: string };
+      } catch (fetchErr) {
+        console.error("Ollama fetch error:", fetchErr);
+        return res.status(502).json({
+          message: `Could not reach Ollama: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`,
+        });
+      }
+
+      // Parse the model's JSON response
+      let parsed: {
+        description?: string;
+        stagePosition?: "top" | "bottom" | "left" | "right";
+        capacityEstimate?: number;
+        suggestions?: Array<{
+          type: string;
+          label: string;
+          xPct: number;
+          yPct: number;
+          widthPct?: number;
+          heightPct?: number;
+          estimatedSeats?: number;
+          notes?: string;
+        }>;
+      };
+
+      try {
+        const rawText =
+          typeof ollamaResponse.response === "string"
+            ? ollamaResponse.response.trim()
+            : JSON.stringify(ollamaResponse.response);
+
+        // Strip markdown code fences if model ignored "no markdown" instruction
+        const cleaned = rawText
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```\s*$/, "")
+          .trim();
+
+        parsed = JSON.parse(cleaned) as typeof parsed;
+      } catch (parseErr) {
+        console.error(
+          "Qwen VL response parse error:",
+          parseErr,
+          ollamaResponse,
+        );
+        return res.status(422).json({
+          message: "AI returned unparseable response",
+          raw: ollamaResponse.response?.slice(0, 500),
+        });
+      }
+
+      // Validate and sanitize suggestions
+      const VALID_TYPES = new Set([
+        "stage",
+        "aisle",
+        "table",
+        "railing",
+        "stairs",
+        "dance_floor",
+        "entrance",
+        "seating_zone",
+      ]);
+      const sanitizedSuggestions = (parsed.suggestions ?? [])
+        .filter(
+          (s) =>
+            VALID_TYPES.has(s.type) &&
+            typeof s.xPct === "number" &&
+            typeof s.yPct === "number",
+        )
+        .map((s) => ({
+          type: s.type as
+            | "stage"
+            | "aisle"
+            | "table"
+            | "railing"
+            | "stairs"
+            | "dance_floor"
+            | "entrance"
+            | "seating_zone",
+          label: String(s.label || s.type),
+          xPct: Math.max(0, Math.min(100, s.xPct)),
+          yPct: Math.max(0, Math.min(100, s.yPct)),
+          widthPct:
+            typeof s.widthPct === "number"
+              ? Math.max(0, Math.min(100, s.widthPct))
+              : undefined,
+          heightPct:
+            typeof s.heightPct === "number"
+              ? Math.max(0, Math.min(100, s.heightPct))
+              : undefined,
+          estimatedSeats:
+            typeof s.estimatedSeats === "number" && s.estimatedSeats > 0
+              ? s.estimatedSeats
+              : undefined,
+          notes: s.notes ? String(s.notes) : undefined,
+        }));
+
+      const aiSuggestions = {
+        analyzedAt: new Date(),
+        model: "qwen2.5vl:32b",
+        description: parsed.description
+          ? String(parsed.description)
+          : undefined,
+        stagePosition: ["top", "bottom", "left", "right"].includes(
+          parsed.stagePosition ?? "",
+        )
+          ? (parsed.stagePosition as "top" | "bottom" | "left" | "right")
+          : undefined,
+        capacityEstimate:
+          typeof parsed.capacityEstimate === "number" &&
+          parsed.capacityEstimate > 0
+            ? parsed.capacityEstimate
+            : undefined,
+        suggestions: sanitizedSuggestions,
+      };
+
+      // Persist to layout
+      (layout as any).aiSuggestions = aiSuggestions;
+      await layout.save();
+
+      return res.json({ aiSuggestions });
+    } catch (err) {
+      console.error("POST /seating/layouts/:layoutId/analyze-image error", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
 export default router;

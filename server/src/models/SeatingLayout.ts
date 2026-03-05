@@ -33,16 +33,29 @@ export interface ISeat {
 
 export interface ILayoutElement {
   elementId: string;
-  type: "aisle";
+  type: "aisle" | "table" | "railing" | "stairs" | "dance_floor" | "entrance";
   floorId?: string;
-  orientation: "vertical" | "horizontal";
+  /** Used by aisle lines */
+  orientation?: "vertical" | "horizontal";
   /** World coordinates (same coordinate system as seat posX/posY) */
   x: number;
   y: number;
   /** Size in world units */
-  length: number;
-  thickness: number;
+  length?: number;
+  thickness?: number;
   label?: string;
+  /** For table elements */
+  tableShape?: "round" | "rect";
+  /** Table width (also used as diameter for round) */
+  width?: number;
+  /** Table height (used for rect tables) */
+  height?: number;
+  /** Number of seats around this table (links to seat rowGroupId = "table-{elementId}") */
+  seatCount?: number;
+  /** Direction for stairs/entrance arrows: up, down, left, right */
+  arrowDir?: "up" | "down" | "left" | "right";
+  /** Accessibility note */
+  accessibilityNote?: string;
 }
 
 export interface IFloor {
@@ -94,10 +107,44 @@ export interface ISeatingLayout extends Document {
   seats: ISeat[];
   /** Floors/levels for this venue */
   floors?: IFloor[];
-  /** Optional layout elements (e.g., aisles) used by the editor */
+  /** Optional layout elements (e.g., aisles, tables, railings) used by the editor */
   elements?: ILayoutElement[];
+  /** Optional room boundary in feet for the canvas visualizer */
+  roomBoundary?: { width: number; height: number };
   /** Optional editor background image (distinct from the venue cover image) */
   backgroundImageUrl?: string;
+  /** Stored binary for uploaded background image */
+  backgroundImageBlob?: {
+    filename: string;
+    mimeType: string;
+    data: Buffer;
+  };
+  /** Last AI analysis result from Qwen VL */
+  aiSuggestions?: {
+    analyzedAt: Date;
+    model: string;
+    description?: string;
+    stagePosition?: "top" | "bottom" | "left" | "right";
+    capacityEstimate?: number;
+    suggestions: Array<{
+      type:
+        | "stage"
+        | "aisle"
+        | "table"
+        | "railing"
+        | "stairs"
+        | "dance_floor"
+        | "entrance"
+        | "seating_zone";
+      label: string;
+      xPct: number;
+      yPct: number;
+      widthPct?: number;
+      heightPct?: number;
+      estimatedSeats?: number;
+      notes?: string;
+    }>;
+  };
   /** Stage configuration stored in world coordinates */
   stage?: {
     x: number;
@@ -136,18 +183,24 @@ const SeatSchema = new Schema<ISeat>(
 const LayoutElementSchema = new Schema<ILayoutElement>(
   {
     elementId: { type: String, required: true },
-    type: { type: String, required: true, enum: ["aisle"] },
-    floorId: { type: String },
-    orientation: {
+    type: {
       type: String,
       required: true,
-      enum: ["vertical", "horizontal"],
+      enum: ["aisle", "table", "railing", "stairs", "dance_floor", "entrance"],
     },
+    floorId: { type: String },
+    orientation: { type: String, enum: ["vertical", "horizontal"] },
     x: { type: Number, required: true },
     y: { type: Number, required: true },
-    length: { type: Number, required: true, min: 0 },
-    thickness: { type: Number, required: true, min: 0 },
+    length: { type: Number, min: 0 },
+    thickness: { type: Number, min: 0 },
     label: { type: String },
+    tableShape: { type: String, enum: ["round", "rect"] },
+    width: { type: Number },
+    height: { type: Number },
+    seatCount: { type: Number },
+    arrowDir: { type: String, enum: ["up", "down", "left", "right"] },
+    accessibilityNote: { type: String },
   },
   { _id: false },
 );
@@ -195,6 +248,46 @@ const SeatingLayoutSchema = new Schema<ISeatingLayout>(
     floors: [FloorSchema],
     elements: [LayoutElementSchema],
     backgroundImageUrl: { type: String },
+    backgroundImageBlob: {
+      filename: { type: String },
+      mimeType: { type: String },
+      data: { type: Buffer },
+    },
+    aiSuggestions: {
+      analyzedAt: { type: Date },
+      model: { type: String },
+      description: { type: String },
+      stagePosition: { type: String, enum: ["top", "bottom", "left", "right"] },
+      capacityEstimate: { type: Number },
+      suggestions: [
+        {
+          type: {
+            type: String,
+            enum: [
+              "stage",
+              "aisle",
+              "table",
+              "railing",
+              "stairs",
+              "dance_floor",
+              "entrance",
+              "seating_zone",
+            ],
+          },
+          label: { type: String },
+          xPct: { type: Number },
+          yPct: { type: Number },
+          widthPct: { type: Number },
+          heightPct: { type: Number },
+          estimatedSeats: { type: Number },
+          notes: { type: String },
+        },
+      ],
+    },
+    roomBoundary: {
+      width: { type: Number },
+      height: { type: Number },
+    },
     stage: {
       x: { type: Number },
       y: { type: Number },

@@ -22,6 +22,10 @@
   border-radius: var(--radius-md);
 }
 
+.statCard {
+  border-top: 2px solid var(--accent);
+}
+
 .statCardLink {
   cursor: pointer;
   text-decoration: none;
@@ -46,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--accent);
   font-size: clamp(1.25rem, 3vw, 1.5rem);
 }
 
@@ -58,7 +62,7 @@
 }
 
 .statNumber {
-  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
   font-weight: 700;
   color: var(--text);
   line-height: 1;
@@ -102,20 +106,22 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
 }
 
 .sectionIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--accent);
   font-size: var(--text-lg);
 }
 
 .sectionTitle {
   margin: 0;
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -173,6 +179,15 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color 0.15s;
+  border-left: 3px solid var(--border);
+}
+
+.eventCardOpen {
+  border-left-color: var(--warning);
+}
+
+.eventCardFilled {
+  border-left-color: var(--success);
 }
 
 .eventCard:hover {
@@ -375,8 +390,8 @@
 .venueCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: clamp(0.75rem, 2vw, 1rem);
+  gap: 14px;
+  padding: clamp(0.875rem, 2vw, 1.125rem);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -398,9 +413,9 @@
 }
 
 .venueThumb {
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid var(--border);
@@ -442,19 +457,44 @@
 /* Quick actions grid (tidy action tiles) */
 .quickActions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 10px;
 }
 
 .actionTile {
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  font-size: var(--text-sm);
+  font-weight: 500;
   color: var(--text);
+  text-align: center;
+}
+
+.actionTile:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.actionTilePrimary {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.actionTilePrimary:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-2));
 }
 
 .formRow {

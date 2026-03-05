@@ -10,8 +10,8 @@ tools:
   - read/terminalLastCommand
   - execute/getTerminalOutput
   - execute/runInTerminal
-  - edit/editFiles
   - read/terminalSelection
+  - edit/editFiles
   - read/problems
   - agent
 ---
@@ -84,6 +84,20 @@ Write to `.github/plan.md` using this **STRICT FORMAT**:
 
 ---
 
+## PHASE 3: DIAGNOSE
+
+Before writing the plan, investigate the code:
+
+1. Locate the relevant files using codebase search and usage lookups.
+2. Run build/lint/test commands to reproduce reported failures.
+3. Read the specific code that needs to change — understand its current shape.
+4. Identify all callsites that may be affected by proposed changes.
+5. Confirm root cause. Only proceed to Phase 4 once root cause is understood.
+
+> **Rule:** Do not write to `plan.md` until you have confirmed the root cause. A plan written without a confirmed root cause will be wrong.
+
+---
+
 ## PHASE 4: FINALIZE
 
 1. Ensure every step has:
@@ -93,4 +107,26 @@ Write to `.github/plan.md` using this **STRICT FORMAT**:
    - Complete code block
    - Verification command
 
-2. Clear `.github/bugs.md` and note that plan is ready.
+2. **Language rule — NEVER write these phrases in plan.md:**
+   - "this can be implemented", "could be added", "might be useful", "optionally"
+   - If something is optional or ambiguous, it MUST go into the USER DECISION block below — not silently into steps.
+
+3. Clear `.github/bugs.md` (it has been resolved by the plan).
+
+4. **MANDATORY: End your turn with this exact structure sent as a chat message to the user:**
+
+```
+## Plan Ready
+
+✅ Completed steps: [N steps covering X, Y, Z]
+
+⚠️ DECISIONS REQUIRED (do not proceed until user responds):
+- [Decision 1 — describe the two options clearly]
+- [Decision 2 — describe tradeoff]
+
+📋 Out of scope this plan (NOT scheduled, needs your go-ahead to add):
+- [Item A — one line why it wasn't included]
+```
+
+If there are no decisions or out-of-scope items, still send the ✅ block so the user knows the plan is complete.
+Do NOT proceed to implementation or hand off to another agent until the user responds to any ⚠️ items.

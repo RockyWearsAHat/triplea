@@ -27,6 +27,8 @@ export interface IGig extends Document {
   seatingLayoutId?: Types.ObjectId;
   /** Whether the concert has multiple ticket tiers configured */
   hasTicketTiers?: boolean;
+  /** Running count of GA tickets sold; used for atomic capacity enforcement */
+  ticketsSold?: number;
 }
 
 const GigSchema = new Schema<IGig>(
@@ -62,6 +64,7 @@ const GigSchema = new Schema<IGig>(
     seatCapacity: { type: Number, min: 0 },
     seatingLayoutId: { type: Schema.Types.ObjectId, ref: "SeatingLayout" },
     hasTicketTiers: { type: Boolean, default: false },
+    ticketsSold: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 );

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import styles from "./SeatSelector.module.scss";
 import ui from "@shared/styles/primitives.module.scss";
 
@@ -12,6 +12,7 @@ export interface SeatInfo {
   posY?: number;
   isAvailable: boolean;
   isSold?: boolean;
+  rotationDeg?: number;
 }
 
 export interface SectionInfo {
@@ -30,6 +31,8 @@ export interface TierInfo {
 }
 
 interface SeatSelectorProps {
+  /** Seat IDs that other users currently have in their cart (soft indicator only). */
+  inCartSeats?: string[];
   seats: SeatInfo[];
   sections: SectionInfo[];
   tiers: TierInfo[];
@@ -45,6 +48,7 @@ export default function SeatSelector({
   tiers,
   stagePosition = "top",
   selectedSeats,
+  inCartSeats = [],
   maxSeats,
   onSelectionChange,
 }: SeatSelectorProps) {
@@ -107,28 +111,17 @@ export default function SeatSelector({
     }
   };
 
-  const getSeatColor = (seat: SeatInfo): string => {
-    if (seat.isSold) return "var(--color-surface-tertiary)";
-    if (!seat.isAvailable) return "var(--color-surface-tertiary)";
-    if (selectedSeats.includes(seat.seatId)) return "var(--color-gold)";
-
-    // Use tier color if available
-    if (seat.tierId) {
-      const tier = tierById.get(seat.tierId);
-      if (tier?.color) return tier.color;
-    }
-
-    // Use section color if available
-    const section = sectionByName.get(seat.section);
-    if (section?.color) return section.color;
-
-    return "var(--color-accent)";
+  const getSeatColor = (_seat: SeatInfo): string => {
+    // Colors are driven entirely by data-status CSS; return transparent to avoid
+    // inline style overriding the CSS rules.
+    return "transparent";
   };
 
   const getSeatStatus = (seat: SeatInfo): string => {
     if (seat.isSold) return "sold";
     if (!seat.isAvailable) return "unavailable";
     if (selectedSeats.includes(seat.seatId)) return "selected";
+    if (inCartSeats.includes(seat.seatId)) return "in-cart";
     return "available";
   };
 
@@ -141,6 +134,42 @@ export default function SeatSelector({
   const hoveredTier = hoveredInfo?.tierId
     ? tierById.get(hoveredInfo.tierId)
     : null;
+
+  // ─── Touch pan on the chart ───────────────────────────────────────
+  const panRef = useRef<{
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+    active: boolean;
+  } | null>(null);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+
+  function handleChartPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Only start pan if not clicking a seat button
+    if ((e.target as HTMLElement).closest("button")) return;
+    panRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: panOffset.x,
+      offsetY: panOffset.y,
+      active: true,
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function handleChartPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const pan = panRef.current;
+    if (!pan?.active) return;
+    setPanOffset({
+      x: pan.offsetX + (e.clientX - pan.startX),
+      y: pan.offsetY + (e.clientY - pan.startY),
+    });
+  }
+
+  function handleChartPointerUp() {
+    if (panRef.current) panRef.current.active = false;
+  }
 
   // Calculate total price of selected seats
   const totalPrice = useMemo(() => {
@@ -166,23 +195,20 @@ export default function SeatSelector({
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <span
-            className={styles.legendSwatch}
-            style={{ backgroundColor: "var(--color-accent)" }}
+            className={`${styles.legendSwatch} ${styles.legendAvailable}`}
           />
           <span>Available</span>
         </div>
         <div className={styles.legendItem}>
-          <span
-            className={styles.legendSwatch}
-            style={{ backgroundColor: "var(--color-gold)" }}
-          />
+          <span className={`${styles.legendSwatch} ${styles.legendSelected}`} />
           <span>Selected</span>
         </div>
         <div className={styles.legendItem}>
-          <span
-            className={styles.legendSwatch}
-            style={{ backgroundColor: "var(--color-surface-tertiary)" }}
-          />
+          <span className={`${styles.legendSwatch} ${styles.legendInCart}`} />
+          <span>Viewing</span>
+        </div>
+        <div className={styles.legendItem}>
+          <span className={`${styles.legendSwatch} ${styles.legendSold}`} />
           <span>Sold</span>
         </div>
         {tiers.map((tier) => (
@@ -199,7 +225,19 @@ export default function SeatSelector({
       </div>
 
       {/* Seating chart */}
-      <div className={styles.chart}>
+      <div
+        className={styles.chart}
+        style={{
+          transform:
+            panOffset.x !== 0 || panOffset.y !== 0
+              ? `translate(${panOffset.x}px, ${panOffset.y}px)`
+              : undefined,
+        }}
+        onPointerDown={handleChartPointerDown}
+        onPointerMove={handleChartPointerMove}
+        onPointerUp={handleChartPointerUp}
+        onPointerCancel={handleChartPointerUp}
+      >
         {Array.from(seatsBySection.entries()).map(([sectionName, rows]) => {
           const _section = sectionByName.get(sectionName);
           void _section; // Available for future styling based on section
@@ -220,6 +258,9 @@ export default function SeatSelector({
                             data-status={getSeatStatus(seat)}
                             style={{
                               backgroundColor: getSeatColor(seat),
+                              transform: seat.rotationDeg
+                                ? `rotate(${seat.rotationDeg}deg)`
+                                : undefined,
                             }}
                             onClick={() => handleSeatClick(seat)}
                             onMouseEnter={() => setHoveredSeat(seat.seatId)}

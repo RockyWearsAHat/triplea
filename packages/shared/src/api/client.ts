@@ -1564,15 +1564,22 @@ export class TripleAApiClient {
       floors?: Array<{ floorId: string; name: string; order: number }>;
       elements?: Array<{
         elementId: string;
-        type: "aisle";
+        type: string;
         floorId?: string;
-        orientation: "vertical" | "horizontal";
+        orientation?: "vertical" | "horizontal";
         x: number;
         y: number;
-        length: number;
-        thickness: number;
+        length?: number;
+        thickness?: number;
         label?: string;
+        tableShape?: "round" | "rect";
+        width?: number;
+        height?: number;
+        seatCount?: number;
+        arrowDir?: "up" | "down" | "left" | "right";
+        accessibilityNote?: string;
       }>;
+      roomBoundary?: { width: number; height: number } | null;
       stage?: {
         x: number;
         y: number;
@@ -1644,6 +1651,63 @@ export class TripleAApiClient {
         method: "PATCH",
         body: JSON.stringify(updates),
       },
+    );
+  }
+
+  /** Upload a local file as the background image for a seating layout. */
+  async uploadSeatingLayoutBackgroundImage(
+    layoutId: string,
+    file: File,
+  ): Promise<{ imageUrl: string }> {
+    const url = `${this.baseUrl}/seating/layouts/${encodeURIComponent(layoutId)}/background-image`;
+    const fd = new FormData();
+    fd.append("image", file, file.name);
+
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Upload failed with ${res.status}`);
+    }
+
+    return (await res.json()) as { imageUrl: string };
+  }
+
+  /** Analyze the stored background image using Qwen VL via Ollama (server-side). */
+  async analyzeSeatingLayoutImage(layoutId: string): Promise<{
+    aiSuggestions: {
+      analyzedAt: string;
+      model: string;
+      description?: string;
+      stagePosition?: "top" | "bottom" | "left" | "right";
+      capacityEstimate?: number;
+      suggestions: Array<{
+        type:
+          | "stage"
+          | "aisle"
+          | "table"
+          | "railing"
+          | "stairs"
+          | "dance_floor"
+          | "entrance"
+          | "seating_zone";
+        label: string;
+        xPct: number;
+        yPct: number;
+        widthPct?: number;
+        heightPct?: number;
+        estimatedSeats?: number;
+        notes?: string;
+      }>;
+    };
+  }> {
+    return await this.request(
+      `/seating/layouts/${encodeURIComponent(layoutId)}/analyze-image`,
+      { method: "POST" },
     );
   }
 
@@ -1750,6 +1814,35 @@ export class TripleAApiClient {
       method: "POST",
       body: JSON.stringify(params),
     });
+  }
+
+  async addCartActivity(
+    gigId: string,
+    params: { seatId?: string; quantity?: number },
+  ): Promise<void> {
+    await this.request<void>(
+      `/public/gigs/${encodeURIComponent(gigId)}/cart-activity`,
+      { method: "POST", body: JSON.stringify(params) },
+    );
+  }
+
+  async getCartActivity(
+    gigId: string,
+  ): Promise<{ activity: Record<string, number> }> {
+    return this.request<{ activity: Record<string, number> }>(
+      `/public/gigs/${encodeURIComponent(gigId)}/cart-activity`,
+      { method: "GET" },
+    );
+  }
+
+  async removeCartActivity(
+    gigId: string,
+    params: { seatId?: string; quantity?: number },
+  ): Promise<void> {
+    await this.request<void>(
+      `/public/gigs/${encodeURIComponent(gigId)}/cart-activity`,
+      { method: "DELETE", body: JSON.stringify(params) },
+    );
   }
 
   async getMyStaffHosts(): Promise<StaffHost[]> {
