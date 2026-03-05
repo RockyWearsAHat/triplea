@@ -1432,7 +1432,10 @@ export function SeatLayoutEditorPage() {
       // Use generateSectionSeats so rotation is applied correctly
       const centerX = x + width / 2;
       const centerY = y + height / 2;
-      const seatsPerRow = Math.max(1, Math.round(width / (seatSizeFeet * gridSize * 1.15)));
+      const seatsPerRow = Math.max(
+        1,
+        Math.round(width / (seatSizeFeet * gridSize * 1.15)),
+      );
       const rowCount = Math.max(
         1,
         s.estimatedSeats
@@ -1454,7 +1457,9 @@ export function SeatLayoutEditorPage() {
       const blueprints = generateSectionSeats(params, gridSize);
       const generated: EditableSeat[] = blueprints.map((bp) => ({
         ...bp,
-        seatId: bp.seatId || `ai-${floorId}-${s.label.replace(/\s+/g, "-")}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        seatId:
+          bp.seatId ||
+          `ai-${floorId}-${s.label.replace(/\s+/g, "-")}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         isAvailable: true,
         ...(s.isAccessible ? { accessibilityNote: "Accessible" } : {}),
       }));

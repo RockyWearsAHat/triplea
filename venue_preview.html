@@ -1,0 +1,596 @@
+<!doctype html>
+<!-- venue_preview.html — dynamic: fetches ./ollama_latest_result.json on load -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Venue AI Preview — Latest</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+        background: #0d0d0d;
+        color: #e0e0e0;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      #ver-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        background: #1c276e;
+        color: #adb8e0;
+        font-size: 13px;
+        font-weight: 700;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+      #meta {
+        color: #888;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      #meta strong {
+        color: #aaa;
+      }
+      #canvas-wrap {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        border: 1px solid #333;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      #bg-img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      #svg-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+      }
+      .section-wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+      }
+      @media (max-width: 700px) {
+        .section-wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+      #summary {
+        margin-top: 20px;
+      }
+      .sum-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .sum-table th {
+        text-align: left;
+        padding: 6px 10px;
+        background: #1a1a2e;
+        color: #adb8e0;
+        font-weight: 600;
+      }
+      .sum-table td {
+        padding: 5px 10px;
+        border-bottom: 1px solid #222;
+        vertical-align: top;
+      }
+      .sum-table tr:hover td {
+        background: #151525;
+      }
+      .tag {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .tag-zone {
+        background: #1c276e;
+        color: #adb8e0;
+      }
+      .tag-wall {
+        background: #333;
+        color: #aaa;
+      }
+      .tag-stage {
+        background: #5a3a00;
+        color: #e59d0d;
+      }
+      .tag-label {
+        background: #2a1050;
+        color: #c084fc;
+      }
+      .tag-hc {
+        background: #0a3040;
+        color: #00b5d8;
+      }
+      .shape-badge {
+        font-size: 11px;
+        color: #666;
+      }
+      .shape-badge.nr {
+        color: #e59d0d;
+      }
+      details {
+        margin-top: 20px;
+      }
+      details summary {
+        cursor: pointer;
+        color: #666;
+        font-size: 12px;
+        padding: 6px 0;
+      }
+      details summary:hover {
+        color: #aaa;
+      }
+      pre {
+        background: #111;
+        border: 1px solid #222;
+        border-radius: 4px;
+        padding: 12px;
+        font-size: 11px;
+        overflow-x: auto;
+        max-height: 400px;
+        color: #8bc;
+        margin-top: 8px;
+      }
+      .loading {
+        color: #666;
+        font-style: italic;
+      }
+      .error {
+        color: #f87171;
+      }
+      #reload-btn {
+        margin-left: 12px;
+        padding: 3px 12px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        background: #1a1a2e;
+        color: #adb8e0;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      #reload-btn:hover {
+        background: #252550;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      Venue AI Preview <span id="ver-badge">—</span>
+      <button id="reload-btn" onclick="load()">↺ Reload</button>
+    </h1>
+    <div id="meta" class="loading">Loading ollama_latest_result.json…</div>
+
+    <div class="section-wrap">
+      <div>
+        <div id="canvas-wrap">
+          <img id="bg-img" src=".github/example2.jpg" alt="Floor plan" />
+          <svg
+            id="svg-overlay"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          ></svg>
+        </div>
+      </div>
+      <div id="summary"></div>
+    </div>
+
+    <details id="json-details">
+      <summary>Raw JSON</summary>
+      <pre id="raw-json"></pre>
+    </details>
+
+    <script>
+      const ZONE_PALETTE = [
+        ["rgba(100,180,255,0.28)", "#3a8fff"],
+        ["rgba(255,200,80,0.28)", "#c09000"],
+        ["rgba(100,220,150,0.28)", "#28a064"],
+        ["rgba(200,100,255,0.28)", "#8822cc"],
+        ["rgba(255,140,100,0.28)", "#c04020"],
+        ["rgba(80,200,220,0.28)", "#1898b4"],
+        ["rgba(255,100,150,0.28)", "#cc2255"],
+        ["rgba(180,220,80,0.28)", "#7a9000"],
+      ];
+      const TYPE_COLOR = {
+        door: "#e53e3e",
+        stair: "#ed8936",
+        ramp: "#38a169",
+        railing: "#718096",
+        partition: "#3182ce",
+        room: "#805ad5",
+        sign: "#d69e2e",
+        handicap: "#00b5d8",
+        entrance: "#e53e3e",
+        other: "#aaa",
+      };
+
+      function svgEl(tag, attrs) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+        return el;
+      }
+
+      // Polygon from array of [x, y] pairs
+      function addPoly(svg, pts, fill, stroke, title) {
+        const points = pts.map(([x, y]) => x + "," + y).join(" ");
+        const poly = svgEl("polygon", {
+          points,
+          fill,
+          stroke,
+          "stroke-width": "0.5",
+          "stroke-linejoin": "round",
+        });
+        if (title) {
+          const t = svgEl("title", {});
+          t.textContent = title;
+          poly.appendChild(t);
+        }
+        svg.appendChild(poly);
+      }
+
+      // Label text in SVG
+      function addSvgLabel(svg, x, y, text, color) {
+        // background rect approx
+        const bg = svgEl("rect", {
+          x: x - 0.1,
+          y: y - 1.6,
+          width: text.length * 0.9 + 0.2,
+          height: 2.0,
+          fill: "rgba(0,0,0,0.60)",
+          rx: "0.4",
+        });
+        svg.appendChild(bg);
+        const t = svgEl("text", {
+          x,
+          y,
+          fill: color || "#fff",
+          "font-size": "2.2",
+          "font-family": "system-ui,sans-serif",
+          "font-weight": "600",
+          "pointer-events": "none",
+        });
+        t.textContent = text;
+        svg.appendChild(t);
+      }
+
+      function addPin(svg, x, y, text, color) {
+        const dot = svgEl("circle", {
+          cx: x,
+          cy: y,
+          r: "1.2",
+          fill: color,
+          stroke: "#fff",
+          "stroke-width": "0.3",
+        });
+        svg.appendChild(dot);
+        addSvgLabel(svg, x + 1.5, y + 0.7, text, color);
+      }
+
+      // ── V9 / V11 renderer ─────────────────────────────────────────────────────────
+      function renderV9(d, svg) {
+        // otherElements first (stage, aisles, entrances as bbox)
+        (d.otherElements || []).forEach((e) => {
+          const l = e.xPct - (e.widthPct || 0) / 2;
+          const t = e.yPct - (e.heightPct || 0) / 2;
+          const r = l + (e.widthPct || 0);
+          const b = t + (e.heightPct || 0);
+          const fill =
+            e.type === "stage"
+              ? "rgba(229,157,13,0.20)"
+              : "rgba(255,255,255,0.06)";
+          const stroke = e.type === "stage" ? "#e59d0d" : "#555";
+          addPoly(
+            svg,
+            [
+              [l, t],
+              [r, t],
+              [r, b],
+              [l, b],
+            ],
+            fill,
+            stroke,
+            e.label + " (" + e.type + ")",
+          );
+          if (e.label)
+            addSvgLabel(
+              svg,
+              l + 0.5,
+              t + 2.4,
+              e.label,
+              e.type === "stage" ? "#e59d0d" : "#aaa",
+            );
+        });
+        // seatingZones as named-edge quadrilaterals
+        (d.seatingZones || []).forEach((z, i) => {
+          const [fill, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
+          const pts = [
+            [z.xLeftTopPct, z.yTopPct],
+            [z.xRightTopPct, z.yTopPct],
+            [z.xRightBottomPct, z.yBottomPct],
+            [z.xLeftBottomPct, z.yBottomPct],
+          ];
+          const hcSuffix = z.isHandicap ? " ♿" : "";
+          addPoly(
+            svg,
+            pts,
+            fill,
+            stroke,
+            z.label + hcSuffix + " (~" + (z.estimatedSeats || "?") + " seats)",
+          );
+          const cx =
+            (z.xLeftTopPct +
+              z.xRightTopPct +
+              z.xRightBottomPct +
+              z.xLeftBottomPct) /
+            4;
+          const cy = (z.yTopPct * 2 + z.yBottomPct * 2) / 4;
+          addSvgLabel(
+            svg,
+            cx - z.label.length * 0.45,
+            cy,
+            z.label + hcSuffix,
+            stroke,
+          );
+        });
+        // pointLabels (v11 hybrid — render pins if present)
+        (d.pointLabels || []).forEach((lbl) => {
+          const color = TYPE_COLOR[lbl.type] || TYPE_COLOR.other;
+          addPin(svg, lbl.xPct, lbl.yPct, lbl.text, color);
+        });
+      }
+
+      // ── V10 renderer ───────────────────────────────────────────────────────────────
+      function renderV10(d, svg) {
+        // Walls (grey hatched)
+        (d.walls || []).forEach((w) => {
+          addPoly(
+            svg,
+            [
+              [w.tlX, w.tlY],
+              [w.trX, w.trY],
+              [w.brX, w.brY],
+              [w.blX, w.blY],
+            ],
+            "rgba(120,120,120,0.12)",
+            "#555",
+            w.label,
+          );
+        });
+        // Stage (gold)
+        if (d.stage) {
+          const s = d.stage;
+          const l = s.xPct - (s.widthPct || 0) / 2;
+          const t = s.yPct - (s.heightPct || 0) / 2;
+          const r = l + (s.widthPct || 0);
+          const b = t + (s.heightPct || 0);
+          addPoly(
+            svg,
+            [
+              [l, t],
+              [r, t],
+              [r, b],
+              [l, b],
+            ],
+            "rgba(229,157,13,0.25)",
+            "#e59d0d",
+            "Stage",
+          );
+          addSvgLabel(svg, l + 0.5, b - 0.8, s.label || "Stage", "#e59d0d");
+        }
+        // Seat sections (colored quads)
+        (d.seatSections || []).forEach((sec, i) => {
+          const [fill, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
+          addPoly(
+            svg,
+            [
+              [sec.tlX, sec.tlY],
+              [sec.trX, sec.trY],
+              [sec.brX, sec.brY],
+              [sec.blX, sec.blY],
+            ],
+            fill,
+            stroke,
+            sec.label +
+              " (" +
+              (sec.estimatedSeats || "?") +
+              " seats)" +
+              (sec.isHandicap ? " ♿" : ""),
+          );
+          const cx = (sec.tlX + sec.trX + sec.brX + sec.blX) / 4;
+          const cy = (sec.tlY + sec.trY + sec.brY + sec.blY) / 4;
+          const lbl = sec.label + (sec.isHandicap ? " ♿" : "");
+          addSvgLabel(svg, cx - lbl.length * 0.45, cy, lbl, stroke);
+        });
+        // Point labels
+        (d.pointLabels || []).forEach((lbl) => {
+          const color = TYPE_COLOR[lbl.type] || TYPE_COLOR.other;
+          addPin(svg, lbl.xPct, lbl.yPct, lbl.text, color);
+        });
+      }
+
+      // ── Summary table ──────────────────────────────────────────────────────────────
+      function buildSummary(d) {
+        const el = document.getElementById("summary");
+        const rows = [];
+
+        const isV9 = !!d.seatingZones;
+        const isV10 = !!(d.seatSections || d.stage);
+
+        if (isV9) {
+          const ver = d._version || "v9";
+          rows.push(
+            `<tr><th colspan="3">Seating Zones (${ver} named-edge)</th></tr>`,
+          );
+          rows.push("<tr><th>#</th><th>Label</th><th>Details</th></tr>");
+          (d.seatingZones || []).forEach((z, i) => {
+            const [, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
+            const ld = z.xLeftBottomPct - z.xLeftTopPct,
+              rd = z.xRightBottomPct - z.xRightTopPct;
+            const shape =
+              Math.abs(ld) > 2 || Math.abs(rd) > 2
+                ? '<span class="shape-badge nr">non-rect ✓</span>'
+                : '<span class="shape-badge">RECT</span>';
+            const hc = z.isHandicap
+              ? ' <span class="tag tag-hc">♿ HC</span>'
+              : "";
+            rows.push(
+              `<tr><td><span class="tag tag-zone" style="background:${stroke}22;color:${stroke}">${i + 1}</span></td>` +
+                `<td><strong>${z.label || "—"}</strong>${hc}</td>` +
+                `<td>y:${z.yTopPct}→${z.yBottomPct}% | L:Δ${ld >= 0 ? "+" : ""}${ld} R:Δ${rd >= 0 ? "+" : ""}${rd} | seats:${z.estimatedSeats || "?"} ${shape}</td></tr>`,
+            );
+          });
+          const stage = (d.otherElements || []).find((e) => e.type === "stage");
+          if (stage)
+            rows.push(
+              `<tr><td><span class="tag tag-stage">stage</span></td><td><strong>${stage.label}</strong></td><td>${stage.xPct}%,${stage.yPct}% ${stage.widthPct}×${stage.heightPct}%</td></tr>`,
+            );
+          // pointLabels (v11 hybrid)
+          if ((d.pointLabels || []).length) {
+            rows.push('<tr><th colspan="3">Point Labels (v11)</th></tr>');
+            (d.pointLabels || []).forEach((l, i) => {
+              const color = TYPE_COLOR[l.type] || TYPE_COLOR.other;
+              rows.push(
+                `<tr><td><span class="tag" style="background:${color}22;color:${color}">${l.type}</span></td>` +
+                  `<td>"${l.text}"</td><td>${l.xPct}%, ${l.yPct}%</td></tr>`,
+              );
+            });
+          }
+        }
+
+        if (isV10) {
+          if (d.stage) {
+            const s = d.stage;
+            rows.push('<tr><th colspan="3">Stage (v10)</th></tr>');
+            rows.push(
+              `<tr><td><span class="tag tag-stage">stage</span></td><td><strong>${s.label}</strong></td><td>${s.xPct}%,${s.yPct}% | ${s.widthPct}×${s.heightPct}%</td></tr>`,
+            );
+          }
+          if ((d.walls || []).length) {
+            rows.push('<tr><th colspan="3">Walls</th></tr>');
+            (d.walls || []).forEach((w, i) => {
+              rows.push(
+                `<tr><td><span class="tag tag-wall">${i + 1}</span></td><td>${w.label || "—"}</td><td>tl:(${w.tlX},${w.tlY}) tr:(${w.trX},${w.trY}) br:(${w.brX},${w.brY}) bl:(${w.blX},${w.blY})</td></tr>`,
+              );
+            });
+          }
+          if ((d.seatSections || []).length) {
+            rows.push(
+              '<tr><th colspan="3">Seat Sections (v10 4-corner)</th></tr>',
+            );
+            (d.seatSections || []).forEach((s, i) => {
+              const [, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
+              const al =
+                s.tlY === s.trY &&
+                s.blY === s.brY &&
+                s.tlX === s.blX &&
+                s.trX === s.brX;
+              const shape = al
+                ? '<span class="shape-badge">RECT</span>'
+                : '<span class="shape-badge nr">non-rect ✓</span>';
+              const hc = s.isHandicap
+                ? ' <span class="tag tag-hc">♿ HC</span>'
+                : "";
+              rows.push(
+                `<tr><td><span class="tag tag-zone" style="background:${stroke}22;color:${stroke}">${i + 1}</span></td>` +
+                  `<td><strong>${s.label || "—"}</strong>${hc}</td>` +
+                  `<td>tl:(${s.tlX},${s.tlY}) tr:(${s.trX},${s.trY}) br:(${s.brX},${s.brY}) bl:(${s.blX},${s.blY}) | seats:${s.estimatedSeats || "?"} ${shape}</td></tr>`,
+              );
+            });
+          }
+          if ((d.pointLabels || []).length) {
+            rows.push('<tr><th colspan="3">Point Labels</th></tr>');
+            (d.pointLabels || []).forEach((l, i) => {
+              const color = TYPE_COLOR[l.type] || TYPE_COLOR.other;
+              rows.push(
+                `<tr><td><span class="tag" style="background:${color}22;color:${color}">${l.type}</span></td>` +
+                  `<td>"${l.text}"</td><td>${l.xPct}%, ${l.yPct}%</td></tr>`,
+              );
+            });
+          }
+        }
+
+        el.innerHTML = rows.length
+          ? `<table class="sum-table"><tbody>${rows.join("")}</tbody></table>`
+          : '<p style="color:#666">No recognizable schema keys found.</p>';
+      }
+
+      // ── Main load ──────────────────────────────────────────────────────────────────
+      async function load() {
+        const meta = document.getElementById("meta");
+        meta.className = "loading";
+        meta.textContent = "Loading…";
+
+        try {
+          const resp = await fetch(
+            "./ollama_latest_result.json?_t=" + Date.now(),
+          );
+          if (!resp.ok)
+            throw new Error(
+              "HTTP " + resp.status + " — run a test script first (v9 or v10)",
+            );
+          const d = await resp.json();
+
+          // Header
+          document.getElementById("ver-badge").textContent = d._version || "?";
+          meta.className = "";
+          meta.innerHTML =
+            "<strong>Elapsed:</strong> " +
+            (d._elapsed || "?") +
+            "s &nbsp;|&nbsp; " +
+            "<strong>Ran:</strong> " +
+            (d._ranAt ? new Date(d._ranAt).toLocaleString() : "?") +
+            (d._model
+              ? " &nbsp;|&nbsp; <strong>Model:</strong> " + d._model
+              : "");
+
+          // SVG overlay (clear & redraw)
+          const svg = document.getElementById("svg-overlay");
+          svg.innerHTML = "";
+          if (d.seatingZones) renderV9(d, svg);
+          else if (d.seatSections || d.stage) renderV10(d, svg);
+
+          // Summary
+          buildSummary(d);
+
+          // Raw JSON
+          document.getElementById("raw-json").textContent = JSON.stringify(
+            d,
+            null,
+            2,
+          );
+        } catch (err) {
+          meta.className = "error";
+          meta.textContent = "⚠ " + err.message;
+          document.getElementById("summary").innerHTML =
+            '<p class="error" style="margin-top:12px">No data yet. Run <code>node /tmp/ollama_test_v9.mjs</code> or <code>node /tmp/ollama_test_v10.mjs</code> to generate results.</p>';
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

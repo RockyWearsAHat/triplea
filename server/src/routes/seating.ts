@@ -1346,13 +1346,12 @@ router.post(
         "entrance",
         "seating_zone",
       ]);
-      const sanitizedSuggestions = (parsed.suggestions ?? [])
-        .filter(
-          (s) =>
-            VALID_TYPES.has(s.type) &&
-            typeof s.xPct === "number" &&
-            typeof s.yPct === "number",
-        );
+      const sanitizedSuggestions = (parsed.suggestions ?? []).filter(
+        (s) =>
+          VALID_TYPES.has(s.type) &&
+          typeof s.xPct === "number" &&
+          typeof s.yPct === "number",
+      );
 
       // Auto-normalize: if the model returned 0-1 fractions instead of 0-100 integers,
       // scale everything up. Heuristic: if the max xPct/yPct across all suggestions <= 1.0
@@ -1365,37 +1364,38 @@ router.post(
       const pctScale =
         maxCoord <= 1.0 && sanitizedSuggestions.length > 0 ? 100 : 1;
 
-      const mappedSuggestions = sanitizedSuggestions
-        .map((s) => ({
-          type: s.type as
-            | "stage"
-            | "aisle"
-            | "table"
-            | "railing"
-            | "stairs"
-            | "dance_floor"
-            | "entrance"
-            | "seating_zone",
-          label: String(s.label || s.type),
-          xPct: Math.max(0, Math.min(100, s.xPct * pctScale)),
-          yPct: Math.max(0, Math.min(100, s.yPct * pctScale)),
-          widthPct:
-            typeof s.widthPct === "number"
-              ? Math.max(0, Math.min(100, s.widthPct * pctScale))
-              : undefined,
-          heightPct:
-            typeof s.heightPct === "number"
-              ? Math.max(0, Math.min(100, s.heightPct * pctScale))
-              : undefined,
-          estimatedSeats:
-            typeof s.estimatedSeats === "number" && s.estimatedSeats > 0
-              ? s.estimatedSeats
-              : undefined,
-          rotationDeg:
-            typeof s.rotationDeg === "number" ? Math.round(s.rotationDeg) : undefined,
-          isAccessible: s.isAccessible === true ? true : undefined,
-          notes: s.notes ? String(s.notes) : undefined,
-        }));
+      const mappedSuggestions = sanitizedSuggestions.map((s) => ({
+        type: s.type as
+          | "stage"
+          | "aisle"
+          | "table"
+          | "railing"
+          | "stairs"
+          | "dance_floor"
+          | "entrance"
+          | "seating_zone",
+        label: String(s.label || s.type),
+        xPct: Math.max(0, Math.min(100, s.xPct * pctScale)),
+        yPct: Math.max(0, Math.min(100, s.yPct * pctScale)),
+        widthPct:
+          typeof s.widthPct === "number"
+            ? Math.max(0, Math.min(100, s.widthPct * pctScale))
+            : undefined,
+        heightPct:
+          typeof s.heightPct === "number"
+            ? Math.max(0, Math.min(100, s.heightPct * pctScale))
+            : undefined,
+        estimatedSeats:
+          typeof s.estimatedSeats === "number" && s.estimatedSeats > 0
+            ? s.estimatedSeats
+            : undefined,
+        rotationDeg:
+          typeof s.rotationDeg === "number"
+            ? Math.round(s.rotationDeg)
+            : undefined,
+        isAccessible: s.isAccessible === true ? true : undefined,
+        notes: s.notes ? String(s.notes) : undefined,
+      }));
       // (mappedSuggestions is typed; used below in the aiSuggestions object)
 
       // Extract and validate real-world measurement fields

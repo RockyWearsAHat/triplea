@@ -1,0 +1,151 @@
+{
+  "stagePosition": "left",
+  "seatingZones": [
+    {
+      "label": "Zone 1",
+      "yTopPct": 0.1,
+      "yBottomPct": 0.3,
+      "xLeftTopPct": 0.2,
+      "xLeftBottomPct": 0.2,
+      "xRightTopPct": 0.4,
+      "xRightBottomPct": 0.4,
+      "estimatedSeats": 50,
+      "isHandicap": true
+    },
+    {
+      "label": "Zone 2",
+      "yTopPct": 0.3,
+      "yBottomPct": 0.5,
+      "xLeftTopPct": 0.2,
+      "xLeftBottomPct": 0.2,
+      "xRightTopPct": 0.4,
+      "xRightBottomPct": 0.4,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 3",
+      "yTopPct": 0.5,
+      "yBottomPct": 0.7,
+      "xLeftTopPct": 0.2,
+      "xLeftBottomPct": 0.2,
+      "xRightTopPct": 0.4,
+      "xRightBottomPct": 0.4,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 4",
+      "yTopPct": 0.7,
+      "yBottomPct": 0.9,
+      "xLeftTopPct": 0.2,
+      "xLeftBottomPct": 0.2,
+      "xRightTopPct": 0.4,
+      "xRightBottomPct": 0.4,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 5",
+      "yTopPct": 0.1,
+      "yBottomPct": 0.3,
+      "xLeftTopPct": 0.6,
+      "xLeftBottomPct": 0.6,
+      "xRightTopPct": 0.8,
+      "xRightBottomPct": 0.8,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 6",
+      "yTopPct": 0.3,
+      "yBottomPct": 0.5,
+      "xLeftTopPct": 0.6,
+      "xLeftBottomPct": 0.6,
+      "xRightTopPct": 0.8,
+      "xRightBottomPct": 0.8,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 7",
+      "yTopPct": 0.5,
+      "yBottomPct": 0.7,
+      "xLeftTopPct": 0.6,
+      "xLeftBottomPct": 0.6,
+      "xRightTopPct": 0.8,
+      "xRightBottomPct": 0.8,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    },
+    {
+      "label": "Zone 8",
+      "yTopPct": 0.7,
+      "yBottomPct": 0.9,
+      "xLeftTopPct": 0.6,
+      "xLeftBottomPct": 0.6,
+      "xRightTopPct": 0.8,
+      "xRightBottomPct": 0.8,
+      "estimatedSeats": 50,
+      "isHandicap": false
+    }
+  ],
+  "otherElements": [
+    {
+      "type": "stage",
+      "label": "Stage",
+      "xPct": 0.5,
+      "yPct": 0.95,
+      "widthPct": 0.2,
+      "heightPct": 0.05
+    }
+  ],
+  "pointLabels": [
+    {
+      "text": "Projection Room",
+      "type": "room",
+      "xPct": 0.8,
+      "yPct": 0.1
+    },
+    {
+      "text": "Railing",
+      "type": "railing",
+      "xPct": 0.2,
+      "yPct": 0.2
+    },
+    {
+      "text": "Railing",
+      "type": "railing",
+      "xPct": 0.8,
+      "yPct": 0.2
+    },
+    {
+      "text": "Railing",
+      "type": "railing",
+      "xPct": 0.2,
+      "yPct": 0.8
+    },
+    {
+      "text": "Railing",
+      "type": "railing",
+      "xPct": 0.8,
+      "yPct": 0.8
+    },
+    {
+      "text": "Moveable Partition",
+      "type": "partition",
+      "xPct": 0.5,
+      "yPct": 0.5
+    },
+    {
+      "text": "Moveable Partition",
+      "type": "partition",
+      "xPct": 0.5,
+      "yPct": 0.7
+    }
+  ],
+  "_version": "v11",
+  "_elapsed": "462.4",
+  "_ranAt": "2026-03-05T22:17:16.301Z",
+  "_model": "qwen2.5vl:32b"
+}
