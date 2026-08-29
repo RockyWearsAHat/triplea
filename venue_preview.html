@@ -25,17 +25,7 @@
         font-weight: 600;
         margin-bottom: 6px;
       }
-      #ver-badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        background: #1c276e;
-        color: #adb8e0;
-        font-size: 13px;
-        font-weight: 700;
-        vertical-align: middle;
-        margin-left: 8px;
-      }
+
       #meta {
         color: #888;
         font-size: 12px;
@@ -63,7 +53,28 @@
         width: 100%;
         height: 100%;
         overflow: visible;
+      }
+      /* Section polygons are interactive by default */
+      #svg-overlay polygon {
+        pointer-events: all;
+        cursor: pointer;
+        transition:
+          fill 0.15s ease,
+          stroke-width 0.15s ease,
+          filter 0.15s ease;
+      }
+      #svg-overlay polygon:hover {
+        filter: brightness(1.4) drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+        stroke-width: 1.2;
+      }
+      /* Non-interactive overlays (walls, voids) opt out */
+      #svg-overlay polygon.poly-passive {
         pointer-events: none;
+        cursor: default;
+      }
+      #svg-overlay polygon.poly-passive:hover {
+        filter: none;
+        stroke-width: 0.8;
       }
       .section-wrap {
         display: grid;
@@ -163,8 +174,11 @@
       .error {
         color: #f87171;
       }
-      #reload-btn {
-        margin-left: 12px;
+      #reload-btn,
+      #grid-btn,
+      #run-btn,
+      #upload-btn {
+        margin-left: 8px;
         padding: 3px 12px;
         border-radius: 4px;
         border: 1px solid #444;
@@ -173,17 +187,378 @@
         cursor: pointer;
         font-size: 13px;
       }
-      #reload-btn:hover {
+      #reload-btn:hover,
+      #grid-btn:hover,
+      #upload-btn:hover,
+      #run-btn:hover:not(:disabled) {
         background: #252550;
+      }
+      #run-btn {
+        border-color: #1c276e;
+        color: #e59d0d;
+      }
+      #run-btn.running {
+        border-color: #e59d0d;
+        color: #e59d0d;
+        opacity: 0.7;
+        cursor: wait;
+      }
+      #template-warn {
+        display: none;
+        margin: 10px 0 0;
+        padding: 8px 14px;
+        background: #2d1000;
+        border: 1px solid #c04020;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #fca5a5;
+      }
+      #template-warn strong {
+        color: #f87171;
+      }
+      #template-warn.visible {
+        display: block;
+      }
+      #run-log {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 14px;
+        background: #0a0a16;
+        border: 1px solid #1c276e;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: monospace;
+        color: #adb8e0;
+        max-height: 220px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #run-log.visible {
+        display: block;
+      }
+      #grid-btn.active {
+        background: #1c3a1c;
+        border-color: #28a064;
+        color: #28a064;
+      }
+      #poll-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a064;
+        margin-left: 10px;
+        vertical-align: middle;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+      }
+      #poll-indicator.active {
+        opacity: 1;
+        animation: pulse 1s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      .svg-grid .minor {
+        stroke: rgba(255, 255, 255, 0.07);
+        stroke-width: 0.1;
+      }
+      .svg-grid .major {
+        stroke: rgba(255, 255, 255, 0.22);
+        stroke-width: 0.18;
+      }
+      .svg-grid .accent {
+        stroke: rgba(99, 179, 255, 0.55);
+        stroke-width: 0.28;
+        stroke-dasharray: 0.6 0.4;
+      }
+      .svg-grid .label-x {
+        fill: rgba(255, 255, 255, 0.7);
+        font-size: 2.2px;
+        font-family: ui-monospace, monospace;
+        dominant-baseline: hanging;
+      }
+      .svg-grid .label-y {
+        fill: rgba(255, 255, 255, 0.7);
+        font-size: 2.2px;
+        font-family: ui-monospace, monospace;
+        text-anchor: start;
+      }
+      /* canvas flash on new data */
+      @keyframes data-flash {
+        0% {
+          box-shadow: 0 0 0 0 rgba(99, 179, 255, 0);
+        }
+        30% {
+          box-shadow: 0 0 0 4px rgba(99, 179, 255, 0.7);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(99, 179, 255, 0);
+        }
+      }
+      #canvas-wrap.flash {
+        animation: data-flash 0.8s ease-out;
+      }
+      #coord-tip {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        background: rgba(0, 0, 0, 0.72);
+        color: #63b3ff;
+        font:
+          11px/1.4 ui-monospace,
+          monospace;
+        padding: 3px 7px;
+        border-radius: 4px;
+        pointer-events: none;
+        display: none;
+        z-index: 10;
+      }
+      /* ── Editor mode ────────────────────────────────────── */
+      #edit-btn {
+        margin-left: 8px;
+        padding: 3px 12px;
+        border-radius: 4px;
+        border: 1px solid #825eca;
+        background: #1a1a2e;
+        color: #c084fc;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      #edit-btn.active {
+        background: #2a1050;
+        border-color: #c084fc;
+        color: #fff;
+      }
+      #save-btn {
+        margin-left: 8px;
+        padding: 3px 12px;
+        border-radius: 4px;
+        border: 1px solid #28a064;
+        background: #0a1a10;
+        color: #28a064;
+        cursor: pointer;
+        font-size: 13px;
+        display: none;
+      }
+      #save-btn:hover {
+        background: #152a1c;
+      }
+      #upload-btn {
+        margin-left: 8px;
+        padding: 3px 12px;
+        border-radius: 4px;
+        border: 1px solid #1c276e;
+        background: #1a1a2e;
+        color: #adb8e0;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      #upload-input {
+        display: none;
+      }
+      body.edit-mode #svg-overlay {
+        pointer-events: all;
+        cursor: crosshair;
+      }
+      body.edit-mode #canvas-wrap {
+        cursor: crosshair;
+      }
+      .edit-panel {
+        display: none;
+        position: fixed;
+        right: 16px;
+        top: 80px;
+        width: 240px;
+        background: #111827;
+        border: 1px solid #1c276e;
+        border-radius: 8px;
+        padding: 14px;
+        z-index: 100;
+        font-size: 13px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+      }
+      body.edit-mode .edit-panel {
+        display: block;
+      }
+      .edit-panel h3 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: #c084fc;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .edit-panel label {
+        display: block;
+        font-size: 11px;
+        color: #888;
+        margin: 8px 0 2px;
+      }
+      .edit-panel input,
+      .edit-panel select {
+        width: 100%;
+        background: #0d111a;
+        border: 1px solid #2a3050;
+        border-radius: 4px;
+        color: #e0e0e0;
+        padding: 4px 7px;
+        font-size: 12px;
+        font-family: system-ui, sans-serif;
+        box-sizing: border-box;
+      }
+      .edit-panel .ep-row {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .edit-panel button {
+        flex: 1;
+        padding: 5px 0;
+        border-radius: 4px;
+        border: 1px solid #334;
+        background: #1a1a2e;
+        color: #adb8e0;
+        cursor: pointer;
+        font-size: 11px;
+      }
+      .edit-panel button:hover {
+        background: #252550;
+      }
+      .edit-panel button.danger {
+        border-color: #7f1d1d;
+        color: #f87171;
+      }
+      .edit-panel button.danger:hover {
+        background: #3d0808;
+      }
+      .edit-panel button.primary {
+        border-color: #28a064;
+        color: #28a064;
+      }
+      .edit-panel button.primary:hover {
+        background: #0a2010;
+      }
+      .ep-hint {
+        font-size: 10px;
+        color: #555;
+        margin-top: 10px;
+        line-height: 1.5;
+      }
+      /* vertex handles */
+      .vhandle {
+        cursor: grab;
+        fill: #c084fc;
+        stroke: #fff;
+        stroke-width: 0.5;
+      }
+      .vhandle:hover {
+        fill: #fff;
+      }
+      .vhandle.dragging {
+        cursor: grabbing;
+        fill: #e59d0d;
+      }
+      /* selected polygon highlight */
+      .poly-selected {
+        filter: drop-shadow(0 0 3px rgba(192, 132, 252, 0.85));
+      }
+      /* seat dots */
+      .seat-dot {
+        cursor: pointer;
+        fill: rgba(100, 180, 255, 0.55);
+        stroke: rgba(100, 180, 255, 0.9);
+        stroke-width: 0.25;
+      }
+      .seat-dot:hover {
+        fill: #e59d0d;
+        stroke: #e59d0d;
+      }
+      .seat-dot.reserved {
+        fill: rgba(200, 50, 50, 0.6);
+        stroke: #f87171;
+      }
+      .seat-dot.selected {
+        fill: #e59d0d;
+        stroke: #fff;
+      }
+      .seat-dot.suspect {
+        fill: rgba(245, 158, 11, 0.55);
+        stroke: #f59e0b;
+      }
+      .seat-dot.suspect:hover {
+        fill: #f59e0b;
+        stroke: #fff;
       }
     </style>
   </head>
   <body>
     <h1>
-      Venue AI Preview <span id="ver-badge">—</span>
+      Venue AI Preview
       <button id="reload-btn" onclick="load()">↺ Reload</button>
+      <button id="grid-btn" onclick="toggleGrid()">⊞ Grid</button>
+      <button id="edit-btn" onclick="toggleEditMode()">✏ Edit</button>
+      <button id="save-btn" onclick="saveResult()">💾 Save</button>
+      <button id="run-btn" onclick="runAI()">▶ Run AI</button>
+      <label id="upload-btn" title="Upload floor plan image and run AI">
+        📤 Upload Image
+        <input
+          type="file"
+          id="upload-input"
+          accept="image/*"
+          onchange="uploadImage(event)"
+        />
+      </label>
+      <span id="poll-indicator" title="Auto-polling for new results…"></span>
     </h1>
+    <!-- Edit mode panel -->
+    <div class="edit-panel" id="edit-panel">
+      <h3>✏ Zone Editor</h3>
+      <div id="ep-no-sel" style="color: #555; font-size: 11px">
+        Click a zone to select it.<br />Drag vertices to adjust shape.
+      </div>
+      <div id="ep-sel" style="display: none">
+        <label>Label</label>
+        <input id="ep-label" type="text" oninput="applyZoneEdit()" />
+        <label>Type</label>
+        <select id="ep-type" onchange="applyZoneEdit()">
+          <option value="seating">seating</option>
+          <option value="stage">stage</option>
+          <option value="wall">wall</option>
+          <option value="aisle">aisle</option>
+          <option value="other">other</option>
+        </select>
+        <label>Notes</label>
+        <input id="ep-notes" type="text" oninput="applyZoneEdit()" />
+        <div class="ep-row">
+          <button class="primary" onclick="generateSeats()">⊞ Gen Seats</button>
+          <button class="danger" onclick="deleteZone()">✕ Delete</button>
+        </div>
+      </div>
+      <div class="ep-row" style="margin-top: 12px">
+        <button onclick="addZone()">＋ Add Zone</button>
+      </div>
+      <div class="ep-hint">
+        Drag vertices to adjust.<br />Click edge midpoint to add vertex.<br />Shift+click
+        vertex to delete it.
+      </div>
+    </div>
     <div id="meta" class="loading">Loading ollama_latest_result.json…</div>
+    <div id="template-warn">
+      <strong>⚠ Suspected template output</strong> — the AI returned
+      round-number coordinates (<code
+        >_templateScore: <span id="tmpl-score">?</span></code
+      >). This means the model did <em>not</em> read the grid; it filled in a
+      generic layout. Click <strong>▶ Run AI</strong> to rerun (v20 will
+      auto-retry with corrective feedback).
+    </div>
+    <pre id="run-log"></pre>
 
     <div class="section-wrap">
       <div>
@@ -194,6 +569,7 @@
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           ></svg>
+          <div id="coord-tip"></div>
         </div>
       </div>
       <div id="summary"></div>
@@ -235,15 +611,17 @@
       }
 
       // Polygon from array of [x, y] pairs
-      function addPoly(svg, pts, fill, stroke, title) {
+      function addPoly(svg, pts, fill, stroke, title, extraClass) {
         const points = pts.map(([x, y]) => x + "," + y).join(" ");
         const poly = svgEl("polygon", {
           points,
           fill,
           stroke,
-          "stroke-width": "0.5",
+          "stroke-width": "0.6",
           "stroke-linejoin": "round",
+          "stroke-linecap": "round",
         });
+        if (extraClass) poly.setAttribute("class", extraClass);
         if (title) {
           const t = svgEl("title", {});
           t.textContent = title;
@@ -278,26 +656,37 @@
       }
 
       function addPin(svg, x, y, text, color) {
+        // Dot only — text label omitted to avoid cluttering the floor plan.
+        // The annotation type/label is shown via SVG <title> (native tooltip).
         const dot = svgEl("circle", {
           cx: x,
           cy: y,
-          r: "1.2",
+          r: "1.5",
           fill: color,
-          stroke: "#fff",
+          stroke: "rgba(255,255,255,0.7)",
           "stroke-width": "0.3",
         });
+        const title = svgEl("title", {});
+        title.textContent = text;
+        dot.appendChild(title);
         svg.appendChild(dot);
-        addSvgLabel(svg, x + 1.5, y + 0.7, text, color);
       }
 
       // ── V9 / V11 renderer ─────────────────────────────────────────────────────────
+      // Coords from JSON are 0-1 fractions; SVG viewBox is 0-100, so scale ×100.
+      const S = (v) => v * 100;
+
       function renderV9(d, svg) {
         // otherElements first (stage, aisles, entrances as bbox)
         (d.otherElements || []).forEach((e) => {
-          const l = e.xPct - (e.widthPct || 0) / 2;
-          const t = e.yPct - (e.heightPct || 0) / 2;
-          const r = l + (e.widthPct || 0);
-          const b = t + (e.heightPct || 0);
+          const xc = S(e.xPct),
+            yc = S(e.yPct);
+          const w = S(e.widthPct || 0),
+            h = S(e.heightPct || 0);
+          const l = xc - w / 2;
+          const t = yc - h / 2;
+          const r = l + w;
+          const b = t + h;
           const fill =
             e.type === "stage"
               ? "rgba(229,157,13,0.20)"
@@ -315,23 +704,17 @@
             stroke,
             e.label + " (" + e.type + ")",
           );
-          if (e.label)
-            addSvgLabel(
-              svg,
-              l + 0.5,
-              t + 2.4,
-              e.label,
-              e.type === "stage" ? "#e59d0d" : "#aaa",
-            );
+          if (e.label && e.type === "stage")
+            addSvgLabel(svg, l + 0.5, t + 2.4, e.label, "#e59d0d");
         });
         // seatingZones as named-edge quadrilaterals
         (d.seatingZones || []).forEach((z, i) => {
           const [fill, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
           const pts = [
-            [z.xLeftTopPct, z.yTopPct],
-            [z.xRightTopPct, z.yTopPct],
-            [z.xRightBottomPct, z.yBottomPct],
-            [z.xLeftBottomPct, z.yBottomPct],
+            [S(z.xLeftTopPct), S(z.yTopPct)],
+            [S(z.xRightTopPct), S(z.yTopPct)],
+            [S(z.xRightBottomPct), S(z.yBottomPct)],
+            [S(z.xLeftBottomPct), S(z.yBottomPct)],
           ];
           const hcSuffix = z.isHandicap ? " ♿" : "";
           addPoly(
@@ -341,25 +724,74 @@
             stroke,
             z.label + hcSuffix + " (~" + (z.estimatedSeats || "?") + " seats)",
           );
-          const cx =
+          // Zone number badge — centroid of the quad
+          const cx = S(
             (z.xLeftTopPct +
               z.xRightTopPct +
               z.xRightBottomPct +
               z.xLeftBottomPct) /
-            4;
-          const cy = (z.yTopPct * 2 + z.yBottomPct * 2) / 4;
-          addSvgLabel(
-            svg,
-            cx - z.label.length * 0.45,
-            cy,
-            z.label + hcSuffix,
-            stroke,
+              4,
           );
+          const cy = S((z.yTopPct + z.yBottomPct) / 2);
+          const badge = svgEl("g", {});
+          const circ = svgEl("circle", {
+            cx,
+            cy,
+            r: "3.5",
+            fill: stroke,
+            opacity: "0.9",
+          });
+          const num = svgEl("text", {
+            x: cx,
+            y: cy,
+            fill: "#fff",
+            "font-size": "3.2",
+            "font-family": "ui-monospace,monospace",
+            "font-weight": "700",
+            "text-anchor": "middle",
+            "dominant-baseline": "central",
+            "pointer-events": "none",
+          });
+          num.textContent = i + 1;
+          badge.appendChild(circ);
+          badge.appendChild(num);
+          svg.appendChild(badge);
         });
+        // _separators (v17) — draw dashed lines across the SVG
+        const SEP_COLORS = {
+          aisle: "#60a5fa",
+          railing: "#f59e0b",
+          partition: "#a78bfa",
+          wall: "#94a3b8",
+          stage: "#f97316",
+        };
+        (d._separators || []).forEach((sep) => {
+          const pos = S(sep.posPct);
+          const color = SEP_COLORS[sep.type] || "#888";
+          const line = svgEl(
+            "line",
+            sep.orientation === "H"
+              ? { x1: 0, y1: pos, x2: 100, y2: pos }
+              : { x1: pos, y1: 0, x2: pos, y2: 100 },
+          );
+          line.setAttribute("stroke", color);
+          line.setAttribute("stroke-width", "0.6");
+          line.setAttribute("stroke-dasharray", "2,1.5");
+          line.setAttribute("opacity", "0.85");
+          const title = svgEl("title", {});
+          title.textContent = `${sep.type} (${sep.label || sep.orientation}) @ ${Math.round(sep.posPct * 100)}%`;
+          line.appendChild(title);
+          svg.appendChild(line);
+          // small label at the line
+          const lx = sep.orientation === "H" ? 1 : pos + 0.5;
+          const ly = sep.orientation === "H" ? pos - 0.8 : 2;
+          addSvgLabel(svg, lx, ly, sep.label || sep.type, color);
+        });
+
         // pointLabels (v11 hybrid — render pins if present)
         (d.pointLabels || []).forEach((lbl) => {
           const color = TYPE_COLOR[lbl.type] || TYPE_COLOR.other;
-          addPin(svg, lbl.xPct, lbl.yPct, lbl.text, color);
+          addPin(svg, S(lbl.xPct), S(lbl.yPct), lbl.text, color);
         });
       }
 
@@ -422,8 +854,9 @@
           );
           const cx = (sec.tlX + sec.trX + sec.brX + sec.blX) / 4;
           const cy = (sec.tlY + sec.trY + sec.brY + sec.blY) / 4;
-          const lbl = sec.label + (sec.isHandicap ? " ♿" : "");
-          addSvgLabel(svg, cx - lbl.length * 0.45, cy, lbl, stroke);
+          void cx;
+          void cy;
+          // Zone label removed from SVG overlay — visible in summary table.
         });
         // Point labels
         (d.pointLabels || []).forEach((lbl) => {
@@ -432,24 +865,377 @@
         });
       }
 
+      // ── V18/V19 renderer — free-form elements array (polygon-aware) ────────────
+      function renderV18(d, svg) {
+        const TYPE_STYLE = {
+          seating: {
+            fill: null,
+            stroke: null,
+            useZonePalette: true,
+            interactive: true,
+          },
+          seating_section: {
+            fill: null,
+            stroke: null,
+            useZonePalette: true,
+            interactive: true,
+          },
+          stage: {
+            fill: "rgba(229,157,13,0.18)",
+            stroke: "#e59d0d",
+            interactive: true,
+          },
+          aisle: {
+            fill: "rgba(100,180,255,0.06)",
+            stroke: "rgba(96,165,250,0.5)",
+            passive: true,
+          },
+          wall: {
+            fill: "rgba(120,120,120,0.06)",
+            stroke: "rgba(100,116,139,0.5)",
+            passive: true,
+          },
+          void: {
+            fill: "rgba(250,204,21,0.08)",
+            stroke: "rgba(250,204,21,0.4)",
+            passive: true,
+          },
+          opening: {
+            fill: "rgba(192,132,252,0.12)",
+            stroke: "#c084fc",
+            interactive: true,
+          },
+          door: {
+            fill: "rgba(192,132,252,0.12)",
+            stroke: "#c084fc",
+            interactive: true,
+          },
+          stairs: {
+            fill: "rgba(52,211,153,0.10)",
+            stroke: "#34d399",
+            interactive: true,
+          },
+          railing: {
+            fill: "rgba(248,113,113,0.08)",
+            stroke: "#f87171",
+            passive: true,
+          },
+          seat: { fill: null, stroke: "#93c5fd", pointOnly: true },
+          label: { fill: null, stroke: null, pinOnly: true },
+          other: {
+            fill: "rgba(200,200,200,0.06)",
+            stroke: "#888",
+            passive: true,
+          },
+        };
+        let seatIdx = 0;
+
+        // Render non-seat elements first (back to front: walls → voids → sections → stages)
+        const renderOrder = [
+          "wall",
+          "void",
+          "aisle",
+          "other",
+          "railing",
+          "seating",
+          "seating_section",
+          "opening",
+          "door",
+          "stairs",
+          "stage",
+        ];
+        const byType = {};
+        (d.elements || []).forEach((e) => {
+          const key = e.type || "other";
+          (byType[key] = byType[key] || []).push(e);
+        });
+
+        // Render in layer order
+        for (const type of renderOrder) {
+          (byType[type] || []).forEach((e) => {
+            const s = TYPE_STYLE[e.type] || TYPE_STYLE.other;
+            if (s.pointOnly || s.pinOnly) return;
+
+            let pts;
+            if (Array.isArray(e.points) && e.points.length >= 3) {
+              pts = e.points.map(([x, y]) => [S(x), S(y)]);
+            } else {
+              const l = S(e.xLeft ?? 0),
+                r = S(e.xRight ?? 1),
+                t = S(e.yTop ?? 0),
+                b = S(e.yBottom ?? 1);
+              pts = [
+                [l, t],
+                [r, t],
+                [r, b],
+                [l, b],
+              ];
+            }
+
+            const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+            const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+
+            let fill = s.fill,
+              stroke = s.stroke;
+            if (s.useZonePalette) {
+              [fill, stroke] = ZONE_PALETTE[seatIdx % ZONE_PALETTE.length];
+              seatIdx++;
+            }
+            if (!fill) return;
+
+            const passiveClass = s.passive ? "poly-passive" : "";
+            addPoly(
+              svg,
+              pts,
+              fill,
+              stroke,
+              e.label + (e.notes ? " — " + e.notes : ""),
+              passiveClass,
+            );
+
+            // Section number badge
+            if (e.type === "seating" || e.type === "seating_section") {
+              const badge = svgEl("g", { "pointer-events": "none" });
+              const circ = svgEl("circle", {
+                cx,
+                cy,
+                r: "3.2",
+                fill: stroke,
+                opacity: "0.85",
+              });
+              const num = svgEl("text", {
+                x: cx,
+                y: cy,
+                fill: "#fff",
+                "font-size": "2.8",
+                "font-family": "ui-monospace,monospace",
+                "font-weight": "700",
+                "text-anchor": "middle",
+                "dominant-baseline": "central",
+                "pointer-events": "none",
+              });
+              num.textContent = seatIdx;
+              badge.appendChild(circ);
+              badge.appendChild(num);
+              svg.appendChild(badge);
+            }
+            if (e.type === "stage") {
+              const tTop = pts.reduce((a, p) => Math.min(a, p[1]), Infinity);
+              const lLeft = pts.reduce((a, p) => Math.min(a, p[0]), Infinity);
+              addSvgLabel(svg, lLeft + 0.5, tTop + 2.4, e.label, "#e59d0d");
+            }
+          });
+          delete byType[type];
+        }
+        // Render any remaining types not in renderOrder
+        for (const [type, elems] of Object.entries(byType)) {
+          elems.forEach((e) => {
+            const s = TYPE_STYLE[e.type] || TYPE_STYLE.other;
+            if (s.pointOnly || s.pinOnly) return;
+            let pts;
+            if (Array.isArray(e.points) && e.points.length >= 3) {
+              pts = e.points.map(([x, y]) => [S(x), S(y)]);
+            } else {
+              const l = S(e.xLeft ?? 0),
+                r = S(e.xRight ?? 1),
+                t = S(e.yTop ?? 0),
+                b = S(e.yBottom ?? 1);
+              pts = [
+                [l, t],
+                [r, t],
+                [r, b],
+                [l, b],
+              ];
+            }
+            let fill = s.fill || "rgba(200,200,200,0.06)",
+              stroke = s.stroke || "#888";
+            addPoly(
+              svg,
+              pts,
+              fill,
+              stroke,
+              e.label || "",
+              s.passive ? "poly-passive" : "",
+            );
+          });
+        }
+
+        // Render seats last (on top of everything)
+        (d.elements || []).forEach((e) => {
+          const s = TYPE_STYLE[e.type] || TYPE_STYLE.other;
+          if (!s.pointOnly) return;
+          const cx = S(e.cx ?? ((e.xLeft ?? 0) + (e.xRight ?? 0)) / 2);
+          const cy = S(e.cy ?? ((e.yTop ?? 0) + (e.yBottom ?? 0)) / 2);
+          const dot = svgEl("circle", {
+            cx,
+            cy,
+            r: "0.5",
+            class: "seat-dot",
+          });
+          if (e.status === "reserved") dot.classList.add("reserved");
+          if (e.suspect) dot.classList.add("suspect");
+          const title = svgEl("title", {});
+          title.textContent =
+            e.seatId ||
+            e.label ||
+            `Seat ${e.row != null ? `R${e.row}` : ""}${e.seatNumber != null ? `-${e.seatNumber}` : ""}`;
+          dot.appendChild(title);
+          svg.appendChild(dot);
+        });
+
+        // Pin labels (if any)
+        (d.elements || []).forEach((e) => {
+          const s = TYPE_STYLE[e.type] || TYPE_STYLE.other;
+          if (!s.pinOnly) return;
+          const cx = S(e.cx ?? ((e.xLeft ?? 0) + (e.xRight ?? 0)) / 2);
+          const cy = S(e.cy ?? ((e.yTop ?? 0) + (e.yBottom ?? 0)) / 2);
+          addPin(svg, cx, cy, e.label, "#a78bfa");
+        });
+      }
+
       // ── Summary table ──────────────────────────────────────────────────────────────
       function buildSummary(d) {
         const el = document.getElementById("summary");
         const rows = [];
 
-        const isV9 = !!d.seatingZones;
-        const isV10 = !!(d.seatSections || d.stage);
+        const isV18 = Array.isArray(d.elements);
+        const isV9 = !isV18 && !!d.seatingZones;
+        const isV10 = !isV18 && !!(d.seatSections || d.stage);
+
+        if (isV18) {
+          const tmplBadge =
+            d._model === "hand-traced"
+              ? ` <span style="color:#34d399;font-size:10px">✓ hand-traced (pixel scan)</span>`
+              : d._isTemplate
+                ? ` <span style="color:#f87171;font-size:10px">⚠ template output</span>`
+                : d._templateScore != null && d._templateScore < 0.3
+                  ? ` <span style="color:#34d399;font-size:10px">✓ real grid readings</span>`
+                  : "";
+          rows.push(
+            `<tr><td colspan="3" style="padding:6px 8px;background:#1e40af18;border-left:3px solid #60a5fa;font-size:11px;color:#93c5fd">🔢 <strong>${d._version || "v18"}</strong> — free-form reconstruction${tmplBadge}</td></tr>`,
+          );
+          if (d.gridVerification)
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#34d399">🔍 ${d.gridVerification}</td></tr>`,
+            );
+          if (d.observations)
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#aaa;font-style:italic">${d.observations}</td></tr>`,
+            );
+          const TYPE_CLR = {
+            seating: "#60a5fa",
+            seating_section: "#60a5fa",
+            stage: "#e59d0d",
+            aisle: "#34d399",
+            wall: "#94a3b8",
+            void: "#facc15",
+            opening: "#c084fc",
+            door: "#c084fc",
+            stairs: "#34d399",
+            railing: "#f87171",
+            seat: "#93c5fd",
+            label: "#a78bfa",
+            other: "#888",
+          };
+          if (d.phases) {
+            const phaseBits = Object.entries(d.phases)
+              .filter(([, items]) => Array.isArray(items) && items.length)
+              .map(([key, items]) => `${key}:${items.length}`)
+              .join(" | ");
+            if (phaseBits) {
+              rows.push(
+                `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#9ca3af">phases: ${phaseBits}</td></tr>`,
+              );
+            }
+          }
+          if (d.debug?.maskCoverage) {
+            const mc = d.debug.maskCoverage;
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#9ca3af">mask coverage: ink ${mc.inkPct}% | text ${mc.textPct}% | artifact ${mc.artifactPct}%</td></tr>`,
+            );
+          }
+          if (d.debug?.candidateCounts) {
+            const cc = d.debug.candidateCounts;
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#9ca3af">candidates: shells ${cc.shells ?? "–"} | seating ${cc.seating ?? "–"} | voids ${cc.voids ?? "–"} | seats ${cc.seats ?? "–"} | stages ${cc.stages ?? "–"} | openings ${cc.openings ?? "–"}</td></tr>`,
+            );
+          }
+          const byType = {};
+          (d.elements || []).forEach((e) => {
+            (byType[e.type] = byType[e.type] || []).push(e);
+          });
+          Object.entries(byType).forEach(([type, items]) => {
+            const c = TYPE_CLR[type] || "#888";
+            rows.push(
+              `<tr><th colspan="3" style="color:${c}">${type} (${items.length})</th></tr>`,
+            );
+            if (type === "seat") {
+              const bySection = new Map();
+              items.forEach((seat) => {
+                const key = seat.sectionId || "?";
+                bySection.set(key, (bySection.get(key) || 0) + 1);
+              });
+              rows.push(
+                `<tr><td><span class="tag" style="background:${c}22;color:${c}">seat</span></td><td><strong>Detected seats</strong></td><td style="font-size:11px">${items.length} total${
+                  bySection.size
+                    ? ` | sections: ${Array.from(bySection.entries())
+                        .map(([key, count]) => `${key}:${count}`)
+                        .join(", ")}`
+                    : ""
+                }</td></tr>`,
+              );
+              return;
+            }
+            items.forEach((e) => {
+              const pct = (v) => Math.round(v * 1000) / 10;
+              const polyInfo =
+                Array.isArray(e.points) && e.points.length >= 3
+                  ? `<span style="color:#34d399;font-size:10px"> poly:${e.points.length}pts</span>`
+                  : `<span style="color:#888;font-size:10px"> bbox</span>`;
+              const xL =
+                e.xLeft ??
+                (e.points ? Math.min(...e.points.map((p) => p[0])) : 0);
+              const xR =
+                e.xRight ??
+                (e.points ? Math.max(...e.points.map((p) => p[0])) : 1);
+              const yT =
+                e.yTop ??
+                (e.points ? Math.min(...e.points.map((p) => p[1])) : 0);
+              const yB =
+                e.yBottom ??
+                (e.points ? Math.max(...e.points.map((p) => p[1])) : 1);
+              rows.push(
+                `<tr><td><span class="tag" style="background:${c}22;color:${c}">${type}</span></td>` +
+                  `<td><strong>${e.label}</strong>${polyInfo}${e.reasoning ? `<br><span style="font-size:10px;color:#888;font-style:italic">${e.reasoning}</span>` : ""}</td>` +
+                  `<td style="font-size:11px">x:${pct(xL)}%→${pct(xR)}% y:${pct(yT)}%→${pct(yB)}%</td></tr>`,
+              );
+            });
+          });
+        }
 
         if (isV9) {
-          const ver = d._version || "v9";
-          rows.push(
-            `<tr><th colspan="3">Seating Zones (${ver} named-edge)</th></tr>`,
-          );
+          // Version badge
+          if (d._version) {
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;background:#1e40af18;border-left:3px solid #60a5fa;font-size:11px;color:#93c5fd">` +
+                `🔢 <strong>${d._version}</strong> — separator-first architecture` +
+                `</td></tr>`,
+            );
+          }
+          rows.push(`<tr><th colspan="3">Seating Zones</th></tr>`);
+          // Reasoning
+          if (d._reasoning) {
+            rows.push(
+              `<tr><td colspan="3" style="padding:4px 8px;font-size:11px;color:#aaa;font-style:italic">${d._reasoning}</td></tr>`,
+            );
+          }
           rows.push("<tr><th>#</th><th>Label</th><th>Details</th></tr>");
           (d.seatingZones || []).forEach((z, i) => {
             const [, stroke] = ZONE_PALETTE[i % ZONE_PALETTE.length];
-            const ld = z.xLeftBottomPct - z.xLeftTopPct,
-              rd = z.xRightBottomPct - z.xRightTopPct;
+            // values are 0-1 fractions; convert to display percentages
+            const pct = (v) => Math.round(v * 1000) / 10;
+            const ld = pct(z.xLeftBottomPct - z.xLeftTopPct),
+              rd = pct(z.xRightBottomPct - z.xRightTopPct);
             const shape =
               Math.abs(ld) > 2 || Math.abs(rd) > 2
                 ? '<span class="shape-badge nr">non-rect ✓</span>'
@@ -460,22 +1246,49 @@
             rows.push(
               `<tr><td><span class="tag tag-zone" style="background:${stroke}22;color:${stroke}">${i + 1}</span></td>` +
                 `<td><strong>${z.label || "—"}</strong>${hc}</td>` +
-                `<td>y:${z.yTopPct}→${z.yBottomPct}% | L:Δ${ld >= 0 ? "+" : ""}${ld} R:Δ${rd >= 0 ? "+" : ""}${rd} | seats:${z.estimatedSeats || "?"} ${shape}</td></tr>`,
+                `<td>y:${pct(z.yTopPct)}%→${pct(z.yBottomPct)}% | L:Δ${ld >= 0 ? "+" : ""}${ld}% R:Δ${rd >= 0 ? "+" : ""}${rd}% | seats:${z.estimatedSeats || "?"} ${shape}</td></tr>`,
             );
           });
           const stage = (d.otherElements || []).find((e) => e.type === "stage");
-          if (stage)
+          if (stage) {
+            const pct = (v) => Math.round(v * 1000) / 10;
             rows.push(
-              `<tr><td><span class="tag tag-stage">stage</span></td><td><strong>${stage.label}</strong></td><td>${stage.xPct}%,${stage.yPct}% ${stage.widthPct}×${stage.heightPct}%</td></tr>`,
+              `<tr><td><span class="tag tag-stage">stage</span></td><td><strong>${stage.label}</strong></td><td>${pct(stage.xPct)}%,${pct(stage.yPct)}% ${pct(stage.widthPct)}×${pct(stage.heightPct)}%</td></tr>`,
             );
+          }
+          // _separators (v17)
+          if ((d._separators || []).length) {
+            rows.push(
+              '<tr><th colspan="3">Separators (v17 — aisles, railings, partitions)</th></tr>',
+            );
+            (d._separators || []).forEach((sep, i) => {
+              const pct = (v) => Math.round(v * 1000) / 10;
+              const dirLabel = sep.orientation === "H" ? "H → y=" : "V → x=";
+              const typeColors = {
+                aisle: "#60a5fa",
+                railing: "#f59e0b",
+                partition: "#a78bfa",
+                wall: "#94a3b8",
+                stage: "#f97316",
+              };
+              const color = typeColors[sep.type] || "#888";
+              rows.push(
+                `<tr><td style="font-size:11px;padding:2px 8px"><span class="tag" style="background:${color}22;color:${color}">${sep.type}</span></td>` +
+                  `<td style="font-size:11px;padding:2px 8px">${dirLabel}<strong>${pct(sep.posPct)}%</strong></td>` +
+                  `<td style="font-size:11px;padding:2px 8px;color:#888">${sep.label || ""}</td></tr>`,
+              );
+            });
+          }
+
           // pointLabels (v11 hybrid)
           if ((d.pointLabels || []).length) {
             rows.push('<tr><th colspan="3">Point Labels (v11)</th></tr>');
             (d.pointLabels || []).forEach((l, i) => {
+              const pct = (v) => Math.round(v * 1000) / 10;
               const color = TYPE_COLOR[l.type] || TYPE_COLOR.other;
               rows.push(
                 `<tr><td><span class="tag" style="background:${color}22;color:${color}">${l.type}</span></td>` +
-                  `<td>"${l.text}"</td><td>${l.xPct}%, ${l.yPct}%</td></tr>`,
+                  `<td>"${l.text}"</td><td>${pct(l.xPct)}%, ${pct(l.yPct)}%</td></tr>`,
               );
             });
           }
@@ -538,11 +1351,99 @@
           : '<p style="color:#666">No recognizable schema keys found.</p>';
       }
 
+      // ── Grid overlay (three-tier: 5% minor / 10% major / 50% accent) ──────────────
+      let gridVisible = false;
+
+      function drawGrid(svg) {
+        const g = svgEl("g", { class: "svg-grid" });
+
+        for (let i = 0; i <= 100; i += 5) {
+          const is50 = i === 50;
+          const is10 = i % 10 === 0;
+          const cls = is50 ? "accent" : is10 ? "major" : "minor";
+
+          const vl = svgEl("line", {
+            class: cls,
+            x1: i,
+            y1: 0,
+            x2: i,
+            y2: 100,
+          });
+          const hl = svgEl("line", {
+            class: cls,
+            x1: 0,
+            y1: i,
+            x2: 100,
+            y2: i,
+          });
+          g.appendChild(vl);
+          g.appendChild(hl);
+
+          // Labels on every 10% line (skip edges)
+          if (is10 && i > 0 && i < 100) {
+            // X-axis label (top)
+            const xt = svgEl("text", { class: "label-x", x: i + 0.5, y: 0.8 });
+            xt.textContent = i;
+            g.appendChild(xt);
+            // Y-axis label (left)
+            const yt = svgEl("text", { class: "label-y", x: 0.5, y: i + 0.8 });
+            yt.textContent = i;
+            g.appendChild(yt);
+          }
+        }
+
+        svg.insertBefore(g, svg.firstChild);
+      }
+
+      function removeGrid(svg) {
+        const existing = svg.querySelector(".svg-grid");
+        if (existing) existing.remove();
+      }
+
+      function toggleGrid() {
+        gridVisible = !gridVisible;
+        const btn = document.getElementById("grid-btn");
+        const svg = document.getElementById("svg-overlay");
+        const tip = document.getElementById("coord-tip");
+        btn.classList.toggle("active", gridVisible);
+        if (gridVisible) {
+          drawGrid(svg);
+          tip.style.display = "block";
+        } else {
+          removeGrid(svg);
+          tip.style.display = "none";
+        }
+      }
+
+      // ── Hover coordinate readout ────────────────────────────────────────────────────
+      (function () {
+        const wrap = document.getElementById("canvas-wrap");
+        const tip = document.getElementById("coord-tip");
+        wrap.addEventListener("mousemove", (e) => {
+          if (!gridVisible) return;
+          const rect = wrap.getBoundingClientRect();
+          const xPct = (((e.clientX - rect.left) / rect.width) * 100).toFixed(
+            1,
+          );
+          const yPct = (((e.clientY - rect.top) / rect.height) * 100).toFixed(
+            1,
+          );
+          tip.textContent = `x: ${xPct}%  y: ${yPct}%`;
+        });
+        wrap.addEventListener("mouseleave", () => {
+          tip.textContent = "";
+        });
+      })();
+
       // ── Main load ──────────────────────────────────────────────────────────────────
-      async function load() {
+      let _lastRanAt = null;
+
+      async function load(silent = false) {
         const meta = document.getElementById("meta");
-        meta.className = "loading";
-        meta.textContent = "Loading…";
+        if (!silent) {
+          meta.className = "loading";
+          meta.textContent = "Loading…";
+        }
 
         try {
           const resp = await fetch(
@@ -550,12 +1451,33 @@
           );
           if (!resp.ok)
             throw new Error(
-              "HTTP " + resp.status + " — run a test script first (v9 or v10)",
+              "HTTP " + resp.status + " — run a test script first",
             );
           const d = await resp.json();
 
+          // Skip silent refresh if nothing changed
+          if (silent && d._ranAt === _lastRanAt) return;
+          if (d._ranAt !== _lastRanAt && _lastRanAt !== null) {
+            // Flash indicator — new result arrived!
+            document.getElementById("poll-indicator").classList.add("active");
+            setTimeout(
+              () =>
+                document
+                  .getElementById("poll-indicator")
+                  .classList.remove("active"),
+              3000,
+            );
+          }
+          _lastRanAt = d._ranAt;
+
+          // Flash canvas border to confirm new data rendered
+          const wrap = document.getElementById("canvas-wrap");
+          wrap.classList.remove("flash");
+          void wrap.offsetWidth; // force reflow to restart animation
+          wrap.classList.add("flash");
+          setTimeout(() => wrap.classList.remove("flash"), 900);
+
           // Header
-          document.getElementById("ver-badge").textContent = d._version || "?";
           meta.className = "";
           meta.innerHTML =
             "<strong>Elapsed:</strong> " +
@@ -565,13 +1487,45 @@
             (d._ranAt ? new Date(d._ranAt).toLocaleString() : "?") +
             (d._model
               ? " &nbsp;|&nbsp; <strong>Model:</strong> " + d._model
+              : "") +
+            (d._imageDim
+              ? " &nbsp;|&nbsp; <strong>ImgDim:</strong> " + d._imageDim + "px"
               : "");
+
+          // Store for editor
+          currentData = d;
+          if (editMode) {
+            redrawEditor();
+            return;
+          }
 
           // SVG overlay (clear & redraw)
           const svg = document.getElementById("svg-overlay");
           svg.innerHTML = "";
-          if (d.seatingZones) renderV9(d, svg);
+          if (gridVisible) drawGrid(svg);
+          if (d.elements) renderV18(d, svg);
+          else if (d.seatingZones) renderV9(d, svg);
           else if (d.seatSections || d.stage) renderV10(d, svg);
+
+          // Restore background if not user-uploaded
+          const bgImg = document.getElementById("bg-img");
+          const src = bgImg.getAttribute("src") || "";
+          if (!src || src === "about:blank") {
+            bgImg.setAttribute("src", ".github/example2.jpg");
+          }
+
+          // Template warning
+          const warn = document.getElementById("template-warn");
+          const isTemplate =
+            d._isTemplate ||
+            (d._templateScore != null && d._templateScore >= 0.7);
+          warn.classList.toggle("visible", !!isTemplate);
+          if (isTemplate) {
+            document.getElementById("tmpl-score").textContent =
+              d._templateScore != null
+                ? (d._templateScore * 100).toFixed(0) + "% round coords"
+                : "high";
+          }
 
           // Summary
           buildSummary(d);
@@ -583,14 +1537,495 @@
             2,
           );
         } catch (err) {
-          meta.className = "error";
-          meta.textContent = "⚠ " + err.message;
-          document.getElementById("summary").innerHTML =
-            '<p class="error" style="margin-top:12px">No data yet. Run <code>node /tmp/ollama_test_v9.mjs</code> or <code>node /tmp/ollama_test_v10.mjs</code> to generate results.</p>';
+          if (!silent) {
+            meta.className = "error";
+            meta.textContent = "⚠ " + err.message;
+            document.getElementById("summary").innerHTML =
+              '<p class="error" style="margin-top:12px">No data yet. Click <strong>▶ Run AI</strong> (requires <code>node venue_server.mjs</code>) or run <code>node venue_ai_generate.mjs</code> directly.</p>';
+          }
         }
       }
 
+      // ── runAI — calls /api/run (SSE), streams output into #run-log ──────────────
+      function runAI() {
+        const btn = document.getElementById("run-btn");
+        const log = document.getElementById("run-log");
+        if (btn.classList.contains("running")) return;
+
+        btn.classList.add("running");
+        btn.textContent = "⏳ Running…";
+        log.textContent = "";
+        log.classList.add("visible");
+        log.scrollTop = 0;
+
+        const es = new EventSource("/api/run");
+
+        es.onmessage = (e) => {
+          let msg;
+          try {
+            msg = JSON.parse(e.data);
+          } catch {
+            return;
+          }
+
+          if (
+            msg.type === "stdout" ||
+            msg.type === "stderr" ||
+            msg.type === "start"
+          ) {
+            log.textContent += msg.text;
+            log.scrollTop = log.scrollHeight;
+          }
+
+          if (msg.type === "error") {
+            log.textContent += "\n⚠ " + msg.text + "\n";
+            log.scrollTop = log.scrollHeight;
+            es.close();
+            btn.classList.remove("running");
+            btn.textContent = "▶ Run AI";
+          }
+
+          if (msg.type === "done") {
+            es.close();
+            btn.classList.remove("running");
+            btn.textContent = "▶ Run AI";
+            if (msg.text === "done") {
+              log.textContent += "\n✅ Complete — reloading results…\n";
+              setTimeout(() => load(), 800);
+            } else {
+              log.textContent += "\n⚠ " + msg.text + "\n";
+            }
+            log.scrollTop = log.scrollHeight;
+          }
+        };
+
+        es.onerror = () => {
+          log.textContent +=
+            "\n⚠ Connection lost (is venue_server.mjs running?)\n";
+          es.close();
+          btn.classList.remove("running");
+          btn.textContent = "▶ Run AI";
+          log.scrollTop = log.scrollHeight;
+        };
+      }
+
+      // ── Auto-poll every 5s — picks up new AI results without manual refresh ────────
       load();
+      setInterval(() => load(true), 5000);
+
+      // ══════════════════════════════════════════════════════════════════════════
+      // INTERACTIVE POLYGON EDITOR
+      // ══════════════════════════════════════════════════════════════════════════
+
+      // ── Live editable copy of the current result data ─────────────────────
+      let currentData = null; // full JSON object, mutated in place by editor
+      let editMode = false;
+      let selectedIdx = null; // index into currentData.elements
+      let dragState = null; // {type:'vertex'|'midpoint', elemIdx, ptIdx, origX, origY}
+
+      // ── Convert client mouse coords → SVG 0-100 space ─────────────────────
+      function svgCoord(svg, clientX, clientY) {
+        const pt = svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+      }
+
+      // ── Toggle edit mode ──────────────────────────────────────────────────
+      function toggleEditMode() {
+        editMode = !editMode;
+        document.body.classList.toggle("edit-mode", editMode);
+        document
+          .getElementById("edit-btn")
+          .classList.toggle("active", editMode);
+        document.getElementById("save-btn").style.display = editMode
+          ? "inline-block"
+          : "none";
+        if (editMode) {
+          selectedIdx = null;
+          redrawEditor();
+        } else {
+          // Restore normal render
+          if (currentData) {
+            const svg = document.getElementById("svg-overlay");
+            svg.innerHTML = "";
+            if (gridVisible) drawGrid(svg);
+            if (currentData.elements) renderV18(currentData, svg);
+          }
+        }
+      }
+
+      // ── Full re-render in edit mode ───────────────────────────────────────
+      function redrawEditor() {
+        if (!editMode || !currentData || !currentData.elements) return;
+        const svg = document.getElementById("svg-overlay");
+        svg.innerHTML = "";
+        if (gridVisible) drawGrid(svg);
+
+        const els = currentData.elements;
+        els.forEach((e, idx) => {
+          const pts = normalizePoints(e);
+          if (!pts || pts.length < 2) return;
+
+          const [fill, stroke] = typeStyle(e.type, idx);
+          const polyPts = pts
+            .map(([x, y]) => x * 100 + "," + y * 100)
+            .join(" ");
+
+          const poly = svgEl("polygon", {
+            points: polyPts,
+            fill,
+            stroke,
+            "stroke-width": idx === selectedIdx ? "1.2" : "0.8",
+            "stroke-linejoin": "round",
+            "data-idx": idx,
+            class: idx === selectedIdx ? "poly-selected" : "",
+          });
+          poly.style.pointerEvents = "all";
+          poly.style.cursor = "pointer";
+          poly.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            if (!dragState) selectZone(idx);
+          });
+          svg.appendChild(poly);
+
+          // Seat dots (if generated)
+          if (e.seats) {
+            e.seats.forEach((seat) => {
+              const dot = svgEl("circle", {
+                cx: seat.x * 100,
+                cy: seat.y * 100,
+                r: "0.7",
+                class: "seat-dot",
+                "data-id": seat.id,
+              });
+              svg.appendChild(dot);
+            });
+          }
+
+          if (idx === selectedIdx) {
+            // Draw midpoints (for adding vertices)
+            for (let i = 0; i < pts.length; i++) {
+              const [x1, y1] = pts[i];
+              const [x2, y2] = pts[(i + 1) % pts.length];
+              const mx = (x1 + x2) / 2,
+                my = (y1 + y2) / 2;
+              const mid = svgEl("circle", {
+                cx: mx * 100,
+                cy: my * 100,
+                r: "1.2",
+                fill: "rgba(192,132,252,0.35)",
+                stroke: "#c084fc",
+                "stroke-width": "0.4",
+                style: "cursor:cell; pointer-events:all",
+                "data-mid-elem": idx,
+                "data-mid-after": i,
+              });
+              mid.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                insertVertex(idx, i, mx, my);
+              });
+              svg.appendChild(mid);
+            }
+            // Draw vertex handles on top
+            pts.forEach(([x, y], ptIdx) => {
+              const h = svgEl("circle", {
+                cx: x * 100,
+                cy: y * 100,
+                r: "1.8",
+                class: "vhandle",
+                "data-elem": idx,
+                "data-pt": ptIdx,
+              });
+              h.addEventListener("mousedown", (ev) => {
+                ev.stopPropagation();
+                if (ev.shiftKey) {
+                  removeVertex(idx, ptIdx);
+                  return;
+                }
+                startDrag(ev, idx, ptIdx);
+              });
+              svg.appendChild(h);
+            });
+          }
+        });
+
+        // Click on empty SVG area → deselect
+        svg.addEventListener(
+          "click",
+          (ev) => {
+            if (ev.target === svg) {
+              selectZone(null);
+            }
+          },
+          { once: true },
+        );
+      }
+
+      // ── Normalise points: support both {points} array and bbox {xLeft..} ─
+      function normalizePoints(e) {
+        if (Array.isArray(e.points) && e.points.length >= 2) return e.points;
+        if (e.xLeft != null)
+          return [
+            [e.xLeft, e.yTop],
+            [e.xRight, e.yTop],
+            [e.xRight, e.yBottom],
+            [e.xLeft, e.yBottom],
+          ];
+        return null;
+      }
+
+      // ── Type → fill/stroke style (mirrors renderV18 logic) ───────────────
+      const TYPE_RENDER = {
+        seating: ["rgba(100,180,255,0.28)", "#3a8fff"],
+        stage: ["rgba(255,180,60,0.30)", "#c08800"],
+        wall: ["rgba(150,150,160,0.20)", "#8888a0"],
+        aisle: ["rgba(255,255,120,0.18)", "#c8c820"],
+        other: ["rgba(200,200,200,0.15)", "#888"],
+      };
+      function typeStyle(type, idx) {
+        if (TYPE_RENDER[type]) return TYPE_RENDER[type];
+        return ["rgba(100,180,255,0.28)", "#3a8fff"];
+      }
+
+      // ── Select a zone by index ────────────────────────────────────────────
+      function selectZone(idx) {
+        selectedIdx = idx;
+        const noSel = document.getElementById("ep-no-sel");
+        const sel = document.getElementById("ep-sel");
+        if (idx == null || !currentData?.elements?.[idx]) {
+          noSel.style.display = "";
+          sel.style.display = "none";
+        } else {
+          const e = currentData.elements[idx];
+          noSel.style.display = "none";
+          sel.style.display = "";
+          document.getElementById("ep-label").value = e.label || "";
+          document.getElementById("ep-type").value = e.type || "seating";
+          document.getElementById("ep-notes").value = e.notes || "";
+        }
+        redrawEditor();
+      }
+
+      // ── Apply edits from panel back to data ───────────────────────────────
+      function applyZoneEdit() {
+        if (selectedIdx == null || !currentData?.elements?.[selectedIdx])
+          return;
+        const e = currentData.elements[selectedIdx];
+        e.label = document.getElementById("ep-label").value;
+        e.type = document.getElementById("ep-type").value;
+        e.notes = document.getElementById("ep-notes").value;
+        redrawEditor();
+      }
+
+      // ── Delete selected zone ──────────────────────────────────────────────
+      function deleteZone() {
+        if (selectedIdx == null) return;
+        currentData.elements.splice(selectedIdx, 1);
+        selectZone(null);
+      }
+
+      // ── Add a new default zone ────────────────────────────────────────────
+      function addZone() {
+        if (!currentData) currentData = { elements: [] };
+        if (!currentData.elements) currentData.elements = [];
+        currentData.elements.push({
+          type: "seating",
+          label: "New Zone " + (currentData.elements.length + 1),
+          points: [
+            [0.35, 0.35],
+            [0.65, 0.35],
+            [0.65, 0.65],
+            [0.35, 0.65],
+          ],
+        });
+        selectZone(currentData.elements.length - 1);
+      }
+
+      // ── Vertex drag ───────────────────────────────────────────────────────
+      function startDrag(ev, elemIdx, ptIdx) {
+        dragState = { elemIdx, ptIdx };
+        const svg = document.getElementById("svg-overlay");
+        const h = svg.querySelector(
+          `.vhandle[data-elem="${elemIdx}"][data-pt="${ptIdx}"]`,
+        );
+        if (h) h.classList.add("dragging");
+
+        const onMove = (e) => {
+          if (!dragState) return;
+          const coord = svgCoord(svg, e.clientX, e.clientY);
+          const x = Math.max(0, Math.min(1, coord.x / 100));
+          const y = Math.max(0, Math.min(1, coord.y / 100));
+          currentData.elements[dragState.elemIdx].points[dragState.ptIdx] = [
+            Math.round(x * 1000) / 1000,
+            Math.round(y * 1000) / 1000,
+          ];
+          redrawEditor();
+        };
+        const onUp = () => {
+          dragState = null;
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        ev.preventDefault();
+      }
+
+      // ── Insert vertex after index i ───────────────────────────────────────
+      function insertVertex(elemIdx, afterPtIdx, x, y) {
+        const pts = currentData.elements[elemIdx].points;
+        pts.splice(afterPtIdx + 1, 0, [
+          Math.round(x * 1000) / 1000,
+          Math.round(y * 1000) / 1000,
+        ]);
+        redrawEditor();
+      }
+
+      // ── Remove vertex (min 3 pts) ─────────────────────────────────────────
+      function removeVertex(elemIdx, ptIdx) {
+        const pts = currentData.elements[elemIdx].points;
+        if (pts.length <= 3) return;
+        pts.splice(ptIdx, 1);
+        redrawEditor();
+      }
+
+      // ══════════════════════════════════════════════════════════════════════════
+      // SEAT GRID GENERATOR
+      // ══════════════════════════════════════════════════════════════════════════
+
+      function generateSeats() {
+        if (selectedIdx == null || !currentData?.elements?.[selectedIdx])
+          return;
+        const el = currentData.elements[selectedIdx];
+        const pts = normalizePoints(el);
+        if (!pts) return;
+
+        // Canvas dimensions in pixels (for density calculation)
+        const imgEl = document.getElementById("bg-img");
+        const W = imgEl.naturalWidth || imgEl.clientWidth || 800;
+        const H = imgEl.naturalHeight || imgEl.clientHeight || 600;
+
+        // Estimate bounding box in 0-1 space
+        const xs = pts.map((p) => p[0]),
+          ys = pts.map((p) => p[1]);
+        const minX = Math.min(...xs),
+          maxX = Math.max(...xs);
+        const minY = Math.min(...ys),
+          maxY = Math.max(...ys);
+
+        // Seat spacing: ~18.5" wide, ~2'10" deep  (typical tight theater)
+        // We use relative spacing: aim for a reasonable grid density.
+        // User can adjust via prompt — for now default to 20 cols across bbox.
+        const colCount = parseInt(
+          prompt("Columns across zone? (default 20)", "20") || "20",
+          10,
+        );
+        const stepX = (maxX - minX) / colCount;
+        const stepY = stepX * (W / H) * 1.35; // slight row depth ratio
+
+        const seats = [];
+        let rowNum = 0;
+        for (let y = minY + stepY * 0.5; y < maxY; y += stepY) {
+          let colNum = 0;
+          for (let x = minX + stepX * 0.5; x < maxX; x += stepX) {
+            if (pointInPolygon([x, y], pts)) {
+              seats.push({
+                id: `${el.label || "Z"}_R${rowNum}C${colNum}`,
+                row: rowNum,
+                col: colNum,
+                x: Math.round(x * 1000) / 1000,
+                y: Math.round(y * 1000) / 1000,
+                status: "available",
+              });
+            }
+            colNum++;
+          }
+          rowNum++;
+        }
+        el.seats = seats;
+        alert(`Generated ${seats.length} seats in "${el.label || "zone"}".`);
+        redrawEditor();
+      }
+
+      // Ray-cast point-in-polygon test ────────────────────────────────────────
+      function pointInPolygon([px, py], polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+          const [xi, yi] = polygon[i],
+            [xj, yj] = polygon[j];
+          if (
+            yi > py !== yj > py &&
+            px < ((xj - xi) * (py - yi)) / (yj - yi) + xi
+          ) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      }
+
+      // ══════════════════════════════════════════════════════════════════════════
+      // SAVE + UPLOAD
+      // ══════════════════════════════════════════════════════════════════════════
+
+      async function saveResult() {
+        if (!currentData) return;
+        currentData._ranAt = new Date().toISOString();
+        currentData._model = (currentData._model || "unknown") + "+edited";
+        try {
+          const r = await fetch("/api/save-result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(currentData, null, 2),
+          });
+          const j = await r.json();
+          if (j.ok) {
+            document.getElementById("save-btn").textContent = "✅ Saved";
+            setTimeout(() => {
+              document.getElementById("save-btn").textContent = "💾 Save";
+            }, 2000);
+          } else {
+            alert("Save failed: " + j.error);
+          }
+        } catch (e) {
+          alert("Save error: " + e.message);
+        }
+      }
+
+      async function uploadImage(ev) {
+        const file = ev.target.files?.[0];
+        if (!file) return;
+        const log = document.getElementById("run-log");
+        log.classList.add("visible");
+        log.textContent = `Uploading ${file.name}…\n`;
+
+        const fd = new FormData();
+        fd.append("image", file);
+        try {
+          const r = await fetch("/api/upload-image", {
+            method: "POST",
+            body: fd,
+          });
+          const j = await r.json();
+          if (!j.ok) {
+            log.textContent += "⚠ Upload failed: " + j.error;
+            return;
+          }
+          log.textContent += `✅ Saved → ${j.path}\nStarting AI analysis…\n`;
+          // Update bg image to the uploaded one
+          document.getElementById("bg-img").src = j.path + "?_t=" + Date.now();
+          // Run AI on the uploaded image
+          runAI();
+        } catch (e) {
+          log.textContent += "⚠ " + e.message;
+        }
+        // Reset file input so same file can be re-uploaded
+        ev.target.value = "";
+      }
+
+      // ── Hook into load() to keep currentData in sync ─────────────────────
+      // Patch the load function to also store data for the editor
+      const _origLoad = load;
     </script>
   </body>
 </html>

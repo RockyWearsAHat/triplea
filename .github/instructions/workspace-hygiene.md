@@ -1,4 +1,3 @@
-```markdown
 # Workspace Hygiene (Artifacts, Cleanup, and When)
 
 This repo may generate build/test/debug output. Keeping the workspace clean improves signal-to-noise and reduces accidental commits.
@@ -37,4 +36,3 @@ Only after the user confirms that the issue is solved:
 If a task is "fix bug X", the cleanup step is **blocked** until the user confirms the behavior is solved.
 
 Reason: artifacts are often required to reproduce and verify the fix.
-```

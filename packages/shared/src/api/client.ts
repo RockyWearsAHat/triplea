@@ -1281,6 +1281,12 @@ export class TripleAApiClient {
       }>;
       floors?: Array<{ floorId: string; name: string; order: number }>;
       stagePosition?: string;
+      backgroundImageUrl?: string;
+      aiPolygonZones?: Array<{
+        type: string;
+        label: string;
+        points: [number, number][];
+      }>;
     };
     soldSeatIds: string[];
     tiers: Array<{
@@ -1675,6 +1681,20 @@ export class TripleAApiClient {
     }
 
     return (await res.json()) as { imageUrl: string };
+  }
+
+  async generateSeatsFromAi(
+    layoutId: string,
+    opts: { clearExisting?: boolean } = {},
+  ): Promise<{ seatsGenerated: number; totalSeats: number }> {
+    return await this.request(
+      `/seating/layouts/${encodeURIComponent(layoutId)}/generate-from-ai`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(opts),
+      },
+    );
   }
 
   /** Analyze the stored background image using Qwen VL via Ollama (server-side). */

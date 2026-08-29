@@ -145,6 +145,8 @@ export interface ISeatingLayout extends Document {
       rotationDeg?: number;
       isAccessible?: boolean;
       notes?: string;
+      /** Polygon vertices in 0-1 fraction space, e.g. [[0.1,0.2],[0.4,0.2],...] */
+      points?: [number, number][];
     }>;
   };
   /** Stage configuration stored in world coordinates */
@@ -285,6 +287,7 @@ const SeatingLayoutSchema = new Schema<ISeatingLayout>(
           rotationDeg: { type: Number },
           isAccessible: { type: Boolean },
           notes: { type: String },
+          points: { type: [[Number]], default: undefined },
         },
       ],
     },

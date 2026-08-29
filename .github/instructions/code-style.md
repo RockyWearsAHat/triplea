@@ -1,4 +1,3 @@
-```markdown
 # Code Style and Documentation Expectations
 
 ## Principles
@@ -32,4 +31,3 @@ Any behavior change requires updating:
 - Prefer `const` over `let`, avoid `var`.
 - Use async/await over raw promises.
 - Prefer named exports over default exports.
-```

@@ -1,7 +1,7 @@
 ---
 name: "Audit"
-description: "Security-focused code review specialist with OWASP Top 10, Zero Trust, LLM security, and enterprise security standards"
-model: Claude Sonnet 4.6 (copilot)
+description: "Security-focused code review: OWASP Top 10, Zero Trust, LLM/ML threats. Run before shipping auth flows, payment integrations, or user data handling."
+model: GPT-5.4 (copilot)
 tools:
   - search/codebase
   - edit/editFiles

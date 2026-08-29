@@ -1,4 +1,3 @@
-```markdown
 # Documentation-First TDD (Spec → Tests → Implementation)
 
 This project's correctness and maintainability depend on treating **documentation as the primary spec**.
@@ -44,4 +43,3 @@ Use descriptive test names like:
 - `Feature_Scenario_ExpectedBehavior`
 - `ClassName_MethodName_ConditionAndResult`
 
-```

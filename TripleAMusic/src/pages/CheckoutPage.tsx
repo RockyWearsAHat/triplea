@@ -158,6 +158,12 @@ export default function CheckoutPage() {
       seats: SeatInfo[];
       sections: SectionInfo[];
       stagePosition?: "top" | "bottom" | "left" | "right";
+      backgroundImageUrl?: string | null;
+      aiPolygonZones?: Array<{
+        type: string;
+        label: string;
+        points: [number, number][];
+      }>;
     };
     tiers: TierInfo[];
   } | null>(null);
@@ -257,6 +263,8 @@ export default function CheckoutPage() {
                   | "bottom"
                   | "left"
                   | "right",
+                backgroundImageUrl: seatsData.layout.backgroundImageUrl,
+                aiPolygonZones: seatsData.layout.aiPolygonZones,
               },
               tiers: seatsData.tiers as TierInfo[],
             });
@@ -649,6 +657,10 @@ export default function CheckoutPage() {
                         }}
                         maxSeats={item.quantity}
                         stagePosition={seatingData.layout.stagePosition}
+                        backgroundImageUrl={
+                          seatingData.layout.backgroundImageUrl ?? undefined
+                        }
+                        polygonZones={seatingData.layout.aiPolygonZones}
                       />
                     ) : (
                       <button

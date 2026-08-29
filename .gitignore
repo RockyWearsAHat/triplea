@@ -33,3 +33,9 @@ server/.env
 *.njsproj
 *.sln
 *.sw?
+# dx: the local index is rebuildable from .doc/repo.dxcp
+.doc/index.db
+.doc/index.db-wal
+.doc/index.db-shm
+.doc/coverage.jsonl
+.doc/local.dxcp
