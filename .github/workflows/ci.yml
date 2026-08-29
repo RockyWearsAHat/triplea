@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck — server
+        run: npx tsc --project server/tsconfig.json --noEmit
+        working-directory: ${{ github.workspace }}
+
+      - name: Typecheck — TripleAMuse
+        run: npx tsc --project tsconfig.app.json --noEmit
+        working-directory: TripleAMuse
+
+      - name: Typecheck — TripleAMusician
+        run: npx tsc --project tsconfig.app.json --noEmit
+        working-directory: TripleAMusician
+
+      - name: Typecheck — TripleAMusic
+        run: npx tsc --project tsconfig.app.json --noEmit
+        working-directory: TripleAMusic
+
+  build:
+    name: Build Apps
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build — TripleAMuse
+        run: pnpm run build
+        working-directory: TripleAMuse
+        env:
+          VITE_API_URL: https://placeholder.example.com
+
+      - name: Build — TripleAMusician
+        run: pnpm run build
+        working-directory: TripleAMusician
+        env:
+          VITE_API_URL: https://placeholder.example.com
+
+      - name: Build — TripleAMusic
+        run: pnpm run build
+        working-directory: TripleAMusic
+        env:
+          VITE_API_URL: https://placeholder.example.com
+
+  server-tests:
+    name: Server Unit Tests
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run server tests
+        run: pnpm test --if-present
+        working-directory: server
+        env:
+          NODE_ENV: test
+          MONGODB_URI: ""

@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/session-start.sh",
+        "osx": ".github/hooks/scripts/session-start.sh",
+        "linux": ".github/hooks/scripts/session-start.sh",
+        "timeout": 10
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/block-dangerous.sh",
+        "osx": ".github/hooks/scripts/block-dangerous.sh",
+        "linux": ".github/hooks/scripts/block-dangerous.sh",
+        "timeout": 10
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/format-after-edit.sh",
+        "osx": ".github/hooks/scripts/format-after-edit.sh",
+        "linux": ".github/hooks/scripts/format-after-edit.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

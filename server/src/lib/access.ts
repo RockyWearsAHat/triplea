@@ -54,7 +54,7 @@ export function hasAnyRole(roles: string[], required: Role[]): boolean {
 
 export function hasPermission(
   perms: string[] | undefined,
-  required: Permission
+  required: Permission,
 ): boolean {
   return (perms ?? []).includes(required);
 }

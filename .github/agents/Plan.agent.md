@@ -1,8 +1,9 @@
 ---
 name: Plan
-description: "Research, diagnose, and create executable code plans, then run those code plans with the Implement.agent.md agent."
-model: Claude Sonnet 4.6 (copilot)
+description: "Research, diagnose, and write executable step-by-step code plans to .github/plan.md. Surfaces decisions before handing off to Implement."
+model: GPT-5.4 (copilot)
 tools:
+  - read/readFile
   - search/codebase
   - web/fetch
   - search/usages

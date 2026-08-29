@@ -58,6 +58,17 @@ Seeded only when `SEED_DEMO_DATA=true`.
 - Run targeted tests first, then broaden
 - Test files live alongside source or in `server/src/__tests__/`
 
+## Seating layout editor + AI analysis
+
+- **Feature:** Host uploads a venue floor plan image → Qwen 2.5 VL analyzes it → returns zone suggestions (stage, seating_zone, aisle, entrance as % bounding boxes) → editor displays overlays → user accepts zones → seat rows are auto-generated within each zone.
+- **Route:** `POST /api/seating/layouts/:layoutId/analyze-image` in `server/src/routes/seating.ts` (~line 1125)
+- **Image resize:** `sharp@0.34.5` resizes image to ≤ 800 px before base64 encoding. Without this, a 4K image = 6–12 MB base64 — kills context window, causes 5–10 min generation + bad coordinates.
+- **Transport:** `http.request` (Node.js built-in) with 12-min hard timeout. NOT global `fetch()` — undici's 300 s `bodyTimeout` would kill the call.
+- **Coordinate system:** xPct/yPct = top-left corner as 0–100 integer % of image dimensions.
+- **Qwen edge case:** Model sometimes returns 0.0–1.0 fractions instead of integers. Server auto-multiplies by 100 when max coordinate ≤ 1.0.
+- **Full reference:** `.github/instructions/seating-ai.md`
+- **Editor:** `TripleAMusic/src/pages/SeatLayoutEditorPage.tsx` — Photoshop-style layout (top bar, left tool strip, canvas, right panel, status bar)
+
 ## Known issues / TODOs
 
 - Update this file whenever a significant architectural change is made.

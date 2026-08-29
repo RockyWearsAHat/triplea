@@ -1,6 +1,6 @@
 ---
 name: Implement
-description: "Execute plans from plan.md with documentation-first TDD discipline."
+description: "Execute every step in .github/plan.md exactly as written, verify each step, report ✅/⚠️/📋, and mark the plan 🟢 COMPLETE. TDD discipline."
 model: Claude Sonnet 4.6 (copilot)
 tools:
   - edit/editFiles

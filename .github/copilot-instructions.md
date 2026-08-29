@@ -5,6 +5,50 @@ applyTo: "**"
 
 # Triple A Apps – Project Instructions
 
+> **⚠️ SIZE NOTE (audit 2026-03-05):** This file is 26.5 KB — above the ~16 KB Copilot auto-truncation limit. The most critical operational sections are placed HERE at the top to ensure they are always loaded. Full product specification follows below.
+
+---
+
+## Agent Routing (ALWAYS USE — never implement inline for non-trivial tasks)
+
+| Agent           | Invoke when…                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| `@Orchestrator` | Any non-trivial task. Entry point. Runs stale-context check, routes to sub-agents.                      |
+| `@Plan`         | Research, root-cause diagnosis, architecture decisions, multi-file refactors. Writes `.github/plan.md`. |
+| `@Implement`    | A plan exists in `.github/plan.md`. Executes every step with TDD verification.                          |
+| `@Style`        | Any `.module.scss` change, layout fix, responsive design, or visual polish.                             |
+| `@Audit`        | Before shipping auth flows, payment integrations, or any user data handling.                            |
+
+**Session start rule (Orchestrator):** Always read `bugs.md` → `plan_todos.md` → `plan.md` before doing any work. Surface non-empty bugs immediately. Gate `plan_todos.md` "Remaining" items — never pick them up silently.
+
+---
+
+## Color Palette (Non-Negotiable)
+
+| Token                                    | Hex       | Use                                     |
+| ---------------------------------------- | --------- | --------------------------------------- |
+| `--taa-gold-500` / `--primary`           | `#E59D0D` | **Primary actions + key emphasis ONLY** |
+| `--taa-blue-900` / `--accent` (Musician) | `#1C276E` | App accent, nav active, emphasis        |
+| `--taa-blue-200`                         | `#ADB8E0` | Secondary actions, borders, accents     |
+| `--taa-purple-400`                       | `#825ECA` | Accent (Muse identity)                  |
+| `--taa-purple-900`                       | `#4E238B` | Dark purple accent                      |
+| `--taa-gray-600`                         | `#4B4E63` | Text, borders, less-prominent elements  |
+| `--taa-white`                            | `#FFFFFF` | Background (light mode)                 |
+| `--taa-black`                            | `#000000` | Background (dark mode)                  |
+
+Never hardcode hex colors in page files. Use `var(--token)` from `packages/shared/src/styles/global.scss`.
+
+---
+
+## Development Guidelines
+
+- Use Vite + TypeScript + React for each app (`TripleAMuse/`, `TripleAMusician/`, `TripleAMusic/`).
+- Keep shared logic in `packages/shared/` (types, API client, design tokens, primitives).
+- Separation of concerns: `src/pages/*` for route screens, `src/components/*` for reusable UI, `src/lib/*` / `src/hooks/*` for logic.
+- Avoid multi-thousand-line files. Split aggressively.
+
+---
+
 This document is a living brief. Keep it updated as product decisions are made.
 
 ## Current North Star (Jan 2026)
@@ -350,6 +394,25 @@ These items are directly supported by `.github/discord-chat-history.md` and shou
 
 This project uses specialized agents for different tasks. **Always delegate to the appropriate agent** rather than doing everything inline.
 
+### Orchestrator Agent (start here for any non-trivial task)
+
+**When to use:** Any task that requires planning, implementation, styling, or security review — use `@Orchestrator` as the entry point and it will coordinate the other agents.
+
+**What it does:**
+
+- Runs a stale-context check at session start (reads `bugs.md`, `plan_todos.md`, `plan.md`)
+- Hands off to Plan → Implement → Style → Audit as needed
+- Surfaces all ambiguous language and decisions to the user before proceeding
+- Never lets a sub-agent silently pick up optional work
+
+### Plan Agent (for research + planning)
+
+**When to use:** Research, architecture decisions, root-cause diagnosis, multi-file refactors, or before any non-trivial implementation. Writes an executable plan to `.github/plan.md`.
+
+### Implement Agent (for executing plans)
+
+**When to use:** Once a plan exists in `.github/plan.md`, use `@Implement` to execute it step-by-step with verification. Creates todos, runs verification commands, and marks steps complete.
+
 ### Style Agent (for all CSS/SCSS work)
 
 **When to use:** Any task involving `.module.scss` files, styling changes, layout fixes, responsive design, or visual polish.
@@ -375,10 +438,6 @@ Update TripleAMuse/src/pages/HomePage.module.scss:
 ```
 
 **Never do inline:** Don't write raw `.module.scss` edits yourself — always send to the Style agent for Kevin Powell-style modern CSS.
-
-### Plan Agent (for complex multi-step work)
-
-**When to use:** Research, architecture decisions, multi-file refactors, or when you need to understand the codebase before making changes.
 
 ### Audit Agent (for security review)
 

@@ -3,7 +3,11 @@ import express from "express";
 import * as http from "http";
 import multer from "multer";
 import mongoose from "mongoose";
-import { requireRole, type AuthenticatedRequest } from "../middleware/auth";
+import {
+  requireAuth,
+  requireRole,
+  type AuthenticatedRequest,
+} from "../middleware/auth";
 import { Gig } from "../models/Gig";
 import { TicketTier } from "../models/TicketTier";
 import { SeatingLayout } from "../models/SeatingLayout";
@@ -724,8 +728,18 @@ router.get("/gigs/:gigId/available-seats", async (req, res: Response) => {
         })),
         floors: (layout as any).floors,
         stagePosition: layout.stagePosition,
+        backgroundImageUrl: (layout as any).backgroundImageUrl ?? null,
+        aiPolygonZones: ((layout as any).aiSuggestions?.suggestions ?? [])
+          .filter(
+            (s: Record<string, unknown>) =>
+              Array.isArray(s.points) && (s.points as unknown[]).length >= 3,
+          )
+          .map((s: Record<string, unknown>) => ({
+            type: s.type ?? "seating_zone",
+            label: s.label ?? "Section",
+            points: s.points as [number, number][],
+          })),
       },
-      soldSeatIds: Array.from(soldSeatIds),
       tiers: tiers.map((t) => ({
         id: t.id,
         gigId: String(t.gigId),
@@ -1121,6 +1135,102 @@ router.post(
   },
 );
 
+// POST /layouts/:layoutId/generate-from-ai
+// One-click: reads stored AI suggestion polygons → generates ISeat[] with posX/posY
+router.post(
+  "/layouts/:layoutId/generate-from-ai",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { layoutId } = req.params as { layoutId: string };
+      const { clearExisting = false } = req.body as { clearExisting?: boolean };
+
+      const layout = await SeatingLayout.findById(layoutId);
+      if (!layout) return res.status(404).json({ error: "Layout not found" });
+
+      const suggestions: Array<Record<string, unknown>> =
+        (layout as any).aiSuggestions?.suggestions ?? [];
+      const seatingZones = suggestions.filter(
+        (s) =>
+          s.type === "seating_zone" &&
+          Array.isArray(s.points) &&
+          (s.points as unknown[]).length >= 3,
+      );
+
+      if (seatingZones.length === 0) {
+        return res.status(400).json({
+          error: "No polygon seating zones found. Run AI analysis first.",
+        });
+      }
+
+      const aiMeta = (layout as any).aiSuggestions ?? {};
+      const roomBoundary = (layout as any).roomBoundary ?? null;
+      const estimatedVenueFeet = {
+        width: aiMeta.estimatedVenueWidthFeet,
+        height: aiMeta.estimatedVenueHeightFeet,
+      };
+      const referenceSeat = aiMeta.referenceSeat;
+      const GRID = 24; // px per foot
+
+      if (
+        !roomBoundary?.width &&
+        !roomBoundary?.height &&
+        !estimatedVenueFeet.width &&
+        !estimatedVenueFeet.height
+      ) {
+        return res.status(400).json({
+          error:
+            "Seat generation needs either layout roomBoundary dimensions or AI-detected labeled venue lengths.",
+        });
+      }
+
+      const { polygonToSeats } = await import("../lib/polygonToSeats.js");
+
+      let newSeats: ReturnType<typeof polygonToSeats> = [];
+      let offset = 0;
+
+      for (const zone of seatingZones) {
+        const generated = polygonToSeats({
+          points: zone.points as [number, number][],
+          sectionName: (zone.label as string) ?? "Section",
+          roomBoundaryFeet: roomBoundary ?? undefined,
+          estimatedVenueFeet,
+          referenceSeat,
+          gridSize: GRID,
+          estimatedSeats:
+            typeof zone.estimatedSeats === "number"
+              ? zone.estimatedSeats
+              : null,
+          isAccessible:
+            typeof zone.isAccessible === "boolean" ? zone.isAccessible : false,
+          seatNumberOffset: offset,
+        });
+        newSeats = newSeats.concat(generated);
+        offset += generated.length;
+      }
+
+      if (clearExisting) {
+        (layout as any).seats = newSeats;
+      } else {
+        (layout as any).seats = [...((layout as any).seats ?? []), ...newSeats];
+      }
+
+      await (layout as any).save();
+
+      res.json({
+        seatsGenerated: newSeats.length,
+        totalSeats: (layout as any).seats.length,
+      });
+    } catch (err) {
+      console.error("[generate-from-ai]", err);
+      res
+        .status(500)
+        .json({ error: "Failed to generate seats from AI polygons" });
+    }
+  },
+);
+
 /**
  * Analyze background image with Qwen VL via Ollama (server-side only)
  * POST /api/seating/layouts/:layoutId/analyze-image
@@ -1153,23 +1263,64 @@ router.post(
         });
       }
 
-      const base64Image = blob.data.toString("base64");
+      // ── Downscale to ≤ 800 px before sending to Ollama ─────────────────
+      // Full-resolution venue images can be 4–12 MB of base64 after encoding.
+      // At that size, Qwen's context window is dominated by raw pixel tokens,
+      // generation takes 5–10 min, and spatial accuracy degrades heavily.
+      // Resizing to 800 px keeps enough structural detail for floor-plan
+      // analysis while cutting base64 payload to ~100 KB (50–100× smaller).
+      let imageBuffer = blob.data;
+      try {
+        const sharpLib = (await import("sharp")).default;
+        imageBuffer = await sharpLib(blob.data)
+          .resize({
+            width: 800,
+            height: 800,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        const originalKB = Math.round(blob.data.length / 1024);
+        const resizedKB = Math.round(imageBuffer.length / 1024);
+        console.log(
+          `[analyze-image] Resized image: ${originalKB} KB → ${resizedKB} KB`,
+        );
+      } catch (sharpErr) {
+        // sharp unavailable or unsupported format — send original, warn only
+        console.warn(
+          "[analyze-image] sharp resize failed, using original image:",
+          sharpErr,
+        );
+      }
+      const base64Image = imageBuffer.toString("base64");
 
-      // Concise prompt — fewer output tokens = much faster generation
+      // Polygon-first prompt (matches venue_ai_generate.mjs v19 — proven superior to bbox format)
       const OLLAMA_PROMPT = [
-        "Analyze this venue floor plan. Return ONLY valid JSON, no markdown or explanation.",
-        '{"description":"one sentence","stagePosition":"top"|"bottom"|"left"|"right"|null,"capacityEstimate":int|null,"estimatedVenueWidthFeet":num|null,"estimatedVenueHeightFeet":num|null,"referenceSeat":{"widthFeet":num,"depthFeet":num,"rowPitchFeet":num}|null,"suggestions":[{"type":"stage"|"seating_zone"|"aisle"|"entrance","label":"short","xPct":INT,"yPct":INT,"widthPct":INT,"heightPct":INT,"estimatedSeats":int|null,"rotationDeg":int|null,"isAccessible":bool|null}]}',
+        "You are a professional venue floor-plan analyzer.",
+        "Study the image carefully and return ONLY a raw JSON object with this exact shape:",
+        "{",
+        '  "elements": [',
+        "    {",
+        '      "type": "seating_zone"|"stage"|"aisle"|"entrance"|"other",',
+        '      "label": "<short name>",',
+        '      "points": [[x0,y0],[x1,y1],...],',
+        '      "estimatedSeats": <integer or null>,',
+        '      "isAccessible": <bool or null>,',
+        '      "rotationDeg": <degrees or 0>,',
+        '      "notes": "<optional>"',
+        "    }",
+        "  ],",
+        '  "stagePosition": "top"|"bottom"|"left"|"right"|null,',
+        '  "capacityEstimate": <integer or null>,',
+        '  "observations": "<one sentence>"',
+        "}",
+        "",
         "RULES:",
-        "- xPct/yPct = top-left corner as INTEGER percent 0-100. Example: center = xPct:50 yPct:50. Use integers NOT decimals like 0.5.",
-        "- widthPct/heightPct = element size as INTEGER percent 0-100.",
-        "- rotationDeg = clockwise degrees the seating zone is rotated relative to the room. 0 = rows run left-right. Use e.g. 45 or -45 for diagonal wings. null for non-seating_zone types.",
-        "- isAccessible = true if the zone is visibly labeled as wheelchair or mobility-accessible. false or null otherwise.",
-        "- Only output types: stage, seating_zone, aisle, entrance. Skip railings, partitions, stairs, projection rooms.",
-        "- Each distinct seating block gets its own seating_zone entry — do NOT merge separate wings or sections. E.g. left wing, center block, and right wing = 3 separate zones with individual xPct/yPct/rotationDeg.",
-        "- Include every visible element: stage, all seating zones, aisles, and entrances.",
-        "- stagePosition = where stage is relative to audience (top/bottom/left/right).",
-        "- If dimension labels show feet/metres, extract estimatedVenueWidthFeet and estimatedVenueHeightFeet.",
-        "- Extract referenceSeat widthFeet/depthFeet/rowPitchFeet from labeled seat or row spacing dimensions.",
+        "- points[] are [x, y] pairs as 0-1 FRACTIONS of image width/height (not pixels, not percentages).",
+        "- Trace each distinct zone with a tight polygon (4-8 vertices is fine; irregular shapes welcome).",
+        "- Include ALL seating zones visible. Label each with a short audience-friendly name (e.g. 'Floor', 'Balcony', 'VIP', 'Left Wing').",
+        "- Do NOT include markdown, code fences, or any text outside the JSON object.",
       ].join("\n");
       let ollamaResponse: { response: string };
       try {
@@ -1183,12 +1334,8 @@ router.post(
               prompt: OLLAMA_PROMPT,
               images: [base64Image],
               stream: false,
-              format: "json",
               keep_alive: "5m",
-              // Limit context + output tokens for faster inference.
-              // 8192 ctx is plenty for a floor plan image + short JSON response.
-              // 1500 predicted tokens covers even complex layouts.
-              options: { num_ctx: 8192, num_predict: 1500 },
+              options: { num_ctx: 16384, num_predict: 4000, temperature: 0.1 },
             });
 
             const req = http.request(
@@ -1296,6 +1443,9 @@ router.post(
           depthFeet?: number;
           rowPitchFeet?: number;
         };
+        /** v19 polygon-first format */
+        elements?: Array<Record<string, unknown>>;
+        /** legacy bbox format */
         suggestions?: Array<{
           type: string;
           label: string;
@@ -1335,6 +1485,66 @@ router.post(
         });
       }
 
+      // --- Normalise: accept elements[] (polygon-first v19) OR legacy suggestions[] ---
+      type RawEl = Record<string, unknown>;
+      const rawElements: RawEl[] = Array.isArray(parsed.elements)
+        ? (parsed.elements as RawEl[])
+        : [];
+      const rawLegacy: RawEl[] = Array.isArray(parsed.suggestions)
+        ? (parsed.suggestions as RawEl[])
+        : [];
+
+      // Convert v19 element (points in 0-1 fraction) to normalised suggestion
+      const fromElements = rawElements.map((el) => {
+        const pts = Array.isArray(el.points)
+          ? (el.points as [number, number][]).filter(
+              (p) => Array.isArray(p) && p.length === 2,
+            )
+          : [];
+        // Derive bbox from polygon bounding box for backward compat
+        const xs = pts.map(([x]) => x);
+        const ys = pts.map(([, y]) => y);
+        const xMinF = xs.length ? Math.min(...xs) : 0;
+        const xMaxF = xs.length ? Math.max(...xs) : 1;
+        const yMinF = ys.length ? Math.min(...ys) : 0;
+        const yMaxF = ys.length ? Math.max(...ys) : 1;
+        return {
+          type: (el.type as string) ?? "seating_zone",
+          label: (el.label as string) ?? "Section",
+          xPct: Math.round(xMinF * 100),
+          yPct: Math.round(yMinF * 100),
+          widthPct: Math.round((xMaxF - xMinF) * 100),
+          heightPct: Math.round((yMaxF - yMinF) * 100),
+          estimatedSeats:
+            typeof el.estimatedSeats === "number" ? el.estimatedSeats : null,
+          rotationDeg: typeof el.rotationDeg === "number" ? el.rotationDeg : 0,
+          isAccessible:
+            typeof el.isAccessible === "boolean" ? el.isAccessible : false,
+          notes: typeof el.notes === "string" ? el.notes : "",
+          // polygon vertices scaled to 0-100 for storage
+          points: pts.map(
+            ([x, y]) =>
+              [Math.round(x * 100), Math.round(y * 100)] as [number, number],
+          ),
+        };
+      });
+
+      const rawSuggestions = (
+        fromElements.length > 0 ? fromElements : rawLegacy
+      ) as Array<{
+        type: string;
+        label: string;
+        xPct: number;
+        yPct: number;
+        widthPct?: number;
+        heightPct?: number;
+        estimatedSeats?: number | null;
+        rotationDeg?: number;
+        isAccessible?: boolean;
+        notes?: string;
+        points?: [number, number][];
+      }>;
+
       // Validate and sanitize suggestions
       const VALID_TYPES = new Set([
         "stage",
@@ -1346,7 +1556,7 @@ router.post(
         "entrance",
         "seating_zone",
       ]);
-      const sanitizedSuggestions = (parsed.suggestions ?? []).filter(
+      const sanitizedSuggestions = rawSuggestions.filter(
         (s) =>
           VALID_TYPES.has(s.type) &&
           typeof s.xPct === "number" &&
@@ -1395,6 +1605,7 @@ router.post(
             : undefined,
         isAccessible: s.isAccessible === true ? true : undefined,
         notes: s.notes ? String(s.notes) : undefined,
+        points: s.points && s.points.length > 0 ? s.points : undefined,
       }));
       // (mappedSuggestions is typed; used below in the aiSuggestions object)
 

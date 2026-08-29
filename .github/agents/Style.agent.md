@@ -1,8 +1,9 @@
 ---
 name: Style
-description: Kevin Powell-style modern CSS. Uses project tokens, intrinsic sizing, minimal media queries.
-model: Claude Sonnet 4.6 (copilot)
+description: "Kevin Powell-style CSS specialist. Edits .module.scss only. Uses project tokens, intrinsic sizing, cascade-first layout. No hardcoded colors."
+model: GPT-5.1-Codex-Mini (Preview) (copilot)
 tools:
+  - read/readFile
   - edit/editFiles
   - search/codebase
   - read/problems
@@ -10,6 +11,7 @@ tools:
   - execute/getTerminalOutput
   - read/terminalLastCommand
   - search/usages
+  - agent
 ---
 
 # STARTUP SEQUENCE (MANDATORY)

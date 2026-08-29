@@ -1,10 +1,11 @@
 ---
 name: Orchestrator
-description: "The central coordinator agent that manages the workflow between Plan, Implement, Style, and Audit agents to ensure smooth execution of tasks and handoffs, plus quick implementation and secure principles, while ensuring overall project coherence and well documented and fully tested code."
-model: Claude Sonnet 4.6 (copilot)
+description: "Entry point for all non-trivial tasks. Runs stale-context check, routes to Plan → Implement → Style → Audit, gates ambiguous language, and reports ✅/⚠️/📋 to the user."
+model: GPT-5.4 (copilot)
 tools:
   - todo
   - agent
+  - read/readFile
   - edit/editFiles
   - search/codebase
   - read/problems
@@ -13,6 +14,7 @@ tools:
   - execute/runInTerminal
   - read/terminalSelection
   - search/usages
+  - web/fetch
 handoffs:
   - label: Start Planning
     agent: Plan

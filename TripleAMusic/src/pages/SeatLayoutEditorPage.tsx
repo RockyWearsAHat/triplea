@@ -109,6 +109,8 @@ type AiSuggestion = {
   /** True if this zone should be designated as accessibility/mobility-accessible. */
   isAccessible?: boolean;
   notes?: string;
+  /** Polygon vertices in 0-100 PCT space from Qwen v19 polygon analysis */
+  points?: [number, number][];
 };
 
 type AiAnalysisResult = {
@@ -577,7 +579,6 @@ export function SeatLayoutEditorPage() {
   const [showSeatText, setShowSeatText] = useState<boolean>(true);
   const [showAllFloors, setShowAllFloors] = useState<boolean>(false);
   const [toolsOpen, setToolsOpen] = useState<boolean>(false);
-  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false);
 
   // In-page confirm dialog — replaces all window.confirm() calls.
   const [confirmState, setConfirmState] = useState<{
@@ -1449,7 +1450,24 @@ export function SeatLayoutEditorPage() {
         seatsPerRow,
         rowSpacingFt: seatSizeFeet * 1.25,
         seatPitchFt: seatSizeFeet * 1.15,
-        rotationDeg: s.rotationDeg ?? 0,
+        rotationDeg: (() => {
+          // Prefer polygon longest-edge angle over stored rotationDeg
+          if (s.points && s.points.length >= 2) {
+            let maxLen = 0;
+            let bestAngle = 0;
+            for (let i = 0; i < s.points.length; i++) {
+              const [ax, ay] = s.points[i];
+              const [bx, by] = s.points[(i + 1) % s.points.length];
+              const len = Math.hypot(bx - ax, by - ay);
+              if (len > maxLen) {
+                maxLen = len;
+                bestAngle = Math.atan2(by - ay, bx - ax) * (180 / Math.PI);
+              }
+            }
+            return Math.round(bestAngle);
+          }
+          return s.rotationDeg ?? 0;
+        })(),
         startX: centerX,
         startY: centerY,
         floorId,
@@ -4426,6 +4444,51 @@ export function SeatLayoutEditorPage() {
             </button>
             <button
               type="button"
+              className={styles.aiAnalyzeBtn}
+              style={{ background: "var(--taa-blue-900)", marginLeft: 8 }}
+              disabled={aiAnalyzing}
+              onClick={async () => {
+                if (!layoutId) return;
+                if (
+                  !window.confirm(
+                    "Replace all seats with AI-generated layout from polygon analysis? This cannot be undone.",
+                  )
+                )
+                  return;
+                setAiAnalyzing(true);
+                setAiError(null);
+                try {
+                  const result = await api.generateSeatsFromAi(layoutId, {
+                    clearExisting: true,
+                  });
+                  const refreshed = await api.getSeatingLayout(layoutId);
+                  setSeats(
+                    (refreshed.layout.seats ?? []).map(
+                      (s: Record<string, unknown>) =>
+                        ({
+                          ...(s as object),
+                          posX: (s.posX as number) ?? 0,
+                          posY: (s.posY as number) ?? 0,
+                        }) as EditableSeat,
+                    ),
+                  );
+                  setShowAiPanel(false);
+                  setSaveOk(true);
+                  setTimeout(() => setSaveOk(false), 3000);
+                  console.log(
+                    `[generate-from-ai] ${result.seatsGenerated} seats generated`,
+                  );
+                } catch (e) {
+                  setAiError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setAiAnalyzing(false);
+                }
+              }}
+            >
+              🗺️ Auto-Generate All Seats
+            </button>
+            <button
+              type="button"
               className={styles.panelClose}
               style={{ fontSize: 12, padding: "4px 10px" }}
               onClick={() => setShowAiPanel(false)}
@@ -4467,6 +4530,7 @@ export function SeatLayoutEditorPage() {
           sections={computeSectionsFromSeats(seats)}
           stagePosition={stagePosition}
           layoutName={name || "Layout"}
+          backgroundImageUrl={backgroundImageUrl || undefined}
           onClose={() => setPreviewOpen(false)}
           onSave={handleSave}
         />

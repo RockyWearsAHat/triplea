@@ -35,6 +35,7 @@ interface LayoutPreviewModalProps {
   seats: EditableSeat[];
   sections: EditableSection[];
   stagePosition: StagePosition;
+  backgroundImageUrl?: string;
   layoutName: string;
   onClose: () => void;
   onSave: () => void;
@@ -44,6 +45,7 @@ export function LayoutPreviewModal({
   seats,
   sections,
   stagePosition,
+  backgroundImageUrl,
   layoutName,
   onClose,
   onSave,
@@ -157,6 +159,7 @@ export function LayoutPreviewModal({
                 sections={sectionInfos}
                 tiers={[]}
                 stagePosition={stagePosition}
+                backgroundImageUrl={backgroundImageUrl}
                 selectedSeats={[]}
                 maxSeats={0}
                 onSelectionChange={() => {}}

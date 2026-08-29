@@ -43,6 +43,12 @@ export default function ConcertDetailPage() {
       seats: SeatInfo[];
       sections: SectionInfo[];
       stagePosition?: "top" | "bottom" | "left" | "right";
+      backgroundImageUrl?: string;
+      aiPolygonZones?: Array<{
+        type: string;
+        label: string;
+        points: [number, number][];
+      }>;
     };
     tiers: TierInfo[];
   } | null>(null);
@@ -106,6 +112,9 @@ export default function ConcertDetailPage() {
                     | "bottom"
                     | "left"
                     | "right",
+                  backgroundImageUrl:
+                    seatsData.layout.backgroundImageUrl ?? undefined,
+                  aiPolygonZones: seatsData.layout.aiPolygonZones,
                 },
                 tiers: seatsData.tiers as TierInfo[],
               });
@@ -419,6 +428,8 @@ export default function ConcertDetailPage() {
                     }}
                     maxSeats={10}
                     stagePosition={seatingData.layout.stagePosition}
+                    backgroundImageUrl={seatingData.layout.backgroundImageUrl}
+                    polygonZones={seatingData.layout.aiPolygonZones}
                   />
                 ) : (
                   <Button
