@@ -1,0 +1,35 @@
+{
+  "projectPath": "/Users/alexwaldmann/Desktop/TripleAApps",
+  "type": "library",
+  "doneDefinition": [
+    "Produce a numbered build plan",
+    "Caveman style",
+    "You are preparing the project at /Users/alexwaldmann/Desktop/TripleAApps for autonomous work",
+    "Before SARA starts dispatching worklist items to you and others, verify and document:",
+    "**Environment**: The project builds and runs cleanly in isolation",
+    "Check PATH, credentials ("
+  ],
+  "deployTarget": "npm",
+  "verification": {
+    "usesPlaywright": false,
+    "startCmd": "",
+    "checkURL": "",
+    "port": 0,
+    "checkCmds": [
+      "go test ./... || pnpm test || cargo test"
+    ]
+  },
+  "liveCheckCmd": "go test ./... || pnpm test || cargo test",
+  "executionIntent": {
+    "publishIntent": "none",
+    "publishEvidence": null
+  },
+  "workingBehaviors": [
+    "User can produce a numbered build plan",
+    "User can caveman style",
+    "User can you are preparing the project at /users/alexwaldmann/desktop/tripleaapps for autonomous work",
+    "User can before sara starts dispatching worklist items to you and others, verify and document:",
+    "User can **environment**: the project builds and runs cleanly in isolation",
+    "User can check path, credentials ("
+  ]
+}

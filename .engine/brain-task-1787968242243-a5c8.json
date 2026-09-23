@@ -1,0 +1,175 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/TripleAApps",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are preparing the project at /Users/alexwaldmann/Desktop/TripleAApps for autonomous work. Before SARA starts dispatching worklist items to you and others, verify and document:\n\n1. **Environment**: The project builds and runs cleanly in isolation. Check PATH, credentials (.env if needed), system dependencies, installed packages.\n2. **Credentials \u0026 Secrets**: Any API keys, GitHub tokens, or credentials needed are in place and working. Verify with a quick test if possible.\n3. **Build System**: The build (npm install, cargo build, poetry install, etc.) completes without errors. Document the build command.\n4. **Test Suite**: Run the existing test suite if one exists. Fix any pre-existing failures (they block detection of new breakage).\n5. **Development Setup**: Editor config, linters, formatters, git hooks all working. Commit setup changes if any were needed.\n6. **Documentation**: index.dx or README clearly states:\n   - How to build and test this project\n   - Where to find the actual code entry points\n   - What the main moving parts are\n   - Any project-specific rules or conventions\n\nDo not implement features or fix bugs — setup is verification only. If something is broken or unclear, fix it enough that the next worker gets a clean slate. Commit your work (or note what you could not fix). When done, say \"Setup complete\" to mark this project ready.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Dependency Installation \u0026 Lock State**",
+      "body": "Root, server, and app package.json declare full dependency trees. Install all deps at root (pnpm install) and in each workspace. Verify no errors in install output. Document the package manager (pnpm 10.28.1).",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/TripleAApps \u0026\u0026 pnpm install 2\u003e\u00261 | grep -q \"ERR\" \u0026\u0026 echo FAIL || echo PASS`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 2,
+      "title": "**Build System Verification**",
+      "body": "Root package.json has build, build:apps, build:unified scripts. Server compiles TypeScript, all frontends run Vite build. Run build:apps; verify server/dist, TripleAMusic/dist exist with no errors.",
+      "acceptance": "`npm run build:apps 2\u003e\u00261 | grep -E \"(error|ERROR)\" || echo PASS`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 3,
+      "title": "**Test Suite Execution**",
+      "body": "Server has Jest tests in `**/__tests__/**/*.test.ts` with mongodb-memory-server for isolation. Run `npm test --prefix server`; identify pre-existing failures and fix them (e.g., missing setup, bad imports, timeout issues).",
+      "acceptance": "`npm test --prefix server 2\u003e\u00261 | grep -E \"(PASS|FAIL)\" | tail -1 | grep -q \"PASS\" \u0026\u0026 echo PASS || echo FAIL`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 4,
+      "title": "**Linting \u0026 Type Checking**",
+      "body": "TripleAMusic has ESLint configured; server has TypeScript. Run `npm run lint --prefix TripleAMusic` and `npm run build --prefix server` (tsc enforces type safety). Fix any linting errors in modified files.",
+      "acceptance": "`npm run lint --prefix TripleAMusic 2\u003e\u00261 | grep -c \"error\" | grep -q \"^0$\" \u0026\u0026 npm run build --prefix server 2\u003e\u00261 | grep -q \"error\" || echo PASS`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 5,
+      "title": "**.env Setup \u0026 Credentials**",
+      "body": "Project requires MONGO_URI, JWT_SECRET, STRIPE_SECRET_KEY, VITE_GOOGLE_MAPS_API_KEY. Copy .env.example to .env if needed; verify critical keys are set (not empty or placeholder). Quick sanity check: MongoDB URI connects (or note if local Mongo needed).",
+      "acceptance": "`[ -f .env ] \u0026\u0026 grep -q \"^MONGO_URI=\" .env \u0026\u0026 grep -q \"^JWT_SECRET=\" .env \u0026\u0026 grep -q \"^STRIPE_SECRET_KEY=\" .env \u0026\u0026 echo PASS || echo FAIL`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 6,
+      "title": "**Git Hooks \u0026 Development Setup**",
+      "body": ".github/hooks/scripts contains quality checks (block-dangerous.sh, format-after-edit.sh). Verify hooks are executable. Document what they do in index.dx. Test running `git status` and `git log` to confirm repo integrity.",
+      "acceptance": "`ls -la /Users/alexwaldmann/Desktop/TripleAApps/.github/hooks/scripts/*.sh | awk '{print $1}' | grep -q \"x\" \u0026\u0026 echo PASS || echo FAIL`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 7,
+      "title": "**Documentation: index.dx Scaffolding**",
+      "body": "Create or update index.dx with sections: Build instructions (pnpm install \u0026\u0026 npm run build:apps), Test instructions (npm test --prefix server), Project structure (monorepo with 5 packages), Entry points (server/src/index.ts, TripleAMusic/src/main.tsx), and key conventions (TypeScript, ESLint, Jest, MongoDB).",
+      "acceptance": "`grep -q \"Build\\|Test\\|Structure\\|Entry\\|Conventions\" index.dx \u0026\u0026 wc -l index.dx | awk '{print $1}' | awk '$1 \u003e 10 {print \"PASS\"} $1 \u003c= 10 {print \"FAIL\"}'`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 8,
+      "title": "**Dev Server Boot \u0026 Connectivity**",
+      "body": "Run `npm run dev` from root (spawns server on :4000, frontends on :5173 variants via Vite). Allow 10s startup. Verify no fatal errors in output. Curl server health endpoint (or check logs for \"listening\").",
+      "acceptance": "`timeout 15 npm run dev 2\u003e\u00261 \u0026 sleep 10 \u0026\u0026 curl -s http://localhost:4000/ \u003e/dev/null \u0026\u0026 echo PASS || echo FAIL`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 9,
+      "title": "**Feature E2E: Seating + Checkout Flow**",
+      "body": "Boot dev server. Navigate to TripleAMusic (http://localhost:5173), select a venue/concert, interact with seat selector, proceed to checkout. Verify seat data persists, no JS errors, Stripe button renders (mock key OK in dev). Check network tab for API calls to server.",
+      "acceptance": "`curl -s http://localhost:4000/api/seating 2\u003e\u00261 | grep -q \"schema\\|seats\" \u0026\u0026 echo PASS || echo FAIL`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    },
+    {
+      "index": 10,
+      "title": "**Deployment / Public Artifact Readiness**",
+      "body": "Monorepo is built for Netlify deployment (netlify.toml, NETLIFY_DEPLOYMENT.md present). Document how to deploy: build:unified creates dist/ with all 3 frontends. Set live-url after first deploy (or note local-dev-only for now).",
+      "acceptance": "`[ -f netlify.toml ] \u0026\u0026 [ -f NETLIFY_DEPLOYMENT.md ] \u0026\u0026 grep -q \"functions\\|build\\|publish\" netlify.toml \u0026\u0026 echo \"PASS: ready for deployment\" || echo \"FAIL: Netlify config incomplete\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-29T01:52:38Z"
+    }
+  ],
+  "teams": {
+    "team-api-3": {
+      "id": "team-api-3",
+      "role": "api",
+      "assigned_steps": [
+        7
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 7: context canceled",
+      "started_at": "2026-08-28T19:52:38.726965-06:00",
+      "completed_at": "2026-08-28T19:55:45.552133-06:00"
+    },
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        1,
+        2
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 1: context canceled",
+      "started_at": "2026-08-28T19:52:38.723514-06:00",
+      "completed_at": "2026-08-28T19:55:46.363962-06:00"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 0: context canceled",
+      "started_at": "2026-08-28T19:52:38.722007-06:00",
+      "completed_at": "2026-08-28T19:55:46.36212-06:00"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 3: context canceled",
+      "started_at": "2026-08-28T19:52:38.725383-06:00",
+      "completed_at": "2026-08-28T19:55:46.080065-06:00"
+    },
+    "team-general-4": {
+      "id": "team-general-4",
+      "role": "general",
+      "assigned_steps": [
+        8,
+        9
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 8: context canceled",
+      "started_at": "2026-08-28T19:52:38.727537-06:00",
+      "completed_at": "2026-08-28T19:55:45.878506-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-28T19:50:47.499731-06:00",
+  "updated_at": "2026-08-28T19:55:46.36413-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1787968242243-a5c8",
+  "state_slug": "task-1787968242243-a5c8"
+}

@@ -1,0 +1,18 @@
+{
+  "updatedAt": "2026-08-30T02:02:39.388299Z",
+  "agents": [
+    {
+      "id": "lead",
+      "role": "orchestrator",
+      "status": "running",
+      "updatedAt": "2026-08-30T02:02:39.340193Z"
+    },
+    {
+      "id": "planner",
+      "role": "planner",
+      "status": "active",
+      "updatedAt": "2026-08-30T02:02:39.388297Z"
+    }
+  ],
+  "messages": null
+}

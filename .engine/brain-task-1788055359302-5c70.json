@@ -1,0 +1,18 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/TripleAApps",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are preparing the project at /Users/alexwaldmann/Desktop/TripleAApps for autonomous work. Before SARA starts dispatching worklist items to you and others, verify and document:\n\n1. **Environment**: The project builds and runs cleanly in isolation. Check PATH, credentials (.env if needed), system dependencies, installed packages.\n2. **Credentials \u0026 Secrets**: Any API keys, GitHub tokens, or credentials needed are in place and working. Verify with a quick test if possible.\n3. **Build System**: The build (npm install, cargo build, poetry install, etc.) completes without errors. Document the build command.\n4. **Test Suite**: Run the existing test suite if one exists. Fix any pre-existing failures (they block detection of new breakage).\n5. **Development Setup**: Editor config, linters, formatters, git hooks all working. Commit setup changes if any were needed.\n6. **Documentation**: index.dx or README clearly states:\n   - How to build and test this project\n   - Where to find the actual code entry points\n   - What the main moving parts are\n   - Any project-specific rules or conventions\n\nDo not implement features or fix bugs — setup is verification only. If something is broken or unclear, fix it enough that the next worker gets a clean slate. Commit your work (or note what you could not fix). When done, say \"Setup complete\" to mark this project ready.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": null,
+  "teams": {},
+  "outer_iterations": 0,
+  "started_at": "2026-08-29T20:02:39.340191-06:00",
+  "updated_at": "2026-08-29T20:02:39.348067-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788055359302-5c70",
+  "state_slug": "task-1788055359302-5c70"
+}
